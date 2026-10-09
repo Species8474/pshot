@@ -165,6 +165,11 @@ class GUI_layers_class {
 				}
 				else app.GUI.Ps_workspace.Mask.add(event.altKey);
 			}
+			else if (action == 'mask_link' || action == 'vmask_link') {
+				var link_layer = app.Layers.get_layer(parseInt(target.dataset.id));
+				if (action == 'mask_link') app.GUI.modules['ps/commands'].mask_link_toggle(link_layer);
+				else app.GUI.modules['ps/commands'].vmask_link_toggle(link_layer);
+			}
 			else if (action == 'vmask_thumb' && event.shiftKey) {
 				app.GUI.Ps_workspace.Vector_mask.toggle();
 			}
@@ -541,7 +546,7 @@ class GUI_layers_class {
 				var editing_mask = !!(value.ps_mask && value.ps_mask_editing);
 				html += '<span class="ps_thumb_wrap' + (value.ps_smart ? ' smart' : '') + '"><canvas class="ps_thumb' + (value.ps_mask && !editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="layer_thumb"></canvas></span>';
 				if (value.ps_mask) {
-					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
+					html += '<span class="ps_mask_link" data-action="mask_link" data-id="' + value.id + '" title="Link layer and mask">' + (value.ps_mask_unlinked ? '' : ICON.link) + '</span>';
 					html += '<span class="ps_mask_wrap' + (value.ps_mask_disabled ? ' disabled' : '') + '">'
 						+ '<canvas class="ps_mask_thumb' + (editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="mask_thumb" title="Layer mask (Shift+click to disable)"></canvas></span>';
 				}
@@ -550,7 +555,7 @@ class GUI_layers_class {
 					html += '<span class="ps_mask_wrap"><canvas class="ps_shape_mask_thumb" width="32" height="32" data-id="' + value.id + '" title="Vector mask"></canvas></span>';
 				}
 				if (value.ps_vmask) {
-					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
+					html += '<span class="ps_mask_link" data-action="vmask_link" data-id="' + value.id + '" title="Link layer and vector mask">' + (value.ps_vmask.unlinked ? '' : ICON.link) + '</span>';
 					html += '<span class="ps_mask_wrap"><canvas class="ps_vmask_thumb" width="32" height="32" data-id="' + value.id + '" data-action="vmask_thumb" title="Vector mask (Shift+click to disable)"></canvas></span>';
 				}
 				var is_background = value.name == 'Background' && value === layers[layers.length - 1];

@@ -24,6 +24,16 @@ export class Update_layer_action extends Base_action {
 		if (!this.reference_layer) {
 			throw new Error('Aborted - layer with specified id doesn\'t exist');
 		}
+		//pshot: an unlinked layer or vector mask stays in place when the layer moves
+		const ref = this.reference_layer;
+		const dx = 'x' in this.settings ? this.settings.x - ref.x : 0, dy = 'y' in this.settings ? this.settings.y - ref.y : 0;
+		if ((dx || dy) && ref.ps_mask && ref.ps_mask_unlinked && !('ps_mask_x' in this.settings)) {
+			this.settings.ps_mask_x = ref.ps_mask_x + dx;
+			this.settings.ps_mask_y = ref.ps_mask_y + dy;
+		}
+		if ((dx || dy) && ref.ps_vmask && ref.ps_vmask.unlinked && !('ps_vmask' in this.settings)) {
+			this.settings.ps_vmask = Object.assign({}, ref.ps_vmask, { lx: (ref.ps_vmask.lx || 0) + dx, ly: (ref.ps_vmask.ly || 0) + dy });
+		}
 		for (let i in this.settings) {
 			if (i == 'id')
 				continue;

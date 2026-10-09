@@ -1291,7 +1291,7 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: var(--ps-text) !im
 .ps_adj_preview { margin-top: 6px; }
 
 /* layer masks */
-.ps_mask_link { width: 12px; color: var(--ps-icon); display: flex; justify-content: center; margin-left: -4px; margin-right: -2px; }
+.ps_mask_link { width: 12px; min-height: 12px; color: var(--ps-icon); display: flex; justify-content: center; margin-left: -4px; margin-right: -2px; cursor: pointer; }
 .ps_mask_link svg { width: 11px; height: 11px; }
 .ps_mask_wrap { position: relative; line-height: 0; margin-right: 6px; }
 .ps_mask_thumb { width: 32px; height: 32px; border: 1px solid #1f1f1f; }

@@ -781,6 +781,30 @@ class Ps_commands_class {
 	vmask_delete() { app.GUI.Ps_workspace.Vector_mask.remove(); }
 	vmask_toggle_label() { var l = config.layer; return l && l.ps_vmask && l.ps_vmask.disabled ? 'Enable' : 'Disable'; }
 	vmask_toggle() { app.GUI.Ps_workspace.Vector_mask.toggle(); }
+	mask_link_label() { var l = config.layer; return l && l.ps_mask && l.ps_mask_unlinked ? 'Link' : 'Unlink'; }
+	vmask_link_label() { var l = config.layer; return l && l.ps_vmask && l.ps_vmask.unlinked ? 'Link' : 'Unlink'; }
+
+	/**
+	 * Layer > Layer Mask > Unlink / Link (or the chain between the thumbnails)
+	 */
+	mask_link_toggle(layer) {
+		layer = layer || config.layer;
+		if (!layer || !layer.ps_mask) return;
+		var unlink = !layer.ps_mask_unlinked;
+		app.State.do_action(new app.Actions.Bundle_action('mask_link', unlink ? 'Unlink Mask' : 'Link Mask', [
+			new app.Actions.Update_layer_action(layer.id, { ps_mask_unlinked: unlink }),
+		]));
+	}
+
+	vmask_link_toggle(layer) {
+		layer = layer || config.layer;
+		if (!layer || !layer.ps_vmask) return;
+		var unlink = !layer.ps_vmask.unlinked;
+		app.State.do_action(new app.Actions.Bundle_action('mask_link', unlink ? 'Unlink Vector Mask' : 'Link Vector Mask', [
+			new app.Actions.Update_layer_action(layer.id, { ps_vmask: Object.assign({}, layer.ps_vmask, { unlinked: unlink }) }),
+		]));
+	}
+
 	vmask_rasterize() { app.GUI.Ps_workspace.Vector_mask.rasterize(); }
 	lighting_effects() { app.GUI.Ps_workspace.Lighting.open(); }
 	filter_gallery() { app.GUI.Ps_workspace.Filter_gallery.open(); }
