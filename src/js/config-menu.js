@@ -90,7 +90,7 @@ const M = [
 		'Assign Profile...',
 		'Convert to Profile...',
 		'-',
-		'Keyboard Shortcuts...|Alt+Shift+Ctrl+K|help/shortcuts.shortcuts',
+		'Keyboard Shortcuts...|Alt+Shift+Ctrl+K|ps/commands.keyboard_shortcuts',
 		'Menus...|Alt+Shift+Ctrl+M',
 		['Preferences', [
 			{ name: 'General...', shortcut: 'Ctrl+K', target: 'ps/commands.preferences', parameter: 'General' }, { name: 'Interface...', target: 'ps/commands.preferences', parameter: 'Interface' }, { name: 'File Handling...', target: 'ps/commands.preferences', parameter: 'File Handling' }, { name: 'Performance...', target: 'ps/commands.preferences', parameter: 'Performance' }, { name: 'Cursors...', target: 'ps/commands.preferences', parameter: 'Cursors' }, { name: 'Transparency & Gamut...', target: 'ps/commands.preferences', parameter: 'Transparency & Gamut' }, { name: 'Units & Rulers...', target: 'ps/commands.preferences', parameter: 'Units & Rulers' }, { name: 'Guides, Grid & Slices...', target: 'ps/commands.preferences', parameter: 'Guides, Grid & Slices' }, { name: 'Plug-Ins...', target: 'ps/commands.preferences', parameter: 'Plug-Ins' }, { name: 'Type...', target: 'ps/commands.preferences', parameter: 'Type' }, { name: '3D...', target: 'ps/commands.preferences', parameter: '3D' }, '-', 'Camera Raw...',
@@ -352,7 +352,7 @@ const M = [
 			{ name: 'Photography', checked: 'workspace_photography', target: 'ps/commands.workspace', parameter: 'Photography' },
 			{ name: 'Typography', checked: 'workspace_typography', target: 'ps/commands.workspace', parameter: 'Typography' }, '-',
 			'Reset Essentials|ps/commands.reset_workspace', 'New Workspace...', 'Delete Workspace...', '-',
-			'Keyboard Shortcuts & Menus...|help/shortcuts.shortcuts',
+			'Keyboard Shortcuts & Menus...|ps/commands.keyboard_shortcuts',
 		]],
 		'-',
 		['Extensions', ['Adobe Exchange', 'Kuler', 'Mini Bridge']],

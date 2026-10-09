@@ -65,6 +65,16 @@ class Ps_keymap_class {
 	}
 
 	install() {
+		this.build_map();
+		window.addEventListener('keydown', (event) => this.on_keydown(event), true);
+		window.addEventListener('keyup', (event) => this.on_keyup(event), true);
+	}
+
+	/**
+	 * (re)build the combo map from the menu definitions (after Keyboard Shortcuts edits too)
+	 */
+	build_map() {
+		this.map = {};
 		this.collect(menuDefinition);
 		//Ctrl+= is the unshifted Ctrl++ on most keyboards
 		this.map['Ctrl+='] = this.map['Ctrl++'];
@@ -75,9 +85,6 @@ class Ps_keymap_class {
 		this.map[this.parse_shortcut('Alt+Shift+Ctrl+N')] = { target: 'ps/commands.new_layer_silent' };
 		this.map[this.parse_shortcut('Alt+]')] = { target: 'ps/commands.select_layer_step', parameter: 1 };
 		this.map[this.parse_shortcut('Alt+[')] = { target: 'ps/commands.select_layer_step', parameter: -1 };
-
-		window.addEventListener('keydown', (event) => this.on_keydown(event), true);
-		window.addEventListener('keyup', (event) => this.on_keyup(event), true);
 	}
 
 	is_typing(target) {

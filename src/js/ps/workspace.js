@@ -24,6 +24,7 @@ import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_warp_text_class from './warp-text.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
+import Ps_shortcuts_class from './shortcuts.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
@@ -91,6 +92,7 @@ class Ps_workspace_class {
 		this.Warp_text = new Ps_warp_text_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
+		this.Shortcuts = new Ps_shortcuts_class(this);
 		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
@@ -121,6 +123,7 @@ class Ps_workspace_class {
 		this.init_statusbar();
 		this.hook_state();
 		this.init_info_panel();
+		this.Shortcuts.install();
 		this.Keymap.install();
 		this.Guides.install();
 		this.Multi.install_move();

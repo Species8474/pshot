@@ -743,6 +743,7 @@ class Ps_commands_class {
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
 	warp_text() { app.GUI.Ps_workspace.Warp_text.open(); }
 	calculations() { app.GUI.Ps_workspace.Calculations.open(); }
+	keyboard_shortcuts() { app.GUI.Ps_workspace.Shortcuts.open(); }
 	preferences(pane) { app.GUI.Ps_workspace.Preferences.open(pane || 'General'); }
 	content_aware_scale() { app.GUI.Ps_workspace.Transform.start_content_aware(); }
 	transform_again() { app.GUI.Ps_workspace.Transform.again(); }

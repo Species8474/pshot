@@ -1525,3 +1525,31 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 .ps_prefs_theme.active { outline: 2px solid var(--ps-select-light); outline-offset: 1px; }
 .ps_prefs_theme:disabled { opacity: 0.35; }
 .ps_prefs_checker { display: inline-block; width: 36px; height: 36px; border: 1px solid var(--ps-field-border); }
+
+/* Edit > Keyboard Shortcuts */
+#popups .popup.ps_kbd { width: 720px; max-width: 96vw; }
+.ps_kbd_tabs { display: flex; gap: 2px; margin-bottom: 8px; }
+.ps_kbd_tabs button { height: 22px; padding: 0 12px; background: var(--ps-panel-dark); color: var(--ps-text); border: 1px solid var(--ps-border); border-bottom: none; border-radius: 3px 3px 0 0; }
+.ps_kbd_tabs button.active { background: var(--ps-panel); }
+.ps_kbd_tabs button:disabled { color: var(--ps-text-disabled); }
+.ps_kbd_body { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+.ps_kbd_main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ps_kbd_row { display: flex; align-items: center; gap: 6px; }
+.ps_kbd_row > span { width: 90px; }
+.ps_kbd_table { border: 1px solid var(--ps-field-border); background: var(--ps-field); }
+.ps_kbd_head { display: grid; grid-template-columns: 1fr 170px; padding: 3px 6px; background: var(--ps-panel-dark); border-bottom: 1px solid var(--ps-border); }
+.ps_kbd_list { height: 340px; overflow-y: auto; }
+.ps_kbd_item { display: grid; grid-template-columns: 1fr 170px; align-items: center; min-height: 20px; padding-right: 6px; cursor: default; }
+.ps_kbd_item.selected { background: var(--ps-select); color: #fff; }
+.ps_kbd_item.disabled > span:first-child { color: var(--ps-text-disabled); }
+.ps_kbd_menu { font-weight: 600; }
+.ps_kbd_short { min-height: 16px; padding: 0 4px; }
+.ps_kbd_short.editing { background: #fff; color: #000; outline: 1px solid var(--ps-select-light); }
+.ps_kbd_msg { min-height: 32px; color: #f2c14e; font-size: 11px; }
+.ps_kbd_buttons { display: flex; flex-direction: column; gap: 6px; }
+.ps_kbd_buttons .button { min-width: 110px; }
+
+/* CS6 shows unavailable buttons greyed (miniPaint hides disabled buttons) */
+body.theme-cs6 button:disabled, body.theme-cs6 input[type="button"]:disabled, body.theme-cs6 #popups .popup .button:disabled, body.theme-cs6 #popups .popup button.button:disabled { visibility: visible; color: var(--ps-text-disabled); cursor: default; }
+body.theme-cs6 button:disabled svg { opacity: 0.45; }
+.ps_kbd > .ps_kbd_tabs, .ps_kbd > .ps_kbd_body, .ps_prefs > .ps_prefs_body { margin: 0 12px 12px; }
