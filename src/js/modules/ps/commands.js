@@ -742,6 +742,7 @@ class Ps_commands_class {
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
 	warp_text() { app.GUI.Ps_workspace.Warp_text.open(); }
+	calculations() { app.GUI.Ps_workspace.Calculations.open(); }
 	content_aware_scale() { app.GUI.Ps_workspace.Transform.start_content_aware(); }
 	transform_again() { app.GUI.Ps_workspace.Transform.again(); }
 

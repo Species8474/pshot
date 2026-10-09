@@ -123,7 +123,7 @@ const M = [
 		'-',
 		'Duplicate...|ps/commands.duplicate_document',
 		'Apply Image...|ps/commands.apply_image',
-		'Calculations...',
+		'Calculations...|ps/commands.calculations',
 		'-',
 		['Variables', ['Define...', 'Data Sets...']],
 		'Apply Data Set...',

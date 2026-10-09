@@ -1498,3 +1498,9 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 .ps_var_tile:hover canvas { outline: 1px solid #fff; }
 .ps_var_fine { display: flex; align-items: center; gap: 4px; font-size: 11px; }
 .ps_var_fine input { width: 90px; }
+
+/* Image > Calculations */
+#popups .popup.ps_calc_dialog { max-width: 96vw; width: 640px; }
+.ps_calc_cols { display: flex; gap: 16px; align-items: flex-start; }
+.ps_calc_cols > div { display: flex; flex-direction: column; gap: 6px; }
+.ps_calc .ps_adj_row > span:first-child { width: 64px; }
