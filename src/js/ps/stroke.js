@@ -23,6 +23,7 @@ async function commit_stroke(tool, pending, label) {
 			return;
 		}
 		var full = app.Layers.convert_layer_to_canvas(temp.id, false, false);
+		app.GUI.Ps_workspace.Selection.clip_document_canvas(full);
 		await app.State.do_action(
 			new app.Actions.Bundle_action(tool.name + '_tool', label, [
 				new app.Actions.Delete_layer_action(temp.id, true),
@@ -45,6 +46,8 @@ async function commit_stroke(tool, pending, label) {
 	}
 
 	var stroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);
+	//CS6: painting is limited to the active selection
+	app.GUI.Ps_workspace.Selection.clip_document_canvas(stroke);
 	var canvas = document.createElement('canvas');
 	canvas.width = target.width_original;
 	canvas.height = target.height_original;

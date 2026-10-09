@@ -54,8 +54,14 @@ Phase 1 (CS6 workspace) is built:
   - Layer bounds show only with the Move tool.
 - **Testing**: `window.pshot` exposes the app. The menu sweep (every enabled target) runs with no errors.
 
+- **Selections**: `ps/selection.js` keeps one document-sized mask per document and records changes in History. The `tools/ps_select.js` tool covers Rect, Ellipse, Row and Column marquees, Lasso, Polygonal Lasso and Magic Wand.
+  - Shift adds, Alt subtracts, Shift+Alt intersects; the options-bar mode buttons do the same.
+  - Marching ants are drawn on a separate overlay canvas.
+  - Fill, Clear/Delete, Copy, Copy Merged, Cut, Layer via Copy/Cut and Crop respect the mask, and so do brush, pencil and gradient strokes.
+  - Select menu: All, Deselect, Reselect, Inverse; Modify > Border, Expand, Contract, Feather.
+
 ### Known gaps (next)
-- Lasso, Magic Wand and Quick Selection; elliptical marquee; add/subtract selection modes.
+- Quick Selection and Magnetic Lasso. The bucket, eraser, blur and clone tools don't respect the selection yet.
 - Layer groups, masks, adjustment layers, layer styles beyond Drop Shadow.
 - Real Levels and Curves dialogs.
 - Brush hardness, opacity and flow (the controls exist but are greyed out).

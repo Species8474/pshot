@@ -16,7 +16,7 @@ import { run_target } from './adjustments-def.js';
 const PASSTHROUGH = ['Escape', 'Enter', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
 	'Shift', 'Control', 'Alt', 'Meta', 'CapsLock'];
 // combos left to the browser / miniPaint because they need native events (clipboard)
-const NATIVE = ['Ctrl+V', 'Ctrl+C'];
+const NATIVE = ['Ctrl+V'];
 
 class Ps_keymap_class {
 
@@ -114,6 +114,14 @@ class Ps_keymap_class {
 		var key = this.key_name(event);
 		var ctrl = event.ctrlKey || event.metaKey;
 		var combo = this.normalize(ctrl, event.altKey, event.shiftKey, key);
+
+		//Delete / Backspace clear the selected pixels (CS6)
+		if ((event.key == 'Delete' || (event.key == 'Backspace' && !ctrl && !event.altKey)) && this.workspace.Selection.has()) {
+			run_target('ps/commands.clear');
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
 
 		if (NATIVE.includes(combo) || PASSTHROUGH.includes(event.key)) {
 			return;

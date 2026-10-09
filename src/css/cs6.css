@@ -1255,3 +1255,5 @@ body.theme-cs6 #popups .popup > .close { top: 3px; height: 20px; line-height: 16
 body.theme-cs6 #popups .popup input[type="text"], body.theme-cs6 #popups .popup input[type="number"],
 body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important; -webkit-text-fill-color: #f0f0f0; }
 #popups .popup.ps_alert [data-id="popup_cancel"] { display: none; }
+
+#ps_selection_overlay { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; box-shadow: none !important; border: none !important; }

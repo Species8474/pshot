@@ -193,6 +193,11 @@ class Base_layers_class {
 			//active tool overlay
 			this.render_overlay();
 
+			//pshot: marching ants follow zoom/pan
+			if (this.Base_gui.Ps_workspace) {
+				this.Base_gui.Ps_workspace.Selection.draw_overlay();
+			}
+
 			//render preview
 			this.render_preview(layers_sorted);
 

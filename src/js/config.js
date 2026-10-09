@@ -83,6 +83,21 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'ps_select',
+		title: 'Selection Tools',
+		on_activate: 'on_activate',
+		on_leave: 'on_leave',
+		attributes: {
+			mode: 'rect',
+			op: 'new',
+			feather: 0,
+			anti_alias: true,
+			tolerance: 32,
+			contiguous: true,
+			sample_all: false,
+		},
+	},
+	{
 		name: 'hand',
 		title: 'Hand Tool',
 		on_activate: 'on_activate',

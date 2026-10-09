@@ -65,6 +65,7 @@ class Ps_documents_class {
 			history: app.State.action_history,
 			history_index: app.State.action_history_index,
 			selection: this.selection_tool().selection,
+			ps_selection: app.GUI.Ps_workspace.Selection.state(),
 			undo_toggle_index: commands.undo_toggle_index,
 			last_selection: commands.last_selection,
 			view: { scale: zoomView.getScale(), x: pos.x, y: pos.y },
@@ -87,6 +88,7 @@ class Ps_documents_class {
 		app.State.action_history = state.history;
 		app.State.action_history_index = state.history_index;
 		this.selection_tool().selection = state.selection;
+		app.GUI.Ps_workspace.Selection.restore(state.ps_selection);
 		commands.undo_toggle_index = state.undo_toggle_index;
 		commands.last_selection = state.last_selection;
 
@@ -139,6 +141,7 @@ class Ps_documents_class {
 		app.State.action_history = blank.history;
 		app.State.action_history_index = 0;
 		this.selection_tool().selection = blank.selection;
+		app.GUI.Ps_workspace.Selection.restore(null);
 		app.GUI.modules['ps/commands'].undo_toggle_index = null;
 		app.GUI.modules['ps/commands'].last_selection = null;
 		this.changed();

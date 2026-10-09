@@ -15,6 +15,7 @@ import menuDefinition from './../config-menu.js';
 import Ps_keymap_class from './keymap.js';
 import Ps_options_bar_class from './options-bar.js';
 import Ps_documents_class from './documents.js';
+import Ps_selection_class from './selection.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 
 const PANEL_TITLES = {
@@ -50,6 +51,7 @@ class Ps_workspace_class {
 		this.extras = true;
 		this.grid_before_extras = false;
 		this.screen_mode = 'standard';
+		this.Selection = new Ps_selection_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
 		this.two_column = false;

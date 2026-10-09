@@ -86,19 +86,19 @@ const groups = [
 		{ id: 'move', name: 'Move Tool', key: 'V', tool: 'select', icon: I.move },
 	]},
 	{ members: [
-		{ id: 'rect_marquee', name: 'Rectangular Marquee Tool', key: 'M', tool: 'selection', icon: I.rect_marquee },
-		{ id: 'ellipse_marquee', name: 'Elliptical Marquee Tool', key: 'M', tool: null, icon: I.ellipse_marquee },
-		{ id: 'row_marquee', name: 'Single Row Marquee Tool', key: '', tool: null, icon: I.row_marquee },
-		{ id: 'col_marquee', name: 'Single Column Marquee Tool', key: '', tool: null, icon: I.col_marquee },
+		{ id: 'rect_marquee', name: 'Rectangular Marquee Tool', key: 'M', tool: 'ps_select', preset: { mode: 'rect' }, icon: I.rect_marquee },
+		{ id: 'ellipse_marquee', name: 'Elliptical Marquee Tool', key: 'M', tool: 'ps_select', preset: { mode: 'ellipse' }, icon: I.ellipse_marquee },
+		{ id: 'row_marquee', name: 'Single Row Marquee Tool', key: '', tool: 'ps_select', preset: { mode: 'row' }, icon: I.row_marquee },
+		{ id: 'col_marquee', name: 'Single Column Marquee Tool', key: '', tool: 'ps_select', preset: { mode: 'col' }, icon: I.col_marquee },
 	]},
 	{ members: [
-		{ id: 'lasso', name: 'Lasso Tool', key: 'L', tool: null, icon: I.lasso },
-		{ id: 'polygon_lasso', name: 'Polygonal Lasso Tool', key: 'L', tool: null, icon: I.polygon_lasso },
+		{ id: 'lasso', name: 'Lasso Tool', key: 'L', tool: 'ps_select', preset: { mode: 'lasso' }, icon: I.lasso },
+		{ id: 'polygon_lasso', name: 'Polygonal Lasso Tool', key: 'L', tool: 'ps_select', preset: { mode: 'polygon' }, icon: I.polygon_lasso },
 		{ id: 'magnetic_lasso', name: 'Magnetic Lasso Tool', key: 'L', tool: null, icon: I.magnetic_lasso },
 	]},
 	{ members: [
 		{ id: 'quick_selection', name: 'Quick Selection Tool', key: 'W', tool: null, icon: I.quick_selection },
-		{ id: 'magic_wand', name: 'Magic Wand Tool', key: 'W', tool: null, icon: I.magic_wand },
+		{ id: 'magic_wand', name: 'Magic Wand Tool', key: 'W', tool: 'ps_select', preset: { mode: 'wand' }, icon: I.magic_wand },
 	]},
 	{ separator: true, members: [
 		{ id: 'crop', name: 'Crop Tool', key: 'C', tool: 'crop', icon: I.crop },

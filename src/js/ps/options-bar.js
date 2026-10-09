@@ -53,7 +53,20 @@ const IC = {
 };
 
 /** layouts keyed by CS6 tool id (tools-def.js) */
-const SELECTION_OPS = { type: 'icons', items: [{ icon: IC.sel_new, title: 'New selection', active: true, bind_const: true }, { icon: IC.sel_add, title: 'Add to selection' }, { icon: IC.sel_sub, title: 'Subtract from selection' }, { icon: IC.sel_int, title: 'Intersect with selection' }] };
+const SELECTION_OPS = { type: 'icons', items: [
+	{ icon: IC.sel_new, title: 'New selection', bind: 'op', bind_value: 'new' },
+	{ icon: IC.sel_add, title: 'Add to selection', bind: 'op', bind_value: 'add' },
+	{ icon: IC.sel_sub, title: 'Subtract from selection', bind: 'op', bind_value: 'subtract' },
+	{ icon: IC.sel_int, title: 'Intersect with selection', bind: 'op', bind_value: 'intersect' },
+] };
+const LASSO_LAYOUT = [
+	SELECTION_OPS,
+	{ type: 'sep' },
+	{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
+	{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
+	{ type: 'sep' },
+	{ type: 'button', text: 'Refine Edge...' },
+];
 const BRUSH_COMMON = [
 	{ type: 'brush', bind: 'size' },
 	{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
@@ -110,12 +123,39 @@ const LAYOUTS = {
 	rect_marquee: [
 		SELECTION_OPS,
 		{ type: 'sep' },
-		{ type: 'num', label: 'Feather:', unit: 'px', value: 0, width: 40 },
+		{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
 		{ type: 'check', label: 'Anti-alias', value: false, always_disabled: true },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Style:', values: ['Normal', 'Fixed Ratio', 'Fixed Size'], value: 'Normal' },
 		{ type: 'num', label: 'Width:', width: 46 },
 		{ type: 'num', label: 'Height:', width: 46 },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Refine Edge...' },
+	],
+	ellipse_marquee: [
+		SELECTION_OPS,
+		{ type: 'sep' },
+		{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
+		{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Style:', values: ['Normal', 'Fixed Ratio', 'Fixed Size'], value: 'Normal' },
+		{ type: 'num', label: 'Width:', width: 46 },
+		{ type: 'num', label: 'Height:', width: 46 },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Refine Edge...' },
+	],
+	row_marquee: [SELECTION_OPS, { type: 'sep' }, { type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 }],
+	col_marquee: [SELECTION_OPS, { type: 'sep' }, { type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 }],
+	lasso: LASSO_LAYOUT,
+	polygon_lasso: LASSO_LAYOUT,
+	magic_wand: [
+		SELECTION_OPS,
+		{ type: 'sep' },
+		{ type: 'select', label: 'Sample Size:', values: ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'], value: 'Point Sample' },
+		{ type: 'num', label: 'Tolerance:', bind: 'tolerance', width: 40 },
+		{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
+		{ type: 'check', label: 'Contiguous', bind: 'contiguous' },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 		{ type: 'sep' },
 		{ type: 'button', text: 'Refine Edge...' },
 	],

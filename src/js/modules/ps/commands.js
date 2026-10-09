@@ -32,16 +32,15 @@ class Ps_commands_class {
 	noop() {
 	}
 
-	get_selection_tool() {
-		return app.GUI.GUI_tools.tools_modules.selection.object;
+	/**
+	 * the active selection's bounding box in document pixels, or null
+	 */
+	get_selection() {
+		return app.GUI.Ps_workspace.Selection.bounds;
 	}
 
-	get_selection() {
-		var selection = this.get_selection_tool().selection;
-		if (selection == null || selection.width == null || selection.width == 0 || selection.height == 0) {
-			return null;
-		}
-		return selection;
+	selection() {
+		return app.GUI.Ps_workspace.Selection;
 	}
 
 	require_image_layer() {
@@ -64,23 +63,6 @@ class Ps_commands_class {
 		canvas.getContext('2d').drawImage(layer.link, 0, 0);
 		return canvas;
 	}
-
-	/**
-	 * selection rectangle converted to the active layer's own pixel space
-	 */
-	selection_in_layer(selection) {
-		var layer = config.layer;
-		var rx = layer.width_original / layer.width;
-		var ry = layer.height_original / layer.height;
-		return {
-			x: (selection.x - layer.x) * rx,
-			y: (selection.y - layer.y) * ry,
-			width: selection.width * rx,
-			height: selection.height * ry,
-		};
-	}
-
-	// ---------- Edit ----------
 
 	/**
 	 * CS6 Ctrl+Z: undoes the last step, pressed again redoes it (single toggle).
@@ -112,25 +94,26 @@ class Ps_commands_class {
 	}
 
 	async cut() {
-		if (this.get_selection() == null) {
+		if (!this.selection().has()) {
 			alertify.error('Could not complete the Cut command because the selected area is empty.');
 			return;
 		}
-		await app.GUI.modules['edit/copy'].copy_to_clipboard();
+		await this.copy();
 		this.clear();
 	}
 
 	clear() {
-		var selection = this.get_selection();
-		if (selection == null) {
+		var sel = this.selection();
+		if (!sel.has()) {
 			return;
 		}
 		if (!this.require_image_layer()) {
 			return;
 		}
 		var canvas = this.layer_canvas();
-		var area = this.selection_in_layer(selection);
-		canvas.getContext('2d').clearRect(area.x, area.y, area.width, area.height);
+		var ctx = canvas.getContext('2d');
+		ctx.globalCompositeOperation = 'destination-out';
+		ctx.drawImage(sel.mask_for_layer(config.layer), 0, 0);
 		app.State.do_action(
 			new app.Actions.Bundle_action('clear', 'Clear', [
 				new app.Actions.Update_layer_image_action(canvas)
@@ -169,21 +152,76 @@ class Ps_commands_class {
 		}
 		var canvas = this.layer_canvas();
 		var ctx = canvas.getContext('2d');
+		var paint = document.createElement('canvas');
+		paint.width = canvas.width;
+		paint.height = canvas.height;
+		var pctx = paint.getContext('2d');
+		pctx.fillStyle = color;
+		pctx.fillRect(0, 0, paint.width, paint.height);
+		var sel = this.selection();
+		if (sel.has()) {
+			pctx.globalCompositeOperation = 'destination-in';
+			pctx.drawImage(sel.mask_for_layer(config.layer), 0, 0);
+		}
 		ctx.globalAlpha = alpha;
-		ctx.fillStyle = color;
-		var selection = this.get_selection();
-		if (selection) {
-			var area = this.selection_in_layer(selection);
-			ctx.fillRect(area.x, area.y, area.width, area.height);
-		}
-		else {
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-		}
+		ctx.drawImage(paint, 0, 0);
 		app.State.do_action(
 			new app.Actions.Bundle_action('fill', description, [
 				new app.Actions.Update_layer_image_action(canvas)
 			])
 		);
+	}
+
+	/**
+	 * the selected pixels of the active layer as a document-positioned canvas
+	 * (or of all visible layers when merged)
+	 */
+	selected_pixels(merged) {
+		var sel = this.selection();
+		var source;
+		if (merged) {
+			source = document.createElement('canvas');
+			source.width = config.WIDTH;
+			source.height = config.HEIGHT;
+			app.Layers.convert_layers_to_canvas(source.getContext('2d'), null, false);
+		}
+		else {
+			source = app.Layers.convert_layer_to_canvas(config.layer.id, false, false);
+		}
+		sel.clip_document_canvas(source);
+		var b = sel.bounds;
+		var out = document.createElement('canvas');
+		out.width = b.width;
+		out.height = b.height;
+		out.getContext('2d').drawImage(source, -b.x, -b.y);
+		return { canvas: out, x: b.x, y: b.y };
+	}
+
+	/**
+	 * CS6 Copy / Copy Merged: the selected pixels go to the clipboard
+	 */
+	async copy(merged) {
+		var sel = this.selection();
+		if (!sel.has()) {
+			if (merged === true) {
+				alertify.error('Could not complete the Copy Merged command because the selected area is empty.');
+				return;
+			}
+			//no selection: copy the whole layer (miniPaint behaviour, Photopea does the same)
+			return app.GUI.modules['edit/copy'].copy_to_clipboard();
+		}
+		var part = this.selected_pixels(merged === true);
+		this.clipboard = part;
+		try {
+			var blob = await new Promise((resolve) => part.canvas.toBlob(resolve));
+			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+		} catch (e) {
+			//system clipboard unavailable (permissions/http): internal clipboard still works
+		}
+	}
+
+	copy_merged() {
+		return this.copy(true);
 	}
 
 	free_transform() {
@@ -270,73 +308,72 @@ class Ps_commands_class {
 		}
 		var actions = [
 			new app.Actions.Prepare_canvas_action('undo'),
-			new app.Actions.Reset_selection_action(this.get_selection_tool().selection),
 		];
 		for (var layer of config.layers) {
 			if (layer.x != null && layer.y != null) {
 				actions.push(new app.Actions.Update_layer_action(layer.id, {
-					x: layer.x - Math.round(s.x),
-					y: layer.y - Math.round(s.y),
+					x: layer.x - s.x,
+					y: layer.y - s.y,
 				}));
 			}
 		}
-		actions.push(new app.Actions.Update_config_action({WIDTH: Math.round(s.width), HEIGHT: Math.round(s.height)}));
+		actions.push(new app.Actions.Update_config_action({WIDTH: s.width, HEIGHT: s.height}));
 		actions.push(new app.Actions.Prepare_canvas_action('do'));
-		app.State.do_action(new app.Actions.Bundle_action('crop', 'Crop', actions));
+		var sel = this.selection();
+		app.State.do_action(new app.Actions.Bundle_action('crop', 'Crop', actions)).then(() => {
+			sel.set_mask_direct(null);
+			sel.last_mask = null;
+		});
 	}
 
 	// ---------- Layer ----------
 
 	layer_via_copy() {
-		var selection = this.get_selection();
-		if (selection == null) {
+		if (!this.selection().has()) {
 			app.GUI.modules['layer/duplicate'].duplicate();
 			return;
 		}
 		if (!this.require_image_layer()) {
 			return;
 		}
-		var area = this.selection_in_layer(selection);
-		var canvas = document.createElement('canvas');
-		canvas.width = Math.max(1, Math.round(area.width));
-		canvas.height = Math.max(1, Math.round(area.height));
-		canvas.getContext('2d').drawImage(config.layer.link, -area.x, -area.y);
-		var params = {
-			x: Math.round(selection.x),
-			y: Math.round(selection.y),
-			width: Math.round(selection.width),
-			height: Math.round(selection.height),
-			width_original: canvas.width,
-			height_original: canvas.height,
-			type: 'image',
-			data: canvas.toDataURL('image/png'),
-		};
-		app.State.do_action(
+		var part = this.selected_pixels(false);
+		return app.State.do_action(
 			new app.Actions.Bundle_action('layer_via_copy', 'Layer Via Copy', [
-				new app.Actions.Insert_layer_action(params, false),
-				new app.Actions.Reset_selection_action(this.get_selection_tool().selection),
+				new app.Actions.Insert_layer_action({
+					x: part.x, y: part.y,
+					width: part.canvas.width, height: part.canvas.height,
+					width_original: part.canvas.width, height_original: part.canvas.height,
+					type: 'image',
+					data: part.canvas.toDataURL('image/png'),
+				}, false),
 			])
 		);
 	}
 
 	async layer_via_cut() {
-		var selection = this.get_selection();
-		if (selection == null) {
+		if (!this.selection().has()) {
 			alertify.error('Could not complete the Layer Via Cut command because the selected area is empty.');
 			return;
 		}
 		if (!this.require_image_layer()) {
 			return;
 		}
-		//copy first (layer_via_copy reads the pixels), then clear them on the source layer
 		var source = config.layer;
-		var source_canvas = this.layer_canvas();
-		var area = this.selection_in_layer(selection);
-		source_canvas.getContext('2d').clearRect(area.x, area.y, area.width, area.height);
-		this.layer_via_copy();
-		app.State.do_action(
+		var part = this.selected_pixels(false);
+		var canvas = this.layer_canvas();
+		var ctx = canvas.getContext('2d');
+		ctx.globalCompositeOperation = 'destination-out';
+		ctx.drawImage(this.selection().mask_for_layer(source), 0, 0);
+		return app.State.do_action(
 			new app.Actions.Bundle_action('layer_via_cut', 'Layer Via Cut', [
-				new app.Actions.Update_layer_image_action(source_canvas, source.id)
+				new app.Actions.Update_layer_image_action(canvas, source.id),
+				new app.Actions.Insert_layer_action({
+					x: part.x, y: part.y,
+					width: part.canvas.width, height: part.canvas.height,
+					width_original: part.canvas.width, height_original: part.canvas.height,
+					type: 'image',
+					data: part.canvas.toDataURL('image/png'),
+				}, false),
 			])
 		);
 	}
@@ -477,28 +514,42 @@ class Ps_commands_class {
 	// ---------- Select ----------
 
 	deselect() {
-		var selection = this.get_selection();
-		if (selection == null) {
-			return;
-		}
-		this.last_selection = JSON.parse(JSON.stringify(selection));
-		app.State.do_action(
-			new app.Actions.Reset_selection_action(this.get_selection_tool().selection)
-		);
+		this.selection().deselect();
 	}
 
-	reselect() {
-		if (this.last_selection == null) {
+	select_all() {
+		this.selection().select_all();
+	}
+
+	select_inverse() {
+		this.selection().inverse();
+	}
+
+	/**
+	 * Select > Modify > Border / Smooth / Expand / Contract / Feather
+	 */
+	modify_selection(kind) {
+		var sel = this.selection();
+		if (!sel.has()) {
 			return;
 		}
-		var s = this.last_selection;
-		var tool = this.get_selection_tool();
-		var actions = [];
-		if (config.TOOL.name != 'selection') {
-			actions.push(new app.Actions.Activate_tool_action('selection'));
-		}
-		actions.push(new app.Actions.Set_selection_action(s.x, s.y, s.width, s.height, tool.selection));
-		app.State.do_action(new app.Actions.Bundle_action('reselect', 'Reselect', actions));
+		var titles = { border: ['Border Selection', 'Width:'], expand: ['Expand Selection', 'Expand By:'],
+			contract: ['Contract Selection', 'Contract By:'], feather: ['Feather Selection', 'Feather Radius:'] };
+		var t = titles[kind];
+		this.POP.show({
+			title: t[0],
+			params: [{ name: 'amount', title: t[1] + ' (pixels)', value: kind == 'feather' ? 5 : 5, range: [1, 100] }],
+			on_finish: (params) => sel.modify(kind, params.amount),
+		});
+	}
+
+	modify_border() { this.modify_selection('border'); }
+	modify_expand() { this.modify_selection('expand'); }
+	modify_contract() { this.modify_selection('contract'); }
+	modify_feather() { this.modify_selection('feather'); }
+
+	reselect() {
+		this.selection().reselect();
 	}
 
 	// ---------- Filter ----------
