@@ -39,6 +39,56 @@ function is_background(layer) {
 	return layer.name == 'Background' && layers[layers.length - 1] === layer;
 }
 
+/**
+ * the selected pixels of `layer` lifted out: { piece, hole } (hole keeps them when copying)
+ */
+function lift(layer, selection, copy) {
+	var w = layer.width_original, h = layer.height_original;
+	var base = canvas_of(w, h);
+	base.getContext('2d').drawImage(layer.link, 0, 0);
+	var mask = selection.mask_for_layer(layer);
+	var piece = canvas_of(w, h);
+	var pctx = piece.getContext('2d');
+	pctx.drawImage(base, 0, 0);
+	pctx.globalCompositeOperation = 'destination-in';
+	pctx.drawImage(mask, 0, 0);
+	var hole = canvas_of(w, h);
+	var hctx = hole.getContext('2d');
+	hctx.drawImage(base, 0, 0);
+	if (!copy) {
+		hctx.globalCompositeOperation = 'destination-out';
+		hctx.drawImage(mask, 0, 0);
+		if (is_background(layer)) {
+			hctx.globalCompositeOperation = 'destination-over';
+			hctx.fillStyle = config.BG_COLOR;
+			hctx.fillRect(0, 0, w, h);
+		}
+	}
+	return { piece: piece, hole: hole, w: w, h: h, sx: w / layer.width, sy: h / layer.height };
+}
+
+/**
+ * Move tool + arrow keys: nudge the selected pixels (and the selection) by dx, dy
+ */
+function nudge_selected_pixels(dx, dy) {
+	var selection = app.GUI.Ps_workspace.Selection;
+	ensure_pixel_layer();
+	var layer = config.layer;
+	if (!selection.has() || !layer || layer.type != 'image' || !layer.link) return false;
+	var j = lift(layer, selection, false);
+	var out = canvas_of(j.w, j.h);
+	var ctx = out.getContext('2d');
+	ctx.drawImage(j.hole, 0, 0);
+	ctx.drawImage(j.piece, Math.round(dx * j.sx), Math.round(dy * j.sy));
+	var moved_mask = canvas_of(selection.mask.width, selection.mask.height);
+	moved_mask.getContext('2d').drawImage(selection.mask, dx, dy);
+	app.State.do_action(new app.Actions.Bundle_action('move', 'Nudge', [
+		new app.Actions.Update_layer_image_action(out, layer.id),
+		new Move_selection_action(selection, moved_mask),
+	]));
+	return true;
+}
+
 function install_move_selection() {
 	var job = null;
 
@@ -138,4 +188,4 @@ function install_move_selection() {
 	}, true);
 }
 
-export { install_move_selection };
+export { install_move_selection, nudge_selected_pixels };

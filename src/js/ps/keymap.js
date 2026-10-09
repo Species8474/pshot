@@ -9,6 +9,7 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import { nudge_selected_pixels } from './move-selection.js';
 import menuDefinition from './../config-menu.js';
 import { run_target } from './adjustments-def.js';
 
@@ -129,6 +130,29 @@ class Ps_keymap_class {
 			else {
 				crop.selection = { x: null, y: null, width: null, height: null };
 				config.need_render = true;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
+		//arrow keys with a selection: the Move tool nudges the selected pixels, the
+		//selection tools nudge the outline (1 px, Shift 10 px)
+		var arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+		if (arrows[event.key] && !ctrl && !event.altKey && this.workspace.Selection.has()
+			&& (config.TOOL.name == 'select' || config.TOOL.name == 'ps_select') && !this.workspace.Transform.active()) {
+			var step = event.shiftKey ? 10 : 1;
+			var d = arrows[event.key];
+			if (config.TOOL.name == 'select') {
+				nudge_selected_pixels(d[0] * step, d[1] * step);
+			}
+			else {
+				var Sel = this.workspace.Selection;
+				var moved = document.createElement('canvas');
+				moved.width = Sel.mask.width;
+				moved.height = Sel.mask.height;
+				moved.getContext('2d').drawImage(Sel.mask, d[0] * step, d[1] * step);
+				Sel.commit(moved, 'Nudge Selection');
 			}
 			event.preventDefault();
 			event.stopPropagation();
