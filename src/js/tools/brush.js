@@ -5,6 +5,28 @@ import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 
+/**
+ * Color Dynamics: the dab color from the foreground/background mix and the
+ * hue / saturation / brightness jitter and purity (r(n) = per-dab random 0..1)
+ */
+function dab_color(fg, bg, p, r) {
+	var h2 = (c) => [parseInt(c.substr(1, 2), 16), parseInt(c.substr(3, 2), 16), parseInt(c.substr(5, 2), 16)];
+	var a = h2(fg), b = h2(bg), t = (p.fgbg_jitter || 0) / 100 * r(11);
+	var rgb = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t].map(v => v / 255);
+	var mx = Math.max.apply(null, rgb), mn = Math.min.apply(null, rgb), d = mx - mn, h = 0;
+	if (d) h = mx == rgb[0] ? ((rgb[1] - rgb[2]) / d) % 6 : (mx == rgb[1] ? (rgb[2] - rgb[0]) / d + 2 : (rgb[0] - rgb[1]) / d + 4);
+	h = h * 60;
+	var s = mx ? d / mx : 0, v = mx;
+	h += (r(12) * 2 - 1) * (p.hue_jitter || 0) / 100 * 180;
+	s = Math.max(0, Math.min(1, s * (1 + (p.purity || 0) / 100) + (r(13) * 2 - 1) * (p.sat_jitter || 0) / 100));
+	v = Math.max(0, Math.min(1, v + (r(14) * 2 - 1) * (p.bright_jitter || 0) / 100));
+	h = ((h % 360) + 360) % 360;
+	var c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+	var o = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+	//quantized so the stamp cache stays useful
+	return '#' + o.map(q => Math.max(0, Math.min(255, Math.round((q + m) * 255 / 8) * 8)).toString(16).padStart(2, '0')).join('');
+}
+
 class Brush_class extends Base_tools_class {
 
 	constructor(ctx) {
@@ -214,7 +236,7 @@ class Brush_class extends Base_tools_class {
 			this.layer = {
 				type: this.name,
 				data: [[]],
-				params: this.clone(this.getParams()),
+				params: Object.assign(this.clone(this.getParams()), { bg_color: config.BG_COLOR }),
 				status: 'draft',
 				render_function: [this.name, 'render'],
 				x: 0,
@@ -350,7 +372,8 @@ class Brush_class extends Base_tools_class {
 	 */
 	use_dabs(params) {
 		return (params.spacing != null && params.spacing != 25) || (params.roundness != null && params.roundness != 100) || params.angle
-			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100);
+			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100)
+			|| params.angle_jitter > 0 || params.roundness_jitter > 0 || params.count > 1 || params.color_dynamics || params.noise || params.wet_edges;
 	}
 
 	/**
@@ -359,7 +382,7 @@ class Brush_class extends Base_tools_class {
 	stamp(size, params, color, k) {
 		var hardness = params.hardness == null ? 100 : params.hardness;
 		var roundness = (params.roundness == null ? 100 : params.roundness) / 100;
-		var key = [Math.round(size * k), hardness, roundness, params.angle || 0, color].join('|');
+		var key = [Math.round(size * k), hardness, roundness, params.angle || 0, color, params.noise ? 1 : 0, params.wet_edges ? 1 : 0].join('|');
 		this.stamp_cache = this.stamp_cache || {};
 		if (this.stamp_cache[key]) return this.stamp_cache[key];
 		var d = Math.max(2, Math.ceil(size * k) + 2);
@@ -378,8 +401,25 @@ class Brush_class extends Base_tools_class {
 		g.beginPath();
 		g.arc(0, 0, Math.max(0.5, r), 0, Math.PI * 2);
 		g.fill();
+		if (params.noise || params.wet_edges) {
+			//Noise: grain in the soft edge; Wet Edges: paint collects at the rim
+			g.setTransform(1, 0, 0, 1, 0, 0);
+			var img = g.getImageData(0, 0, d, d), px = img.data;
+			for (var i = 3; i < px.length; i += 4) {
+				var a = px[i] / 255;
+				if (!a) continue;
+				if (params.wet_edges) {
+					var q = (i - 3) / 4, rn = Math.hypot(q % d - d / 2 + 0.5, Math.floor(q / d) - d / 2 + 0.5) / Math.max(0.5, r);
+					var t = Math.max(0, Math.min(1, (rn - 0.55) / 0.4));
+					a *= 0.4 + 0.6 * t * t * (3 - 2 * t);
+				}
+				if (params.noise && a < 0.999) a = Math.max(0, Math.min(1, a + (Math.random() - 0.5) * (1 - a) * 1.6));
+				px[i] = a * 255;
+			}
+			g.putImageData(img, 0, 0);
+		}
 		var keys = Object.keys(this.stamp_cache);
-		if (keys.length > 64) delete this.stamp_cache[keys[0]];
+		if (keys.length > 256) delete this.stamp_cache[keys[0]];
 		this.stamp_cache[key] = c;
 		return c;
 	}
@@ -392,15 +432,35 @@ class Brush_class extends Base_tools_class {
 		var rnd = (i, s) => { var v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v); };
 		var hex = color.length == 4 ? '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3] : color.substr(0, 7);
 		var dab = 0;
-		var place = (x, y, base) => {
+		var dynamic = params.angle_jitter > 0 || params.roundness_jitter > 0;
+		var colored = params.color_dynamics && (params.fgbg_jitter > 0 || params.hue_jitter > 0 || params.sat_jitter > 0 || params.bright_jitter > 0 || params.purity);
+		var bg = (params.bg_color || '#ffffff').substr(0, 7);
+		var one = (x, y, base, dir) => {
 			var sz = base * (1 - (params.size_jitter || 0) / 100 * rnd(dab, 1));
 			var sc = (params.scatter || 0) / 100 * base;
-			if (sc) { x += (rnd(dab, 2) * 2 - 1) * sc; y += (rnd(dab, 3) * 2 - 1) * sc; }
+			if (sc) {
+				if (params.both_axes) { x += (rnd(dab, 2) * 2 - 1) * sc; y += (rnd(dab, 3) * 2 - 1) * sc; }
+				else { var off = (rnd(dab, 2) * 2 - 1) * sc; x += -dir[1] * off; y += dir[0] * off; }
+			}
 			var alpha = flow * (1 - (params.opacity_jitter || 0) / 100 * rnd(dab, 4));
-			var st = this.stamp(sz, params, hex, k);
+			var p = params;
+			if (dynamic) {
+				//Shape Dynamics: angle / roundness jitter (quantized so stamps are reused)
+				var ang = (params.angle || 0) + Math.round((rnd(dab, 5) * 2 - 1) * (params.angle_jitter || 0) / 100 * 180 / 5) * 5;
+				var rmin = params.min_roundness == null ? 25 : params.min_roundness;
+				var rd = (params.roundness == null ? 100 : params.roundness) * (1 - (params.roundness_jitter || 0) / 100 * rnd(dab, 6) * (1 - rmin / 100));
+				p = Object.assign({}, params, { angle: ang, roundness: Math.round(rd / 5) * 5 });
+			}
+			var col = colored ? dab_color(hex, bg, params, (n) => rnd(dab, n)) : hex;
+			var st = this.stamp(sz, p, col, k);
 			ctx.globalAlpha = alpha;
 			ctx.drawImage(st, x - st.width / k / 2, y - st.height / k / 2, st.width / k, st.height / k);
 			dab++;
+		};
+		var place = (x, y, base, dir) => {
+			//Scattering count: several dabs per spacing step
+			var n = Math.max(1, Math.round((params.count || 1) * (1 - (params.count_jitter || 0) / 100 * rnd(dab, 7))));
+			for (var c = 0; c < n; c++) one(x, y, base, dir || [1, 0]);
 		};
 		place(group[0][0], group[0][1], group[0][2] || params.size);
 		var carry = 0;
@@ -411,8 +471,9 @@ class Brush_class extends Base_tools_class {
 			var step = Math.max(0.5, base * spacing / 100);
 			var len = Math.hypot(b[0] - a[0], b[1] - a[1]);
 			var t = step - carry;
+			var dir = len ? [(b[0] - a[0]) / len, (b[1] - a[1]) / len] : [1, 0];
 			while (t <= len) {
-				place(a[0] + (b[0] - a[0]) * t / len, a[1] + (b[1] - a[1]) * t / len, base);
+				place(a[0] + (b[0] - a[0]) * t / len, a[1] + (b[1] - a[1]) * t / len, base, dir);
 				t += step;
 			}
 			carry = len - (t - step);
