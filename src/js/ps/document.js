@@ -483,7 +483,23 @@ function text_to_psd(layer) {
 		styleRuns: runs,
 		paragraphStyle: { justification: halign },
 		shapeType: 'point',
+		warp: warp_to_psd(layer.ps_warp),
 	};
+}
+
+/**
+ * Warp Text: pshot style names <-> PSD warp styles (camelCase)
+ */
+function warp_to_psd(w) {
+	if (!w || !w.style || w.style == 'None') return undefined;
+	var style = w.style.replace(/ (\w)/g, (m, c) => c.toUpperCase()).replace(/^\w/, c => c.toLowerCase());
+	return { style: style, value: w.bend, perspective: w.h, perspectiveOther: w.v, rotate: w.vertical ? 'vertical' : 'horizontal' };
+}
+
+function warp_from_psd(w) {
+	if (!w || !w.style || w.style == 'none' || w.style == 'custom' || w.style == 'cylinder') return null;
+	var style = w.style.replace(/([A-Z])/g, ' $1').replace(/^\w/, c => c.toUpperCase());
+	return { style: style, bend: w.value || 0, h: w.perspective || 0, v: w.perspectiveOther || 0, vertical: w.rotate == 'vertical' };
 }
 
 /**
@@ -541,6 +557,7 @@ function text_from_psd(child) {
 		rotate: 0,
 		is_vector: true,
 		data: lines,
+		ps_warp: warp_from_psd(t.warp),
 	};
 }
 

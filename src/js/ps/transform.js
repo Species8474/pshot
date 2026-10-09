@@ -23,25 +23,71 @@ import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 const HANDLES = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
 
-//CS6 warp styles: (x, y) in -1..1, bend b in -1..1 -> displaced (x, y)
+//CS6 warp styles. X runs -1..1 across the bounds; Y uses the same unit, so it
+//runs -a..a where a = height / width (t = 0 top .. 1 bottom); b = bend -1..1
 const WARP_STYLES = {
-	'None': (x, y) => [x, y],
-	'Arc': (x, y, b) => [x * (1 - b * 0.25 * y), y - b * (1 - x * x)],
-	'Arc Lower': (x, y, b) => [x, y + b * (1 - x * x) * (y + 1) / 2 * 1.4],
-	'Arc Upper': (x, y, b) => [x, y - b * (1 - x * x) * (1 - y) / 2 * 1.4],
-	'Arch': (x, y, b) => [x, y - b * (1 - x * x)],
-	'Bulge': (x, y, b) => [x, y + b * (1 - x * x) * y * 0.7],
-	'Shell Lower': (x, y, b) => [x * (1 - b * 0.4 * (1 - y) / 2), y + b * (1 - x * x) * (y + 1) / 2 * 0.8],
-	'Shell Upper': (x, y, b) => [x * (1 - b * 0.4 * (y + 1) / 2), y - b * (1 - x * x) * (1 - y) / 2 * 0.8],
-	'Flag': (x, y, b, PI) => [x, y - b * Math.sin(PI * x) * 0.5],
-	'Wave': (x, y, b, PI) => [x, y - b * Math.sin(PI * x) * 0.5 * (0.6 + 0.4 * y)],
-	'Fish': (x, y, b, PI) => [x, y * (1 + b * 0.5 * x) - b * Math.sin(PI * x) * 0.3],
-	'Rise': (x, y, b, PI) => [x, y - b * Math.sin(x * PI / 2) * 0.8],
-	'Fisheye': (x, y, b) => { var r2 = Math.min(1, (x * x + y * y) / 2), f = 1 + b * 0.6 * (1 - r2); return [x * f, y * f]; },
-	'Inflate': (x, y, b) => [x * (1 + b * 0.35 * (1 - y * y)), y * (1 + b * 0.35 * (1 - x * x))],
-	'Squeeze': (x, y, b) => [x * (1 - b * 0.35 * (1 - y * y)), y * (1 + b * 0.35 * (1 - x * x))],
-	'Twist': (x, y, b, PI) => { var r = Math.min(1, Math.sqrt(x * x + y * y) / Math.SQRT2), a = b * PI / 2 * (1 - r); return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; },
+	'None': (X, Y) => [X, Y],
+	'Arc': (X, Y, b, a) => [X * (1 - b * 0.25 * Y / Math.max(1, a)), Y - b * (1 - X * X) * 0.5],
+	'Arc Lower': (X, Y, b, a, t) => [X, Y + b * (1 - X * X) * t * 0.5],
+	'Arc Upper': (X, Y, b, a, t) => [X, Y - b * (1 - X * X) * (1 - t) * 0.5],
+	'Arch': (X, Y, b) => [X, Y - b * (1 - X * X) * 0.5],
+	'Bulge': (X, Y, b) => [X, Y * (1 + b * (1 - X * X) * 0.7)],
+	'Shell Lower': (X, Y, b, a, t) => [X * (1 - b * 0.4 * (1 - t)), Y + b * (1 - X * X) * t * 0.4],
+	'Shell Upper': (X, Y, b, a, t) => [X * (1 - b * 0.4 * t), Y - b * (1 - X * X) * (1 - t) * 0.4],
+	'Flag': (X, Y, b) => [X, Y - b * Math.sin(Math.PI * X) * 0.3],
+	'Wave': (X, Y, b, a, t) => [X, Y - b * Math.sin(Math.PI * X) * 0.3 * (0.8 + 0.4 * t)],
+	'Fish': (X, Y, b) => [X, Y * (1 + b * 0.5 * X) - b * Math.sin(Math.PI * X) * 0.2],
+	'Rise': (X, Y, b) => [X, Y - b * Math.sin(X * Math.PI / 2) * 0.5],
+	'Fisheye': (X, Y, b, a) => { var r2 = Math.min(1, (X * X + Y * Y) / (1 + a * a)), f = 1 + b * 0.6 * (1 - r2); return [X * f, Y * f]; },
+	'Inflate': (X, Y, b, a) => [X * (1 + b * 0.35 * Math.min(1, a) * (1 - Y * Y / (a * a))), Y * (1 + b * 0.5 * (1 - X * X))],
+	'Squeeze': (X, Y, b, a) => [X * (1 - b * 0.35 * Math.min(1, a) * (1 - Y * Y / (a * a))), Y * (1 - b * 0.5 * (1 - X * X))],
+	'Twist': (X, Y, b, a) => { var r = Math.min(1, Math.sqrt((X * X + Y * Y) / (1 + a * a))), g = b * Math.PI / 2 * (1 - r); return [X * Math.cos(g) - Y * Math.sin(g), X * Math.sin(g) + Y * Math.cos(g)]; },
 };
+
+/**
+ * Warp style -> 4x4 Bezier patch over the quad q (TL TR BR BL): the style's
+ * displacement is sampled at thirds and fitted with an interpolating patch.
+ * bend, h, v in -100..100.
+ */
+function warp_grid(q, style, bend, h, v, vertical) {
+	var b = bend / 100, hd = h / 100, vd = v / 100;
+	var fn = WARP_STYLES[style] || ((x, y) => [x, y]);
+	var dist = (p, q2) => Math.hypot(p.x - q2.x, p.y - q2.y);
+	var width = (dist(q[0], q[1]) + dist(q[3], q[2])) / 2 || 1, height = (dist(q[0], q[3]) + dist(q[1], q[2])) / 2 || 1;
+	var a = vertical ? width / height : height / width;
+	var map = (u, w) => {
+		//local -1..1 coordinates, the style works horizontally
+		var x = u * 2 - 1, y = w * 2 - 1;
+		if (vertical) { var t = x; x = y; y = t; }
+		var r = fn(x, y * a, b, a, (y + 1) / 2);
+		x = r[0]; y = r[1] / a;
+		if (vertical) { var t2 = x; x = y; y = t2; }
+		//horizontal / vertical distortion (perspective-like)
+		y *= 1 + hd * x * 0.5;
+		x *= 1 + vd * y * 0.5;
+		var U = (x + 1) / 2, V = (y + 1) / 2;
+		var top = { x: q[0].x + (q[1].x - q[0].x) * U, y: q[0].y + (q[1].y - q[0].y) * U };
+		var bot = { x: q[3].x + (q[2].x - q[3].x) * U, y: q[3].y + (q[2].y - q[3].y) * U };
+		return { x: top.x + (bot.x - top.x) * V, y: top.y + (bot.y - top.y) * V };
+	};
+	//points at thirds -> Bezier control points
+	var fit = (p0, pa, pb, p3) => {
+		var A = { x: 27 * pa.x - 8 * p0.x - p3.x, y: 27 * pa.y - 8 * p0.y - p3.y };
+		var B = { x: 27 * pb.x - p0.x - 8 * p3.x, y: 27 * pb.y - p0.y - 8 * p3.y };
+		return [p0, { x: (2 * A.x - B.x) / 18, y: (2 * A.y - B.y) / 18 }, { x: (2 * B.x - A.x) / 18, y: (2 * B.y - A.y) / 18 }, p3];
+	};
+	var rows = [];
+	for (var j = 0; j < 4; j++) {
+		var pts = [0, 1, 2, 3].map(i => map(i / 3, j / 3));
+		rows.push(fit(pts[0], pts[1], pts[2], pts[3]));
+	}
+	var grid = new Array(16);
+	for (var i = 0; i < 4; i++) {
+		var col = fit(rows[0][i], rows[1][i], rows[2][i], rows[3][i]);
+		for (var k = 0; k < 4; k++) grid[k * 4 + i] = col[k];
+	}
+	return grid;
+}
 
 class Set_mask_action extends Base_action {
 	constructor(selection, mask) {
@@ -1000,8 +1046,7 @@ class Ps_transform_class {
 	}
 
 	/**
-	 * CS6 Warp styles (options bar): the style's displacement is sampled on the
-	 * bounds and fitted with the 4x4 Bezier patch. bend, h, v in -100..100.
+	 * CS6 Warp styles (options bar), relative to the bounds when warping began
 	 */
 	warp_preset(style, bend, h, v, vertical) {
 		var job = this.job;
@@ -1011,39 +1056,7 @@ class Ps_transform_class {
 		var c = this.corners(), q = [c[0], c[2], c[4], c[6]];
 		if (job.base_quad) q = job.base_quad;
 		else job.base_quad = q.map(p => ({ x: p.x, y: p.y }));
-		var b = bend / 100, hd = h / 100, vd = v / 100, PI = Math.PI;
-		var fn = WARP_STYLES[style] || ((x, y) => [x, y]);
-		var map = (u, w) => {
-			//local -1..1 coordinates, the style works horizontally
-			var x = u * 2 - 1, y = w * 2 - 1;
-			if (vertical) { var t = x; x = y; y = t; }
-			var r = fn(x, y, b, PI);
-			x = r[0]; y = r[1];
-			if (vertical) { var t2 = x; x = y; y = t2; }
-			//horizontal / vertical distortion (perspective-like)
-			y *= 1 + hd * x * 0.5;
-			x *= 1 + vd * y * 0.5;
-			var U = (x + 1) / 2, V = (y + 1) / 2;
-			var top = { x: q[0].x + (q[1].x - q[0].x) * U, y: q[0].y + (q[1].y - q[0].y) * U };
-			var bot = { x: q[3].x + (q[2].x - q[3].x) * U, y: q[3].y + (q[2].y - q[3].y) * U };
-			return { x: top.x + (bot.x - top.x) * V, y: top.y + (bot.y - top.y) * V };
-		};
-		//points at thirds -> Bezier control points (interpolating patch)
-		var fit = (p0, pa, pb, p3) => {
-			var A = { x: 27 * pa.x - 8 * p0.x - p3.x, y: 27 * pa.y - 8 * p0.y - p3.y };
-			var B = { x: 27 * pb.x - p0.x - 8 * p3.x, y: 27 * pb.y - p0.y - 8 * p3.y };
-			return [p0, { x: (2 * A.x - B.x) / 18, y: (2 * A.y - B.y) / 18 }, { x: (2 * B.x - A.x) / 18, y: (2 * B.y - A.y) / 18 }, p3];
-		};
-		var rows = [];
-		for (var j = 0; j < 4; j++) {
-			var pts = [0, 1, 2, 3].map(i => map(i / 3, j / 3));
-			rows.push(fit(pts[0], pts[1], pts[2], pts[3]));
-		}
-		var grid = new Array(16);
-		for (var i = 0; i < 4; i++) {
-			var col = fit(rows[0][i], rows[1][i], rows[2][i], rows[3][i]);
-			for (var k = 0; k < 4; k++) grid[k * 4 + i] = col[k];
-		}
+		var grid = warp_grid(q, style, bend, h, v, vertical);
 		job.warp = grid;
 		job.quad = null;
 		this.preview();
@@ -1151,4 +1164,5 @@ class Ps_transform_class {
 	}
 }
 
+export { warp_grid, draw_patch, draw_patch_exact, WARP_STYLES };
 export default Ps_transform_class;

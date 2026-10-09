@@ -202,7 +202,7 @@ const M = [
 		'-',
 		'Rasterize Type Layer|layer/raster.raster',
 		'Convert to Paragraph Text',
-		'Warp Text...',
+		'Warp Text...|ps/commands.warp_text',
 		'-',
 		['Font Preview Size', ['None', 'Small', 'Medium', 'Large', 'Extra Large', 'Huge']],
 		['Language Options', ['Latin and CJK Features', 'Middle Eastern Features']],

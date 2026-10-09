@@ -448,6 +448,12 @@ class Base_layers_class {
 			return;
 		}
 
+		//pshot: warped text (Type > Warp Text)
+		if (object.type == "text" && object.ps_warp && !object._ps_warping && this.Base_gui.Ps_workspace && this.Base_gui.Ps_workspace.Warp_text.active(object)) {
+			this.Base_gui.Ps_workspace.Warp_text.render(ctx, object);
+			return;
+		}
+
 		this.pre_render_object(ctx, object);
 
 		//example with canvas object - other types should overwrite this method

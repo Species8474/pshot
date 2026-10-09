@@ -529,7 +529,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'icons', items: [{ icon: IC.align_text_l, title: 'Left align text', ...text_align('left') }, { icon: IC.align_text_c, title: 'Center text', ...text_align('center') }, { icon: IC.align_text_r, title: 'Right align text', ...text_align('right') }] },
 		{ type: 'swatch', label: '', bind: 'fill', title: 'Set the text color' },
-		{ type: 'icon', icon: IC.warp, title: 'Create warped text' },
+		{ type: 'icon', icon: IC.warp, title: 'Create warped text', action: () => app.GUI.Ps_workspace.Warp_text.open() },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Character and Paragraph panels', action: () => app.GUI.Ps_workspace.toggle_panel('character') },
 	],
 	hand: [{ type: 'check', label: 'Scroll All Windows', value: false }, { type: 'sep' }, ...ZOOM_BUTTONS],
