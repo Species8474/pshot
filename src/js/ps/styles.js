@@ -416,6 +416,82 @@ class Ps_styles_class {
 		return out;
 	}
 
+	/**
+	 * Layer > Layer Style > Create Layer: every effect becomes a pixel layer with
+	 * the effect's blend mode (outer effects below the layer, inner ones above)
+	 */
+	async create_layers(layer) {
+		layer = layer || config.layer;
+		if (!layer || !this.has(layer)) return;
+		var s = layer.ps_styles;
+		var on = (k) => s[k] && s[k].enabled;
+		var W = config.WIDTH, H = config.HEIGHT;
+		//the layer's own pixels (masks applied, no effects)
+		var content = document.createElement('canvas');
+		content.width = W;
+		content.height = H;
+		var plain = Object.assign(Object.create(Object.getPrototypeOf(layer)), layer, { ps_styles: null, ps_fill: null });
+		app.Layers.render_object(content.getContext('2d'), plain);
+		var only = (k) => this.compose(content, { ps_styles: { [k]: s[k] }, ps_fill: 0 }, 1);
+		var name = layer.name;
+		var below = [], above = [];
+		if (on('drop_shadow')) below.push([name + "'s Drop Shadow", only('drop_shadow'), s.drop_shadow.blend || 'Multiply']);
+		if (on('outer_glow')) below.push([name + "'s Outer Glow", only('outer_glow'), s.outer_glow.blend || 'Screen']);
+		var bevel = on('bevel') ? this.bevel(content, s.bevel, 1) : null;
+		var style = bevel ? (s.bevel.style || 'Inner Bevel') : '';
+		var cut = (c, keep_inside) => {
+			var o = canvas_like(content), octx = o.getContext('2d');
+			octx.drawImage(c, 0, 0);
+			octx.globalCompositeOperation = keep_inside ? 'destination-in' : 'destination-out';
+			octx.drawImage(content, 0, 0);
+			return o;
+		};
+		if (bevel && style != 'Inner Bevel') {
+			below.push([name + "'s Outer Bevel Highlights", cut(bevel[0], false), s.bevel.highlight_blend || 'Screen']);
+			below.push([name + "'s Outer Bevel Shadows", cut(bevel[1], false), s.bevel.shadow_blend || 'Multiply']);
+		}
+		if (on('pattern_overlay')) above.push([name + "'s Pattern Fill", only('pattern_overlay'), s.pattern_overlay.blend || 'Normal']);
+		if (on('gradient_overlay')) above.push([name + "'s Gradient Fill", only('gradient_overlay'), s.gradient_overlay.blend || 'Normal']);
+		if (on('color_overlay')) above.push([name + "'s Color Fill", only('color_overlay'), s.color_overlay.blend || 'Normal']);
+		if (on('satin')) above.push([name + "'s Satin", only('satin'), s.satin.blend || 'Multiply']);
+		if (on('inner_glow')) above.push([name + "'s Inner Glow", only('inner_glow'), s.inner_glow.blend || 'Screen']);
+		if (on('inner_shadow')) above.push([name + "'s Inner Shadow", only('inner_shadow'), s.inner_shadow.blend || 'Multiply']);
+		if (bevel && style != 'Outer Bevel') {
+			above.push([name + "'s Inner Bevel Highlights", cut(bevel[0], true), s.bevel.highlight_blend || 'Screen']);
+			above.push([name + "'s Inner Bevel Shadows", cut(bevel[1], true), s.bevel.shadow_blend || 'Multiply']);
+		}
+		if (on('stroke')) {
+			var pos = s.stroke.position || 'Outside';
+			above.push([name + "'s " + (pos == 'Inside' ? 'Inner Stroke' : (pos == 'Center' ? 'Center Stroke' : 'Outer Stroke')), only('stroke'), s.stroke.blend || 'Normal']);
+		}
+		//pixel layers need an Image link
+		var image = async (c) => {
+			var img = new Image();
+			img.src = c.toDataURL();
+			await img.decode();
+			return img;
+		};
+		var specs = [];
+		for (var e of below.concat(above)) specs.push({ name: e[0], img: await image(e[1]), blend: e[2] });
+		var first_id = app.Layers.auto_increment;
+		var actions = specs.map(sp => new app.Actions.Insert_layer_action({
+			name: sp.name, type: 'image', link: sp.img, x: 0, y: 0, width: W, height: H, width_original: W, height_original: H,
+			composition: BLEND[sp.blend] || 'source-over', ps_parent: layer.ps_parent || null,
+		}, false));
+		actions.push(new app.Actions.Update_layer_action(layer.id, { ps_styles: {} }));
+		actions.push(new app.Actions.Select_layer_action(layer.id, true));
+		await app.State.do_action(new app.Actions.Bundle_action('create_layers', 'Create Layers', actions));
+		//restack: inner effects above the layer (last on top), outer ones below it
+		var made = specs.map((sp, i) => app.Layers.get_layer(first_id + i));
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var list = Groups.ordered().filter(l => !made.includes(l));
+		var at = list.indexOf(layer);
+		var above_layers = made.slice(below.length).reverse(), below_layers = made.slice(0, below.length).reverse();
+		list.splice(at, 1, ...above_layers, layer, ...below_layers);
+		await Groups.merge_into_last(Groups.restack_actions(list));
+		Groups.after_change();
+	}
+
 	enabled_names(layer) {
 		var s = layer.ps_styles || {};
 		return LIST.filter(([k]) => k && k != 'blending' && s[k] && s[k].enabled).map(([k, t]) => [k, t]);

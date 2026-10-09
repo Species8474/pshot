@@ -153,7 +153,7 @@ const M = [
 			{ name: 'Outer Glow...', target: 'ps/commands.layer_style', parameter: 'outer_glow' },
 			{ name: 'Drop Shadow...', target: 'ps/commands.layer_style', parameter: 'drop_shadow' }, '-',
 			'Copy Layer Style|ps/commands.copy_layer_style', 'Paste Layer Style|ps/commands.paste_layer_style', 'Clear Layer Style|ps/commands.clear_layer_style', '-',
-			'Global Light...|ps/commands.global_light', 'Create Layer', { name: 'Hide All Effects', target: 'ps/commands.toggle_all_effects', dynamic_name: 'effects_label' }, 'Scale Effects...|ps/commands.scale_effects',
+			'Global Light...|ps/commands.global_light', 'Create Layer|ps/commands.create_style_layers', { name: 'Hide All Effects', target: 'ps/commands.toggle_all_effects', dynamic_name: 'effects_label' }, 'Scale Effects...|ps/commands.scale_effects',
 		]],
 		['Smart Filter', [{ name: 'Disable Smart Filters', target: 'ps/commands.smart_filters_toggle', dynamic_name: 'smart_filters_label' }, 'Delete Filter Mask', 'Disable Filter Mask', 'Clear Smart Filters|ps/commands.smart_filters_clear']],
 		'-',

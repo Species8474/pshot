@@ -752,6 +752,7 @@ class Ps_commands_class {
 	lock_layers() { app.GUI.Ps_workspace.Extras.lock_layers(); }
 	toggle_all_effects() { app.GUI.Ps_workspace.Extras.toggle_all_effects(); }
 	effects_label() { return app.GUI.Ps_workspace.Extras.effects_label(); }
+	create_style_layers() { app.GUI.Ps_workspace.Styles.create_layers(); }
 	scale_effects() { app.GUI.Ps_workspace.Extras.scale_effects(); }
 	global_light() { app.GUI.Ps_workspace.Extras.global_light(); }
 	print_size() { app.GUI.Ps_workspace.Extras.print_size(); }
