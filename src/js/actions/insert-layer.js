@@ -198,9 +198,9 @@ export class Insert_layer_action extends Base_action {
 			}
 		}
 
-		if (this.settings != undefined && config.layers.length > 0
+		if (this.settings != undefined && config.layers.length > 0 && config.layer.type == null
 			&& (config.layer.width == 0 || config.layer.width === null) && (config.layer.height == 0 || config.layer.height === null)
-			&& config.layer.data == null && layer.type != 'image' && this.can_automate !== false) {
+			&& config.layer.data == null && layer.type != 'image' && layer.type != 'ps_group' && layer.type != 'ps_adjust' && this.can_automate !== false) {
 			// Update existing layer, because it's empty
 			// pshot: the empty layer keeps its name (CS6: painting on "Layer 1" stays "Layer 1")
 			layer.name = config.layer.name;
