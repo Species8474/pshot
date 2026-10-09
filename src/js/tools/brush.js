@@ -345,12 +345,96 @@ class Brush_class extends Base_tools_class {
 		this.Base_layers.render();
 	}
 
+	/**
+	 * pshot: Brush panel settings that need a dab (stamp) engine instead of a stroked path
+	 */
+	use_dabs(params) {
+		return (params.spacing != null && params.spacing != 25) || (params.roundness != null && params.roundness != 100) || params.angle
+			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100);
+	}
+
+	/**
+	 * a soft elliptical stamp (hardness, roundness, angle) at screen resolution
+	 */
+	stamp(size, params, color, k) {
+		var hardness = params.hardness == null ? 100 : params.hardness;
+		var roundness = (params.roundness == null ? 100 : params.roundness) / 100;
+		var key = [Math.round(size * k), hardness, roundness, params.angle || 0, color].join('|');
+		this.stamp_cache = this.stamp_cache || {};
+		if (this.stamp_cache[key]) return this.stamp_cache[key];
+		var d = Math.max(2, Math.ceil(size * k) + 2);
+		var c = document.createElement('canvas');
+		c.width = c.height = d;
+		var g = c.getContext('2d');
+		g.translate(d / 2, d / 2);
+		g.rotate(-(params.angle || 0) * Math.PI / 180);
+		g.scale(1, roundness);
+		var r = size * k / 2;
+		var grad = g.createRadialGradient(0, 0, 0, 0, 0, Math.max(0.5, r));
+		grad.addColorStop(0, color);
+		grad.addColorStop(Math.min(0.999, Math.max(0, hardness / 100)), color);
+		grad.addColorStop(1, color + '00');
+		g.fillStyle = grad;
+		g.beginPath();
+		g.arc(0, 0, Math.max(0.5, r), 0, Math.PI * 2);
+		g.fill();
+		var keys = Object.keys(this.stamp_cache);
+		if (keys.length > 64) delete this.stamp_cache[keys[0]];
+		this.stamp_cache[key] = c;
+		return c;
+	}
+
+	render_dabs(ctx, group, params, color) {
+		if (!group.length) return;
+		var k = Math.abs(ctx.getTransform().a) || 1;
+		var spacing = Math.max(1, (params.spacing == null ? 25 : params.spacing));
+		var flow = (params.flow == null ? 100 : params.flow) / 100;
+		var rnd = (i, s) => { var v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v); };
+		var hex = color.length == 4 ? '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3] : color.substr(0, 7);
+		var dab = 0;
+		var place = (x, y, base) => {
+			var sz = base * (1 - (params.size_jitter || 0) / 100 * rnd(dab, 1));
+			var sc = (params.scatter || 0) / 100 * base;
+			if (sc) { x += (rnd(dab, 2) * 2 - 1) * sc; y += (rnd(dab, 3) * 2 - 1) * sc; }
+			var alpha = flow * (1 - (params.opacity_jitter || 0) / 100 * rnd(dab, 4));
+			var st = this.stamp(sz, params, hex, k);
+			ctx.globalAlpha = alpha;
+			ctx.drawImage(st, x - st.width / k / 2, y - st.height / k / 2, st.width / k, st.height / k);
+			dab++;
+		};
+		place(group[0][0], group[0][1], group[0][2] || params.size);
+		var carry = 0;
+		for (var i = 1; i < group.length; i++) {
+			var a = group[i - 1], b = group[i];
+			if (!a || !b) continue;
+			var base = b[2] || params.size;
+			var step = Math.max(0.5, base * spacing / 100);
+			var len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+			var t = step - carry;
+			while (t <= len) {
+				place(a[0] + (b[0] - a[0]) * t / len, a[1] + (b[1] - a[1]) * t / len, base);
+				t += step;
+			}
+			carry = len - (t - step);
+		}
+		ctx.globalAlpha = 1;
+	}
+
 	render(ctx, layer) {
 		if (layer.data.length == 0)
 			return;
 
 		var params = layer.params;
 		var size = params.size;
+		if (this.use_dabs(params)) {
+			ctx.save();
+			ctx.translate(layer.x, layer.y);
+			for (var group of this.check_legacy_format(layer.data)) {
+				this.render_dabs(ctx, group.filter(p => p), params, layer.color);
+			}
+			ctx.restore();
+			return;
+		}
 
 		//set styles
 		ctx.save();

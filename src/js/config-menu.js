@@ -357,7 +357,7 @@ const M = [
 		'3D',
 		'Actions|Alt+F9',
 		{ name: 'Adjustments', target: 'ps/commands.toggle_panel', parameter: 'adjustments', checked: 'panel:adjustments' },
-		'Brush|F5',
+		{ name: 'Brush', shortcut: 'F5', target: 'ps/commands.toggle_panel', parameter: 'brush', checked: 'panel:brush' },
 		'Brush Presets',
 		{ name: 'Channels', target: 'ps/commands.toggle_panel', parameter: 'channels', checked: 'panel:channels' },
 		{ name: 'Character', target: 'ps/commands.toggle_panel', parameter: 'character', checked: 'panel:character' },

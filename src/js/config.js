@@ -198,6 +198,13 @@ config.TOOLS = [
 		attributes: {
 			size: 4,
 			hardness: 100,
+			spacing: 25,
+			angle: 0,
+			roundness: 100,
+			flow: 100,
+			size_jitter: 0,
+			scatter: 0,
+			opacity_jitter: 0,
 			pressure: false,
 			opacity: 100,
 			blend: 'Normal',

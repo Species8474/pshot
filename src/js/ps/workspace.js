@@ -25,6 +25,7 @@ import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
 import Ps_alpha_channels_class from './alpha-channels.js';
+import Ps_brush_panel_class from './brush-panel.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
@@ -33,10 +34,11 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush',
 };
 
 const STRIP_ICONS = {
+	brush: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M15 2.5c.5.5-4.5 7-6.2 8.5l-1.6-1.6C8.6 7.6 14.5 2 15 2.5zM6.7 10.3c-1.6 0-2.8 1-3 2.6-.2 1.5-.8 2.1-1.9 2.6 2.5 1.2 6.1.5 6.6-2 .2-1-.3-2.2-1.7-3.2z" fill="currentColor"/></svg>',
 	character: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 15L7.5 3h1L13 15M5 11h6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
 	paragraph: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M9 3h5M11 3v12M9 3v12M9 3a3 3 0 0 0 0 6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
 	history: '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2.5" y="3" width="10" height="12" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h5M5 9h5M5 12h5" stroke="currentColor" stroke-width="1.2"/><path d="M14.5 4v10" stroke="currentColor" stroke-width="1.2"/></svg>',
@@ -72,6 +74,7 @@ class Ps_workspace_class {
 		this.Multi = new Ps_multi_select_class();
 		this.Paths = new Ps_paths_class();
 		this.Alpha = new Ps_alpha_channels_class();
+		this.Brush_panel = new Ps_brush_panel_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Guides = new Ps_guides_class();
@@ -652,6 +655,9 @@ class Ps_workspace_class {
 		}
 		if (panel == 'character') {
 			render_character(document.getElementById('ps_character'));
+		}
+		if (panel == 'brush') {
+			this.Brush_panel.render(document.getElementById('ps_brush_panel'));
 		}
 		if (panel == 'paragraph') {
 			render_paragraph(document.getElementById('ps_paragraph'));

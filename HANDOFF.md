@@ -74,7 +74,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Open and Place for PSD and images. PSD keeps layers, groups, masks, effects, adjustment layers, blend modes, opacity and fill.
   - Save, Save As and Save for Web.
 - **Painting**
-  - Brush, pencil and gradient paint into the active layer, with Opacity and Mode.
+  - Brush, pencil and gradient paint into the active layer, with Opacity and Mode. Brush panel (F5, `ps/brush-panel.js`): Size, Angle, Roundness, Hardness, Spacing, Size Jitter, Scatter, Opacity Jitter, Flow; non-default tips switch the brush to a dab engine (`brush.js render_dabs`).
   - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen, sponge, dodge, burn and smudge.
   - Retouching: Spot Healing Brush, Healing Brush (Alt+click source), Patch, Content-Aware Move and Red Eye (`tools/retouch.js`, `tools/ps_patch.js`, `ps/inpaint.js`).
   - All of them respect the selection, layer locks and mask targeting.
@@ -130,7 +130,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
-- Brush flow and the Brush panel.
+- Brush panel sections other than Tip Shape / Shape Dynamics (size jitter) / Scattering / Transfer; Brush Presets.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 
 ## Testing

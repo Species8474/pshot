@@ -109,12 +109,12 @@ const MODE_MAP = {};
 for (const m of PAINT_MODES) MODE_MAP[m] = m;
 const BRUSH_COMMON = [
 	{ type: 'brush', bind: 'size' },
-	{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+	{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 	{ type: 'sep' },
 	{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
 	{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
 	{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
-	{ type: 'pct', label: 'Flow:', value: 100 },
+	{ type: 'pct', label: 'Flow:', value: 100, bind: 'flow' },
 	{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
 	{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size', bind: 'pressure' },
 ];
