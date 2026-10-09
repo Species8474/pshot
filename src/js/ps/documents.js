@@ -119,7 +119,7 @@ class Ps_documents_class {
 			ps_selection: app.GUI.Ps_workspace.Selection.state(),
 			undo_toggle_index: commands.undo_toggle_index,
 			last_selection: commands.last_selection,
-			view: { scale: zoomView.getScale(), x: pos.x, y: pos.y },
+			view: { scale: zoomView.getScale(), x: pos.x, y: pos.y, rotation: app.GUI.Ps_workspace.view_rotation || 0 },
 			ps_paths: config.ps_paths,
 			ps_path_active: config.ps_path_active,
 			ps_alpha: config.ps_alpha,
@@ -165,6 +165,7 @@ class Ps_documents_class {
 		app.GUI.prepare_canvas();
 		zoomView.setBounds(0, 0, config.WIDTH, config.HEIGHT);
 		zoomView.setView(state.view.scale, state.view.x, state.view.y);
+		app.GUI.Ps_workspace.set_view_rotation(state.view.rotation || 0);
 		app.Layers.last_zoom = config.ZOOM;
 		app.GUI.GUI_preview.zoom();
 		app.GUI.GUI_layers.render_layers();
@@ -228,6 +229,7 @@ class Ps_documents_class {
 		config.ps_comps = [];
 		config.ps_comp_active = -1;
 		app.GUI.Ps_workspace.Paths.selected = null;
+		app.GUI.Ps_workspace.set_view_rotation(0);
 		app.GUI.Ps_workspace.Paths.drawing = false;
 		app.GUI.Ps_workspace.Paths.render_panel();
 		this.changed();

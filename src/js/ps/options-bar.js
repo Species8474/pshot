@@ -547,6 +547,12 @@ const LAYOUTS = {
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Character and Paragraph panels', action: () => app.GUI.Ps_workspace.toggle_panel('character') },
 	],
 	hand: [{ type: 'check', label: 'Scroll All Windows', value: false }, { type: 'sep' }, ...ZOOM_BUTTONS],
+	rotate_view: [
+		{ type: 'rotation' },
+		{ type: 'button', text: 'Reset View', action: () => app.GUI.Ps_workspace.set_view_rotation(0) },
+		{ type: 'sep' },
+		{ type: 'check', label: 'Rotate All Windows', value: false },
+	],
 	zoom: [
 		{ type: 'icons', items: [
 			{ icon: IC.zoom_in, title: 'Zoom In', action: () => app.GUI.modules['view/zoom'].in() },
@@ -779,6 +785,24 @@ class Ps_options_bar_class {
 			ro.textContent = c.text();
 			ro._text = c.text;
 			wrap.appendChild(ro);
+			return wrap;
+		}
+		if (c.type == 'rotation') {
+			wrap.innerHTML = '<span class="ps_opt_label">Rotation Angle:</span>';
+			var ri = document.createElement('input');
+			ri.type = 'text';
+			ri.className = 'ps_opt_field';
+			ri.id = 'ps_rotation_angle';
+			ri.style.width = '52px';
+			var deg_text = () => Math.round((app.GUI.Ps_workspace.view_rotation || 0) * 10) / 10 + '\u00b0';
+			ri.value = deg_text();
+			ri.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter') ri.blur(); });
+			ri.addEventListener('change', () => {
+				var n = parseFloat(ri.value);
+				if (!isNaN(n)) app.GUI.Ps_workspace.set_view_rotation(n);
+				ri.value = deg_text();
+			});
+			wrap.appendChild(ri);
 			return wrap;
 		}
 		if (c.type == 'label') {

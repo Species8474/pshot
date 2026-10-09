@@ -786,6 +786,16 @@ class Base_layers_class {
 	 * @returns {object} keys: x, y
 	 */
 	get_world_coords(x, y) {
+		//pshot: Rotate View rotates the canvas element; x, y are relative to its
+		//(rotated) bounding box, so undo the rotation around the center first
+		var deg = this.Base_gui.Ps_workspace ? this.Base_gui.Ps_workspace.view_rotation : 0;
+		if (deg) {
+			var c = document.getElementById('canvas_minipaint');
+			var w = c.clientWidth, h = c.clientHeight, a = deg * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
+			var dx = x - (Math.abs(w * cos) + Math.abs(h * sin)) / 2, dy = y - (Math.abs(w * sin) + Math.abs(h * cos)) / 2;
+			x = dx * cos + dy * sin + w / 2;
+			y = -dx * sin + dy * cos + h / 2;
+		}
 		return zoomView.toWorld(x, y);
 	}
 

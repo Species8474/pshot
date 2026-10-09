@@ -89,6 +89,11 @@ config.TOOLS = [
 		attributes: {},
 	},
 	{
+		name: 'ps_rotate_view',
+		title: 'Rotate View',
+		attributes: {},
+	},
+	{
 		name: 'ps_measure',
 		title: 'Measure',
 		on_activate: 'on_activate',

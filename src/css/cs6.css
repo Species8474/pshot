@@ -1584,3 +1584,7 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_bg_head { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
 .ps_bg_side .ps_adj_slider input[type="range"] { width: 200px; }
 .ps_adj_slider.disabled { color: var(--ps-text-disabled); }
+
+/* Rotate View */
+#canvas_wrapper { transform-origin: 50% 50%; }
+#ps_rotate_compass { position: fixed; z-index: 50; pointer-events: none; }

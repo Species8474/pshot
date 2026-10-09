@@ -182,7 +182,7 @@ const groups = [
 	]},
 	{ separator: true, members: [
 		{ id: 'hand', name: 'Hand Tool', key: 'H', tool: 'hand', icon: I.hand },
-		{ id: 'rotate_view', name: 'Rotate View Tool', key: 'R', tool: null, icon: I.rotate_view },
+		{ id: 'rotate_view', name: 'Rotate View Tool', key: 'R', tool: 'ps_rotate_view', icon: I.rotate_view },
 	]},
 	{ members: [
 		{ id: 'zoom', name: 'Zoom Tool', key: 'Z', tool: 'zoom', icon: I.zoom },

@@ -287,6 +287,23 @@ class Ps_workspace_class {
 	}
 
 	/**
+	 * Rotate View: the document window's rotation in degrees (view only)
+	 */
+	set_view_rotation(deg) {
+		deg = ((deg % 360) + 540) % 360 - 180;
+		if (Math.abs(deg) < 0.05) deg = 0;
+		this.view_rotation = deg;
+		var wrapper = document.getElementById('canvas_wrapper');
+		wrapper.style.transform = deg ? 'rotate(' + deg + 'deg)' : '';
+		app.GUI.check_canvas_offset();
+		config.need_render = true;
+		this.Selection.draw_overlay();
+		if (this.Options_bar) this.Options_bar.update_readouts();
+		var field = document.getElementById('ps_rotation_angle');
+		if (field && document.activeElement !== field) field.value = Math.round(deg * 10) / 10 + '\u00b0';
+	}
+
+	/**
 	 * activates a CS6 tool (group index, member index)
 	 */
 	select_member(gi, mi) {
