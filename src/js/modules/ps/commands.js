@@ -781,6 +781,7 @@ class Ps_commands_class {
 	filter_gallery() { app.GUI.Ps_workspace.Filter_gallery.open(); }
 	puppet_warp() { app.GUI.Ps_workspace.Puppet.start(); }
 	warp_text() { app.GUI.Ps_workspace.Warp_text.open(); }
+	anti_alias(mode) { app.GUI.Ps_workspace.Text_aa.set(mode); }
 	calculations() { app.GUI.Ps_workspace.Calculations.open(); }
 	blur_gallery(mode) { app.GUI.Ps_workspace.Blur_gallery.open(mode || 'field'); }
 	keyboard_shortcuts() { app.GUI.Ps_workspace.Shortcuts.open(); }

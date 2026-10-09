@@ -22,6 +22,7 @@ import Ps_groups_class from './groups.js';
 import Ps_styles_class from './styles.js';
 import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_warp_text_class from './warp-text.js';
+import Ps_text_aa_class from './text-aa.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -101,6 +102,7 @@ class Ps_workspace_class {
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Warp_text = new Ps_warp_text_class();
+		this.Text_aa = new Ps_text_aa_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -968,6 +970,9 @@ class Ps_workspace_class {
 				return !group.classList.contains('closed') && group.querySelector('.ps_tab[data-panel="' + panel + '"]').classList.contains('active');
 			}
 			return this.open_popout == panel;
+		}
+		if (key.indexOf('aa:') === 0) {
+			return config.layer && config.layer.type == 'text' && this.Text_aa.current() == key.substr(3);
 		}
 		switch (key) {
 			case 'workspace_essentials': return (this.workspace_name || 'Essentials') == 'Essentials';

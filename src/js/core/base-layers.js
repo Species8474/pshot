@@ -459,6 +459,17 @@ class Base_layers_class {
 			return;
 		}
 
+		//pshot: Type > Anti-Alias (None / Crisp / Strong / Smooth; Sharp is the plain render)
+		if (object.type == "text" && object.ps_aa && object.ps_aa != "sharp" && !object._ps_aa && this.Base_gui.Ps_workspace) {
+			object._ps_aa = true;
+			try {
+				this.Base_gui.Ps_workspace.Text_aa.render(ctx, object, is_preview, (c) => this.render_object(c, object, is_preview));
+			} finally {
+				object._ps_aa = false;
+			}
+			return;
+		}
+
 		//pshot: warped text (Type > Warp Text)
 		if (object.type == "text" && object.ps_warp && !object._ps_warping && this.Base_gui.Ps_workspace && this.Base_gui.Ps_workspace.Warp_text.active(object)) {
 			this.Base_gui.Ps_workspace.Warp_text.render(ctx, object);

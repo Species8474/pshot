@@ -17,6 +17,13 @@ function measure_tool() {
 	return app.GUI.GUI_tools.tools_modules.ps_measure.object;
 }
 
+//Type > Anti-Alias names; the options bar shows the text layer's method
+const AA_NAMES = ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth'];
+function aa_name() {
+	var m = app.GUI.Ps_workspace.Text_aa.current();
+	return m.charAt(0).toUpperCase() + m.substr(1);
+}
+
 function measure_text(key) {
 	var m = measure_tool().measure();
 	var labels = { x: 'X:', y: 'Y:', w: 'W:', h: 'H:', a: 'A:', l: 'L1:' };
@@ -583,7 +590,7 @@ const LAYOUTS = {
 		{ type: 'font' },
 		{ type: 'font_style' },
 		{ type: 'num', bind: 'size', unit: 'pt', width: 52 },
-		{ type: 'select', values: ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth'], value: 'Sharp' },
+		{ type: 'select', title: 'Set the anti-aliasing method', values: AA_NAMES, get value() { return aa_name(); }, onchange: (v) => app.GUI.Ps_workspace.Text_aa.set(v.toLowerCase()) },
 		{ type: 'sep' },
 		{ type: 'icons', items: [{ icon: IC.align_text_l, title: 'Left align text', ...text_align('left') }, { icon: IC.align_text_c, title: 'Center text', ...text_align('center') }, { icon: IC.align_text_r, title: 'Right align text', ...text_align('right') }] },
 		{ type: 'swatch', label: '', bind: 'fill', title: 'Set the text color' },
@@ -988,6 +995,9 @@ class Ps_options_bar_class {
 						this.render();
 					}
 				});
+			}
+			else if (c.onchange) {
+				select.addEventListener('change', () => c.onchange(select.value));
 			}
 			else if (!c.disabled_values) {
 				select.disabled = true;

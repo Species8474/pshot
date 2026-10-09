@@ -191,7 +191,7 @@ const M = [
 	]],
 	['Type', [
 		['Panels', [{ name: 'Character Panel', target: 'ps/commands.toggle_panel', parameter: 'character' }, { name: 'Paragraph Panel', target: 'ps/commands.toggle_panel', parameter: 'paragraph' }, 'Character Styles Panel', 'Paragraph Styles Panel']],
-		['Anti-Alias', ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth']],
+		['Anti-Alias', ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth'].map(n => ({ name: n, target: 'ps/commands.anti_alias', parameter: n.toLowerCase(), checked: 'aa:' + n.toLowerCase() }))],
 		['Orientation', ['Horizontal|ps/commands.text_horizontal', 'Vertical|ps/commands.text_vertical']],
 		['OpenType', ['Contextual Alternates', 'Standard Ligatures', 'Discretionary Ligatures', 'Swash', 'Oldstyle', 'Ordinals', 'Fractions']],
 		'-',

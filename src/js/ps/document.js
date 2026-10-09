@@ -542,7 +542,7 @@ function text_to_psd(layer) {
 		text: text,
 		transform: [1, 0, 0, 1, vertical ? layer.x + layer.width / 2 : ax, vertical ? layer.y : layer.y + baseline],
 		orientation: vertical ? 'vertical' : 'horizontal',
-		antiAlias: 'sharp',
+		antiAlias: layer.ps_aa || 'sharp',
 		style: first,
 		styleRuns: runs,
 		paragraphStyle: { justification: halign },
@@ -622,6 +622,7 @@ function text_from_psd(child) {
 		is_vector: true,
 		data: lines,
 		ps_warp: warp_from_psd(t.warp),
+		ps_aa: ['none', 'crisp', 'strong', 'smooth'].includes(t.antiAlias) ? t.antiAlias : null,
 	};
 }
 

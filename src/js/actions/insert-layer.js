@@ -118,6 +118,7 @@ export class Insert_layer_action extends Base_action {
 			ps_smart: null,
 			ps_color: null,
 			ps_warp: null,
+			ps_aa: null,
 			ps_vmask: null,
 			ps_shape: null,
 		};
