@@ -14,6 +14,7 @@ import { show_new_dialog } from './../../ps/new-dialog.js';
 import Ps_size_dialogs_class from './../../ps/size-dialogs.js';
 import Patterns from './../../ps/patterns.js';
 import Ps_liquify_class from './../../ps/liquify.js';
+import { inpaint } from './../../ps/inpaint.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -281,7 +282,7 @@ class Ps_commands_class {
 		var settings = {
 			title: 'Fill',
 			params: [
-				{name: 'use', title: 'Use:', value: 'Foreground Color', values: ['Foreground Color', 'Background Color', 'Pattern', 'Black', '50% Gray', 'White'], type: 'select'},
+				{name: 'use', title: 'Use:', value: 'Foreground Color', values: ['Foreground Color', 'Background Color', 'Color...', 'Content-Aware', 'Pattern', 'History', 'Black', '50% Gray', 'White'], type: 'select'},
 				{name: 'pattern', title: 'Custom Pattern:', value: Patterns.names()[0], values: Patterns.names(), type: 'select'},
 				{name: 'opacity', title: 'Opacity (%):', value: 100, range: [1, 100]},
 			],
@@ -293,6 +294,25 @@ class Ps_commands_class {
 					'50% Gray': '#808080',
 					'White': '#ffffff',
 				};
+				if (params.use == 'Content-Aware') {
+					_this.content_aware_fill(params.opacity / 100);
+					return;
+				}
+				if (params.use == 'History') {
+					//the History Brush source (the document as opened)
+					var snap = app.GUI.Ps_workspace.Documents.snapshot_for_layer(config.layer);
+					if (!snap) {
+						alertify.error('Could not use the history because the history state does not contain a corresponding layer.');
+						return;
+					}
+					var hp = document.createElement('canvas').getContext('2d').createPattern(snap, 'no-repeat');
+					_this.fill_with(hp, params.opacity / 100, 'Fill');
+					return;
+				}
+				if (params.use == 'Color...') {
+					app.GUI.Ps_workspace.color_dialog('Choose a color:', config.COLOR, (hex) => _this.fill_with(hex, params.opacity / 100, 'Fill'));
+					return;
+				}
 				if (params.use == 'Pattern') {
 					//patterns are aligned to the document origin
 					var probe = document.createElement('canvas').getContext('2d');
@@ -306,6 +326,42 @@ class Ps_commands_class {
 			},
 		};
 		this.POP.show(settings);
+	}
+
+	/**
+	 * Edit > Fill > Content-Aware: the selection is filled from its surroundings
+	 */
+	content_aware_fill(alpha) {
+		var sel = this.selection();
+		var layer = config.layer;
+		if (!sel.has()) {
+			alertify.error('Could not complete the Content-Aware Fill because there is no selection.');
+			return;
+		}
+		if (!this.require_image_layer()) return;
+		var canvas = this.layer_canvas();
+		var w = canvas.width, h = canvas.height;
+		var mask = sel.mask_for_layer(layer);
+		var m = mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+		var hole = new Uint8Array(w * h);
+		for (var i = 0; i < hole.length; i++) hole[i] = m[i * 4 + 3] > 0 ? 1 : 0;
+		var filled = document.createElement('canvas');
+		filled.width = w;
+		filled.height = h;
+		filled.getContext('2d').drawImage(canvas, 0, 0);
+		inpaint(filled, hole);
+		//blend by the selection's softness and Opacity
+		var piece = document.createElement('canvas');
+		piece.width = w;
+		piece.height = h;
+		var pctx = piece.getContext('2d');
+		pctx.drawImage(filled, 0, 0);
+		pctx.globalCompositeOperation = 'destination-in';
+		pctx.drawImage(mask, 0, 0);
+		var ctx = canvas.getContext('2d');
+		ctx.globalAlpha = alpha == null ? 1 : alpha;
+		ctx.drawImage(piece, 0, 0);
+		app.State.do_action(new app.Actions.Bundle_action('fill', 'Fill', [new app.Actions.Update_layer_image_action(canvas)]));
 	}
 
 	fill_with(color, alpha, description) {
@@ -855,6 +911,173 @@ class Ps_commands_class {
 	/**
 	 * Edit > Define Pattern: the selection's bounding box (or the document), all visible layers
 	 */
+	toggle_pixel_grid() {
+		var ws = app.GUI.Ps_workspace;
+		ws.pixel_grid = ws.pixel_grid === false;
+		ws.Selection.draw_overlay();
+	}
+
+	/**
+	 * Type > Create Work Path: the outline of the type layer's glyphs
+	 */
+	type_work_path() {
+		var layer = config.layer;
+		if (!layer || layer.type != 'text') return;
+		var mask = document.createElement('canvas');
+		mask.width = config.WIDTH;
+		mask.height = config.HEIGHT;
+		this.Base_layers.render_object(mask.getContext('2d'), layer);
+		app.GUI.Ps_workspace.Paths.from_selection(0.75, mask);
+	}
+
+	/**
+	 * Select > Refine Edge (Alt+Ctrl+R): Smooth, Feather, Contrast, Shift Edge;
+	 * view modes; output to selection, layer mask or new layer
+	 */
+	refine_edge() {
+		var sel = this.selection();
+		if (!sel.has()) return;
+		var W = config.WIDTH, H = config.HEIGHT;
+		var original = sel.mask;
+		var state = this.refine_state || { smooth: 0, feather: 0, contrast: 0, shift: 0, view: 'On White', output: 'Selection' };
+		var flat = document.createElement('canvas');
+		flat.width = W;
+		flat.height = H;
+		this.Base_layers.convert_layers_to_canvas(flat.getContext('2d'), null, false);
+		var compute = () => {
+			var c = document.createElement('canvas');
+			c.width = W;
+			c.height = H;
+			var ctx = c.getContext('2d', { willReadFrequently: true });
+			var blur = state.smooth / 10 + state.feather;
+			if (blur > 0) ctx.filter = 'blur(' + blur + 'px)';
+			ctx.drawImage(original, 0, 0);
+			ctx.filter = 'none';
+			var img = ctx.getImageData(0, 0, W, H), d = img.data;
+			var k = 1 + state.contrast / 10, shift = state.shift / 100 * 0.5;
+			var hard = state.smooth > 0 && state.feather == 0;
+			for (var i = 3; i < d.length; i += 4) {
+				var a = d[i] / 255 + shift;
+				if (hard) a = a >= 0.5 ? 1 : 0;
+				a = (a - 0.5) * k + 0.5;
+				d[i] = Math.max(0, Math.min(255, Math.round(a * 255)));
+				d[i - 3] = d[i - 2] = d[i - 1] = 255;
+			}
+			ctx.putImageData(img, 0, 0);
+			return c;
+		};
+		var scale = Math.min(300 / W, 220 / H);
+		var pw = Math.max(1, Math.round(W * scale)), ph = Math.max(1, Math.round(H * scale));
+		var slider = (key, label, min, max, unit) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" data-num="' + key + '" min="' + min + '" max="' + max + '"><span class="ps_adj_unit">' + unit + '</span><input type="range" data-range="' + key + '" min="' + min + '" max="' + max + '"></div>';
+		var html = '<div class="ps_cr">'
+			+ '<div class="ps_adj_row"><span>View:</span><select id="re_view">' + ['Marching Ants', 'Overlay', 'On Black', 'On White', 'Black & White', 'On Layers', 'Reveal Layer'].map(v => '<option>' + v + '</option>').join('') + '</select></div>'
+			+ '<canvas id="re_preview" class="ps_cr_preview" width="' + pw + '" height="' + ph + '"></canvas>'
+			+ '<div class="ps_adj_label">Adjust Edge</div>'
+			+ slider('smooth', 'Smooth:', 0, 100, '') + slider('feather', 'Feather:', 0, 250, 'px') + slider('contrast', 'Contrast:', 0, 100, '%') + slider('shift', 'Shift Edge:', -100, 100, '%')
+			+ '<div class="ps_adj_row"><span>Output To:</span><select id="re_output">' + ['Selection', 'Layer Mask', 'New Layer', 'New Layer with Layer Mask'].map(v => '<option>' + v + '</option>').join('') + '</select></div>'
+			+ '</div>';
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Refine Edge',
+			className: 'ps_adjust_dialog',
+			params: [{ function() { return html; } }],
+			on_finish: () => {
+				this.refine_state = state;
+				this.refine_output(compute(), state.output);
+			},
+		});
+		var root = document.querySelector('#popups .popup .ps_cr');
+		var preview = root.querySelector('#re_preview');
+		var draw = () => {
+			var m = compute();
+			var pctx = preview.getContext('2d');
+			var bgs = { 'On White': '#fff', 'On Black': '#000', 'Black & White': '#000', 'Overlay': null, 'Marching Ants': null, 'On Layers': null, 'Reveal Layer': null };
+			pctx.clearRect(0, 0, pw, ph);
+			if (state.view == 'Black & White') {
+				pctx.fillStyle = '#000';
+				pctx.fillRect(0, 0, pw, ph);
+				pctx.drawImage(m, 0, 0, pw, ph);
+				return;
+			}
+			if (state.view == 'Reveal Layer' || state.view == 'Marching Ants') {
+				pctx.drawImage(flat, 0, 0, pw, ph);
+				return;
+			}
+			if (bgs[state.view]) {
+				pctx.fillStyle = bgs[state.view];
+				pctx.fillRect(0, 0, pw, ph);
+			}
+			var cut = document.createElement('canvas');
+			cut.width = W;
+			cut.height = H;
+			var cctx = cut.getContext('2d');
+			cctx.drawImage(flat, 0, 0);
+			cctx.globalCompositeOperation = 'destination-in';
+			cctx.drawImage(m, 0, 0);
+			if (state.view == 'Overlay') {
+				pctx.drawImage(flat, 0, 0, pw, ph);
+				var red = document.createElement('canvas');
+				red.width = W;
+				red.height = H;
+				var rctx = red.getContext('2d');
+				rctx.fillStyle = 'rgba(255,0,0,0.5)';
+				rctx.fillRect(0, 0, W, H);
+				rctx.globalCompositeOperation = 'destination-out';
+				rctx.drawImage(m, 0, 0);
+				pctx.drawImage(red, 0, 0, pw, ph);
+				return;
+			}
+			pctx.drawImage(cut, 0, 0, pw, ph);
+		};
+		root.querySelectorAll('[data-num]').forEach((num) => {
+			var key = num.dataset.num, range = root.querySelector('[data-range="' + key + '"]');
+			num.value = range.value = state[key];
+			var set = (v) => { if (isNaN(v)) return; state[key] = Math.max(parseFloat(num.min), Math.min(parseFloat(num.max), v)); num.value = range.value = state[key]; draw(); };
+			range.addEventListener('input', () => set(parseFloat(range.value)));
+			num.addEventListener('change', () => set(parseFloat(num.value)));
+		});
+		var view = root.querySelector('#re_view'), output = root.querySelector('#re_output');
+		view.value = state.view;
+		output.value = state.output;
+		view.addEventListener('change', () => { state.view = view.value; draw(); });
+		output.addEventListener('change', () => { state.output = output.value; });
+		draw();
+	}
+
+	refine_output(mask, output) {
+		var sel = this.selection();
+		var layer = config.layer;
+		if (output == 'Selection' || !layer || layer.type != 'image') {
+			return sel.commit(mask, 'Refine Edge');
+		}
+		if (output == 'Layer Mask') {
+			if (layer.ps_mask) {
+				alertify.error('The layer already has a layer mask.');
+				return;
+			}
+			return app.GUI.Ps_workspace.Mask.set_mask(layer, mask, 'Refine Edge', { ps_mask_editing: false }).then(() => sel.deselect());
+		}
+		//New Layer / New Layer with Layer Mask: a copy of the layer
+		var W = config.WIDTH, H = config.HEIGHT;
+		var copy = document.createElement('canvas');
+		copy.width = W;
+		copy.height = H;
+		var cctx = copy.getContext('2d');
+		cctx.drawImage(layer.link, layer.x, layer.y, layer.width, layer.height);
+		var settings = { type: 'image', name: layer.name + ' copy', x: 0, y: 0, width: W, height: H, width_original: W, height_original: H };
+		if (output == 'New Layer') {
+			cctx.globalCompositeOperation = 'destination-in';
+			cctx.drawImage(mask, 0, 0);
+		}
+		else {
+			Object.assign(settings, { ps_mask: mask, ps_mask_x: 0, ps_mask_y: 0 });
+		}
+		settings.data = copy.toDataURL('image/png');
+		return app.State.do_action(new app.Actions.Bundle_action('refine_edge', 'Refine Edge', [
+			new app.Actions.Insert_layer_action(settings),
+		])).then(() => sel.deselect());
+	}
+
 	liquify() {
 		this.Liquify = this.Liquify || new Ps_liquify_class();
 		this.Liquify.open();

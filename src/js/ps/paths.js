@@ -327,10 +327,10 @@ class Ps_paths_class {
 	/**
 	 * Make Work Path from selection: traces the selection outline (tolerance 2 px)
 	 */
-	async from_selection(tolerance) {
+	async from_selection(tolerance, source_mask) {
 		var Selection = app.GUI.Ps_workspace.Selection;
-		if (!Selection.has()) return;
-		var mask = Selection.mask;
+		if (!source_mask && !Selection.has()) return;
+		var mask = source_mask || Selection.mask;
 		var w = mask.width, h = mask.height;
 		var d = mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
 		var inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > 127;
@@ -384,7 +384,7 @@ class Ps_paths_class {
 		var paths = clone(config.ps_paths).filter(p => !p.work);
 		paths.push({ name: 'Work Path', work: true, subpaths: loops.map(l => ({ closed: true, pts: simplify(l).map(p => point(p.x, p.y)) })) });
 		await this.commit(paths, paths.length - 1, 'Make Work Path');
-		Selection.deselect && Selection.deselect();
+		if (!source_mask) Selection.deselect();
 	}
 
 	// ---------- panel ----------

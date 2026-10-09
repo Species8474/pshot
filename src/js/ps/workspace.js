@@ -117,6 +117,24 @@ class Ps_workspace_class {
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());
 		this.relayout();
+		//View > Show > Pixel Grid: lines between pixels from 500% zoom (CS6)
+		this.Selection.overlays = this.Selection.overlays || [];
+		this.Selection.overlays.push({
+			active: () => this.pixel_grid !== false && config.ZOOM >= 5,
+			draw: (ctx, scale) => {
+				var t = ctx.getTransform(), cw = ctx.canvas.width, ch = ctx.canvas.height;
+				var x0 = Math.max(0, Math.floor(-t.e / t.a)), x1 = Math.min(config.WIDTH, Math.ceil((cw - t.e) / t.a));
+				var y0 = Math.max(0, Math.floor(-t.f / t.d)), y1 = Math.min(config.HEIGHT, Math.ceil((ch - t.f) / t.d));
+				ctx.save();
+				ctx.lineWidth = 1 / scale;
+				ctx.strokeStyle = 'rgba(128,128,128,0.45)';
+				ctx.beginPath();
+				for (var x = x0; x <= x1; x++) { ctx.moveTo(x, y0); ctx.lineTo(x, y1); }
+				for (var y = y0; y <= y1; y++) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+				ctx.stroke();
+				ctx.restore();
+			},
+		});
 		//the startup document opens at the largest CS6 zoom step that fits
 		setTimeout(() => {
 			if (app.State.action_history.length == 0) app.GUI.GUI_preview.zoom_auto(true);
@@ -718,6 +736,7 @@ class Ps_workspace_class {
 			case 'screen_mode_full': return this.screen_mode == 'full';
 			case 'extras': return this.extras;
 			case 'grid': return app.GUI.grid == true;
+			case 'pixel_grid': return this.pixel_grid !== false;
 			case 'guides': return config.guides_enabled == true;
 			case 'rulers': return config.ruler_active == true;
 			case 'snap': return config.SNAP == true;

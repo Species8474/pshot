@@ -97,6 +97,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Select > All Layers / Deselect Layers / Similar Layers.
   - Add, subtract and intersect; Inverse, Feather, Expand, Contract, Border; Reselect.
   - Move the selected pixels (Alt copies).
+  - Edit > Fill: Foreground/Background/Color…/Content-Aware (diffusion inpainting)/Pattern/History/Black/50% Gray/White.
+  - Refine Edge (Alt+Ctrl+R): Smooth, Feather, Contrast, Shift Edge, view modes, output to Selection / Layer Mask / New Layer / New Layer with Layer Mask.
   - Fill, Clear, Cut, Copy, Copy Merged, Paste, Paste in Place, Paste Into / Paste Outside (new layer masked by the selection).
   - Edit > Stroke (Inside/Center/Outside; without a selection it outlines the layer's pixels) and Edit > Fade (Shift+Ctrl+F: opacity and mode of the last step).
 - **Layers**
@@ -116,7 +118,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Filters**: Liquify (Shift+Ctrl+X: Forward Warp, Reconstruct, Pucker, Bloat, Push Left; size/density/pressure; Restore All; Show Backdrop; `ps/liquify.js`), Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse, Surface Blur, Smart Blur, Sharpen Edges, Wave, ZigZag, Shear, Crystallize, Pointillize, Facet, Fragment, Mezzotint, Fibers, Lens Flare, Tiles, Trace Contour, Wind, Extrude, Custom. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
   - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Again. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
-  - Guides from the rulers.
+  - Guides from the rulers. Pixel Grid at 500%+ (View > Show > Pixel Grid).
+  - Type > Create Work Path (traces the glyphs).
   - Hand, Zoom and Space-to-pan.
   - CS6 zoom steps.
   - Ctrl+Z toggles a single undo; Alt+Ctrl+Z and Shift+Ctrl+Z step through History.
