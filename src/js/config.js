@@ -83,6 +83,12 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'ps_pcrop',
+		title: 'Perspective Crop',
+		on_activate: 'on_activate',
+		attributes: {},
+	},
+	{
 		name: 'ps_measure',
 		title: 'Measure',
 		on_activate: 'on_activate',

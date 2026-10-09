@@ -337,6 +337,16 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Sample All Layers', value: false },
 		{ type: 'check', label: 'Finger Painting', value: false },
 	],
+	perspective_crop: [
+		{ type: 'num', label: 'W:', width: 50, unit: '' },
+		{ type: 'num', label: 'H:', width: 50, unit: '' },
+		{ type: 'num', label: 'Resolution:', width: 50, unit: '' },
+		{ type: 'select', values: ['pixels/inch', 'pixels/cm'], value: 'pixels/inch' },
+		{ type: 'button', text: 'Front Image' },
+		{ type: 'button', text: 'Clear' },
+		{ type: 'sep' },
+		{ type: 'check', label: 'Show Grid', value: true },
+	],
 	ruler: [
 		{ type: 'readout', text: () => measure_text('x') },
 		{ type: 'readout', text: () => measure_text('y') },
