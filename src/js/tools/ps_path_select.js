@@ -146,6 +146,13 @@ class Ps_path_select_class extends Base_tools_class {
 	}
 
 	preview(ed) {
+		if (ed.paths._layer_path) {
+			//shape path / vector mask: the layer follows live; the outline is the layer's own
+			if (this.restore_layer) this.restore_layer();
+			this.restore_layer = this.paths().preview_layer_path(ed.path);
+			app.GUI.Ps_workspace.Selection.draw_overlay();
+			return;
+		}
 		this.saved = this.saved || { paths: config.ps_paths, active: config.ps_path_active };
 		config.ps_paths = ed.paths;
 		config.ps_path_active = ed.index;
@@ -159,6 +166,10 @@ class Ps_path_select_class extends Base_tools_class {
 			config.ps_paths = this.saved.paths;
 			config.ps_path_active = this.saved.active;
 			this.saved = null;
+		}
+		if (this.restore_layer) {
+			this.restore_layer();
+			this.restore_layer = null;
 		}
 		if (!d.moved) return;
 		var name = d.targets.handle ? 'Drag Handle' : ((config.TOOL.attributes.mode || 'path') == 'direct' ? 'Drag Anchor Point' : 'Drag Path');

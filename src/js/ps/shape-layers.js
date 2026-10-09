@@ -100,7 +100,10 @@ class Ps_shape_layers_class {
 				ps_shape: { subpaths: subpaths, bx: bx, by: by, bw: bw, bh: bh, fill: fill, stroke: stroke },
 			}),
 		]));
+		//CS6: the new shape's path is targeted in the Paths panel
+		config.ps_path_active = 'layer';
 		app.GUI.GUI_layers.render_layers();
+		app.GUI.Ps_workspace.Paths.changed();
 	}
 
 	next_name(base) {

@@ -66,14 +66,84 @@ class Ps_paths_class {
 	}
 
 	active() {
+		if (config.ps_path_active == 'layer') return this.layer_path();
 		var paths = config.ps_paths || [];
 		return paths[config.ps_path_active] || null;
+	}
+
+	/**
+	 * CS6 shows a shape layer's path / a layer's vector mask as a temporary path
+	 * (document coordinates); null when the active layer has none
+	 */
+	layer_path() {
+		var l = config.layer;
+		if (!l) return null;
+		if (l.type == 'ps_shape' && l.ps_shape) {
+			return { name: l.name + ' Shape Path', layer: l.id, subpaths: app.GUI.Ps_workspace.Shapes.current_subpaths(l) };
+		}
+		if (l.ps_vmask) {
+			var vm = l.ps_vmask, dx = l.x - (vm.lx || 0), dy = l.y - (vm.ly || 0);
+			return { name: l.name + ' Vector Mask', layer: l.id, subpaths: (vm.subpaths || []).map(sp => ({ closed: sp.closed, pts: sp.pts.map(p => ({ x: p.x + dx, y: p.y + dy, ix: p.ix + dx, iy: p.iy + dy, ox: p.ox + dx, oy: p.oy + dy })) })) };
+		}
+		return null;
+	}
+
+	/**
+	 * the layer settings for an edited layer path
+	 */
+	layer_path_settings(l, subpaths) {
+		var settings;
+		if (l.type == 'ps_shape') {
+			var xs = [], ys = [];
+			subpaths.forEach(sp => sp.pts.forEach(p => { xs.push(p.x); ys.push(p.y); }));
+			var sh = Object.assign({}, l.ps_shape, { subpaths: subpaths });
+			if (xs.length) {
+				sh.bx = Math.min.apply(null, xs); sh.by = Math.min.apply(null, ys);
+				sh.bw = Math.max(1, Math.max.apply(null, xs) - sh.bx); sh.bh = Math.max(1, Math.max.apply(null, ys) - sh.by);
+			}
+			settings = { ps_shape: sh, x: sh.bx, y: sh.by, width: sh.bw, height: sh.bh, rotate: 0 };
+		}
+		else {
+			settings = { ps_vmask: Object.assign({}, l.ps_vmask, { subpaths: subpaths, lx: l.x, ly: l.y }) };
+		}
+		return settings;
+	}
+
+	/**
+	 * live preview while dragging (no History); returns the restore function
+	 */
+	preview_layer_path(path) {
+		var l = config.layer;
+		if (!l || path.layer != l.id) return null;
+		var settings = this.layer_path_settings(l, path.subpaths);
+		var saved = {};
+		for (var k in settings) saved[k] = l[k];
+		Object.assign(l, settings);
+		config.need_render = true;
+		return () => { Object.assign(l, saved); config.need_render = true; };
+	}
+
+	/**
+	 * write an edited layer path back to its shape layer / vector mask
+	 */
+	async commit_layer_path(path, description) {
+		var l = config.layer;
+		if (!l || path.layer != l.id) return;
+		var settings = this.layer_path_settings(l, path.subpaths);
+		await app.State.do_action(new app.Actions.Bundle_action('paths', description, [
+			new app.Actions.Update_layer_action(l.id, settings),
+		]));
+		app.GUI.GUI_layers.render_layers();
+		this.changed();
 	}
 
 	/**
 	 * records a new paths state in History
 	 */
 	async commit(paths, active, description) {
+		if (paths._layer_path) {
+			return this.commit_layer_path(paths[0], description);
+		}
 		var settings = { ps_paths: paths };
 		if (active !== undefined) settings.ps_path_active = active;
 		await app.State.do_action(new app.Actions.Bundle_action('paths', description, [
@@ -93,6 +163,12 @@ class Ps_paths_class {
 	 * (replacing an unsaved one, as CS6 does) when no path is active
 	 */
 	editable() {
+		var lp = config.ps_path_active == 'layer' ? this.layer_path() : null;
+		if (lp) {
+			var only = [clone([lp])[0]];
+			only._layer_path = true;
+			return { paths: only, index: 0, path: only[0] };
+		}
 		var paths = clone(config.ps_paths);
 		var index = config.ps_path_active;
 		if (!paths[index]) {
@@ -394,6 +470,12 @@ class Ps_paths_class {
 		if (!el) return;
 		var paths = config.ps_paths || [];
 		var html = '<div class="ps_paths_list">';
+		var lp = this.layer_path();
+		if (lp) {
+			html += '<div class="ps_path_row' + (config.ps_path_active == 'layer' ? ' active' : '') + '" data-index="layer">'
+				+ '<canvas class="ps_path_thumb" width="36" height="28" data-index="layer"></canvas>'
+				+ '<span class="ps_path_name work">' + app.GUI.Ps_workspace.Helper.escapeHtml(lp.name) + '</span></div>';
+		}
 		paths.forEach((p, i) => {
 			html += '<div class="ps_path_row' + (i == config.ps_path_active ? ' active' : '') + '" data-index="' + i + '">'
 				+ '<canvas class="ps_path_thumb" width="36" height="28" data-index="' + i + '"></canvas>'
@@ -408,15 +490,15 @@ class Ps_paths_class {
 		}
 		html += '</div>';
 		el.innerHTML = html;
-		el.querySelectorAll('canvas.ps_path_thumb').forEach((c) => this.draw_thumb(c, paths[c.dataset.index]));
+		el.querySelectorAll('canvas.ps_path_thumb').forEach((c) => this.draw_thumb(c, c.dataset.index == 'layer' ? lp : paths[c.dataset.index]));
 		el.querySelectorAll('.ps_path_row').forEach((row) => {
 			row.addEventListener('click', (e) => {
 				e.stopPropagation();
-				config.ps_path_active = parseInt(row.dataset.index);
+				config.ps_path_active = row.dataset.index == 'layer' ? 'layer' : parseInt(row.dataset.index);
 				this.selected = null;
 				this.changed();
 			});
-			row.addEventListener('dblclick', () => this.rename(parseInt(row.dataset.index)));
+			row.addEventListener('dblclick', () => { if (row.dataset.index != 'layer') this.rename(parseInt(row.dataset.index)); });
 		});
 		el.querySelector('.ps_paths_list').addEventListener('click', (e) => {
 			//CS6: clicking the empty area deselects the path (hides it)
