@@ -59,6 +59,10 @@ class Base_state_class {
 
 	async do_action(action, options = {}) {
 		let error_during_free = false;
+		//pshot: History Brush snapshot
+		if (app.GUI && app.GUI.Ps_workspace) {
+			app.GUI.Ps_workspace.Documents.before_action(action);
+		}
 		try {
 			await action.do();
 		} catch (error) {

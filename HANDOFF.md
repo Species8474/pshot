@@ -75,6 +75,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen, sponge, dodge, burn and smudge.
   - Retouching: Spot Healing Brush, Healing Brush (Alt+click source), Patch, Content-Aware Move and Red Eye (`tools/retouch.js`, `tools/ps_patch.js`, `ps/inpaint.js`).
   - All of them respect the selection, layer locks and mask targeting.
+  - History Brush (Y): paints back the document's opening snapshot, which is captured just before the first edit (`Documents.before_action`, hooked in `base-state.js`).
   - Quick Mask (Q): painting edits the selection, shown as a red overlay.
 - **Selections**
   - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso; Quick Selection; Magic Wand.
@@ -101,7 +102,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Magnetic Lasso, Color Replacement, Mixer Brush, History Brush, Pen paths and the Paths panel, Slice tools, 3D.
+- Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Pen paths and the Paths panel, Slice tools, 3D.
 - Adjustment kinds: Selective Color, Color Lookup, Shadows/Highlights, HDR Toning.
 - Styles: Bevel & Emboss, Satin, Pattern Overlay. Vector masks. Smart Objects.
 - Brush flow and the Brush panel.

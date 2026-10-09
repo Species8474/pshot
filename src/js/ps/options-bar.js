@@ -303,6 +303,17 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Sample All Layers', value: false },
 		{ type: 'check', label: 'Finger Painting', value: false },
 	],
+	history_brush: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Mode:', values: MODES },
+		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
+		{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
+		{ type: 'pct', label: 'Flow:', value: 100 },
+		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
+	],
 	spot_healing: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'sep' },

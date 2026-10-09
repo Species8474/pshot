@@ -10,6 +10,7 @@ import config from './../config.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 import { inpaint } from './../ps/inpaint.js';
+import { alert_box } from './../ps/pixel-layer.js';
 
 class Retouch_class extends Base_tools_class {
 
@@ -49,6 +50,13 @@ class Retouch_class extends Base_tools_class {
 			return;
 		}
 		var mode = this.getParams().mode;
+		if (mode == 'history') {
+			this.history_source = app.GUI.Ps_workspace.Documents.snapshot_for_layer(config.layer);
+			if (!this.history_source) {
+				alert_box('Could not use the history brush because the history state does not contain a corresponding layer.');
+				return;
+			}
+		}
 		if (mode == 'healing') {
 			if (e.altKey) {
 				//CS6: Alt+click defines the source point
@@ -83,6 +91,12 @@ class Retouch_class extends Base_tools_class {
 		if (mode == 'red_eye') {
 			this.box_start = this.last;
 		}
+		if (mode == 'history') {
+			this.original = this.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height);
+			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
+			this.history_dab(this.last);
+		}
 		if (this.getParams().mode == 'spot_healing') {
 			//the stroke marks the area to heal
 			this.spot = new Uint8Array(this.canvas.width * this.canvas.height);
@@ -113,6 +127,16 @@ class Retouch_class extends Base_tools_class {
 		}
 		else if (mode == 'red_eye') {
 			this.box_end = p;
+		}
+		else if (mode == 'history') {
+			if (dist >= step) {
+				var hp = this.last;
+				for (var tb = step; tb <= dist; tb += step) {
+					hp = { x: this.last.x + dx * tb / dist, y: this.last.y + dy * tb / dist };
+					this.history_dab(hp);
+				}
+				this.last = hp;
+			}
 		}
 		else if (mode == 'healing') {
 			if (dist >= step) {
@@ -150,12 +174,48 @@ class Retouch_class extends Base_tools_class {
 			this.box_end = null;
 		}
 		delete config.layer.link_canvas;
-		var labels = { smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		]));
 		this.canvas = null;
 		this.spot = null;
+		this.original = null;
+		this.source_data = null;
+		this.history_mask = null;
+	}
+
+	/**
+	 * History Brush dab: paint back the snapshot pixels. Coverage within one stroke
+	 * never exceeds Opacity (CS6 behaviour), so overlapping dabs don't build up.
+	 */
+	history_dab(p) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var r = Math.max(1, params.size / 2 * (layer.width_original / layer.width));
+		var opacity = (params.opacity == null ? 100 : params.opacity) / 100;
+		var w = this.canvas.width, h = this.canvas.height;
+		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
+		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
+		if (x1 <= x0 || y1 <= y0) return;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
+		var O = this.original.data, S = this.source_data, M = this.history_mask;
+		for (var y = y0; y < y1; y++) {
+			for (var x = x0; x < x1; x++) {
+				var d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / r;
+				if (d > 1) continue;
+				var k = y * w + x;
+				var f = opacity * (d < 0.8 ? 1 : (1 - d) / 0.2);
+				if (f <= M[k]) continue;
+				M[k] = f;
+				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
+				for (var c = 0; c < 4; c++) {
+					img.data[j + c] = O[i + c] + (S[i + c] - O[i + c]) * f;
+				}
+			}
+		}
+		ctx.putImageData(img, x0, y0);
 	}
 
 	/**

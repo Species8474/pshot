@@ -97,6 +97,7 @@ config.TOOLS = [
 			size: 30,
 			mode: 'smudge',
 			strength: 50,
+			opacity: 100,
 		},
 	},
 	{

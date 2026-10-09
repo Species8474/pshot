@@ -132,7 +132,7 @@ const groups = [
 		{ id: 'pattern_stamp', name: 'Pattern Stamp Tool', key: 'S', tool: null, icon: I.pattern_stamp },
 	]},
 	{ members: [
-		{ id: 'history_brush', name: 'History Brush Tool', key: 'Y', tool: null, icon: I.history_brush },
+		{ id: 'history_brush', name: 'History Brush Tool', key: 'Y', tool: 'retouch', preset: { mode: 'history' }, icon: I.history_brush },
 		{ id: 'art_history_brush', name: 'Art History Brush Tool', key: 'Y', tool: null, icon: I.art_history_brush },
 	]},
 	{ members: [

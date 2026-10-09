@@ -36,11 +36,61 @@ class Ps_documents_class {
 			name: name || 'Untitled-' + untitled,
 			saved_as_psd: !!(file_name && /\.psd$/i.test(file_name)),
 			state: null,
+			snapshot: null,
 		};
 	}
 
 	current() {
 		return this.docs[this.active];
+	}
+
+	/**
+	 * CS6 keeps a snapshot of the document as opened; it is the History Brush source.
+	 * Called before every action: the first edit after New/Open captures it.
+	 */
+	before_action(action) {
+		var doc = this.current();
+		if (!doc || doc.snapshot) {
+			return;
+		}
+		if (app.State.action_history_index == 0 && /^(open|new_file)/.test(action.action_id)) {
+			return;
+		}
+		var layers = {};
+		for (var layer of config.layers) {
+			if (layer.type == 'image' && layer.link) {
+				var canvas = document.createElement('canvas');
+				canvas.width = layer.width_original;
+				canvas.height = layer.height_original;
+				canvas.getContext('2d').drawImage(layer.link, 0, 0);
+				layers[layer.id] = { canvas: canvas, x: layer.x, y: layer.y, width: layer.width, height: layer.height };
+			}
+		}
+		doc.snapshot = { layers: layers };
+	}
+
+	/**
+	 * the snapshot pixels of a layer, in that layer's current pixel space; null if the
+	 * snapshot has no such layer
+	 */
+	snapshot_for_layer(layer) {
+		var doc = this.current();
+		var snap = doc && doc.snapshot ? doc.snapshot.layers[layer.id] : null;
+		if (doc && !doc.snapshot) {
+			//no edits yet: the snapshot is the current state
+			snap = layer.type == 'image' && layer.link ? { canvas: layer.link, x: layer.x, y: layer.y, width: layer.width, height: layer.height } : null;
+		}
+		if (!snap) {
+			return null;
+		}
+		var canvas = document.createElement('canvas');
+		canvas.width = layer.width_original;
+		canvas.height = layer.height_original;
+		var sx = layer.width_original / layer.width, sy = layer.height_original / layer.height;
+		var ctx = canvas.getContext('2d', { willReadFrequently: true });
+		ctx.setTransform(sx, 0, 0, sy, -layer.x * sx, -layer.y * sy);
+		ctx.drawImage(snap.canvas, snap.x, snap.y, snap.width, snap.height);
+		return canvas;
 	}
 
 	selection_tool() {
