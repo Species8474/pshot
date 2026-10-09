@@ -1235,6 +1235,81 @@ class Ps_commands_class {
 		}
 	}
 
+	/**
+	 * Image > Apply Image: blend a layer (or the merged image) into the active layer
+	 */
+	apply_image() {
+		var target = config.layer;
+		if (!target || target.type != 'image' || !target.link) {
+			alertify.error('Could not complete the Apply Image command because the target layer is not a pixel layer.');
+			return;
+		}
+		var modes = { 'Normal': 'source-over', 'Multiply': 'multiply', 'Screen': 'screen', 'Overlay': 'overlay', 'Darken': 'darken', 'Lighten': 'lighten',
+			'Color Dodge': 'color-dodge', 'Color Burn': 'color-burn', 'Soft Light': 'soft-light', 'Hard Light': 'hard-light', 'Difference': 'difference',
+			'Exclusion': 'exclusion', 'Add': 'lighter' };
+		var sources = [['Merged', null]].concat(app.GUI.Ps_workspace.Groups.ordered().filter(l => l.type == 'image' || l.type == 'text').map(l => [l.name, l.id]));
+		var html = '<div class="ps_adj_row"><span>Layer:</span><select id="ai_layer">' + sources.map((s, i) => '<option value="' + i + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(s[0]) + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><span>Channel:</span><select disabled><option>RGB</option></select></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="ai_invert"> Invert</label>'
+			+ '<div class="ps_adj_row"><span>Blending:</span><select id="ai_mode">' + Object.keys(modes).map(m => '<option' + (m == 'Multiply' ? ' selected' : '') + '>' + m + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_slider"><span>Opacity:</span><input type="number" id="ai_opacity_n" min="0" max="100" value="100"><span class="ps_adj_unit">%</span><input type="range" id="ai_opacity" min="0" max="100" value="100"></div>';
+		var source_canvas = (index) => {
+			var c = document.createElement('canvas');
+			c.width = config.WIDTH;
+			c.height = config.HEIGHT;
+			var ctx = c.getContext('2d');
+			if (index == 0) this.Base_layers.convert_layers_to_canvas(ctx, null, false);
+			else {
+				var l = this.Base_layers.get_layer(sources[index][1]);
+				if (l) this.Base_layers.render_object(ctx, Object.assign(Object.create(Object.getPrototypeOf(l)), l, { visible: true, _ps_ignore_groups: true }));
+			}
+			return c;
+		};
+		var cache = {};
+		this.Adjust.show('Apply Image', html, (root, state, update) => {
+			state.source = 0; state.invert = false; state.mode = 'Multiply'; state.opacity = 100;
+			root.querySelector('#ai_layer').addEventListener('change', (e) => { state.source = parseInt(e.target.value); update(); });
+			root.querySelector('#ai_invert').addEventListener('change', (e) => { state.invert = e.target.checked; update(); });
+			root.querySelector('#ai_mode').addEventListener('change', (e) => { state.mode = e.target.value; update(); });
+			var r = root.querySelector('#ai_opacity'), n = root.querySelector('#ai_opacity_n');
+			var set = (v) => { if (isNaN(v)) return; state.opacity = Math.max(0, Math.min(100, v)); r.value = n.value = state.opacity; update(); };
+			r.addEventListener('input', () => set(parseFloat(r.value)));
+			n.addEventListener('change', () => set(parseFloat(n.value)));
+		}, (state) => (src, dst, w, h) => {
+			var key = state.source;
+			if (!cache[key]) cache[key] = source_canvas(key);
+			var s = cache[key];
+			if (state.invert) {
+				var inv = document.createElement('canvas');
+				inv.width = s.width;
+				inv.height = s.height;
+				var ictx = inv.getContext('2d');
+				ictx.drawImage(s, 0, 0);
+				ictx.globalCompositeOperation = 'difference';
+				ictx.fillStyle = '#fff';
+				ictx.fillRect(0, 0, inv.width, inv.height);
+				ictx.globalCompositeOperation = 'destination-in';
+				ictx.drawImage(s, 0, 0);
+				s = inv;
+			}
+			var c = document.createElement('canvas');
+			c.width = w;
+			c.height = h;
+			var ctx = c.getContext('2d', { willReadFrequently: true });
+			ctx.putImageData(new ImageData(new Uint8ClampedArray(src), w, h), 0, 0);
+			ctx.globalAlpha = state.opacity / 100;
+			ctx.globalCompositeOperation = modes[state.mode] || 'multiply';
+			var sx = w / target.width, sy = h / target.height;
+			ctx.setTransform(sx, 0, 0, sy, -target.x * sx, -target.y * sy);
+			ctx.drawImage(s, 0, 0);
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			//keep the target's transparency
+			var out = ctx.getImageData(0, 0, w, h).data;
+			for (var i = 0; i < out.length; i += 4) { out[i + 3] = src[i + 3]; }
+			dst.set(out);
+		}, 'apply_image');
+	}
+
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
 	toggle_pixel_grid() {

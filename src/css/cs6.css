@@ -1431,3 +1431,9 @@ body.theme-cs6 #popups .popup.ps_liquify { width: auto; max-width: none; max-hei
 .ps_tf_ref { display: grid; grid-template-columns: repeat(3, 6px); gap: 2px; padding: 2px; }
 .ps_tf_ref i { width: 6px; height: 6px; border: 1px solid #aaa; box-sizing: border-box; }
 .ps_tf_ref i:nth-child(5) { background: #ddd; }
+
+/* Layer Comps */
+.ps_comps_list { min-height: 80px; }
+.ps_comp_row { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-bottom: 1px solid #3a3a3a; }
+.ps_comp_row.applied { background: var(--ps-select); color: #fff; }
+.ps_comp_mark { width: 12px; font-size: 9px; }

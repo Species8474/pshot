@@ -69,6 +69,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Character and Paragraph panels (Window menu, Type > Panels): font, style, size, leading, tracking, colour, faux styles, alignment. With a type layer selected but not being edited, changes apply to all its text.
   - Screen modes (F) and Tab to hide panels.
   - Workspaces (Window > Workspace and the switcher): Essentials, Painting, Photography, Typography.
+  - Layer Comps panel (Window > Layer Comps, `ps/layer-comps.js`): new/apply/update/delete, previous/next; records visibility, position, layer style per layer; per document.
   - History panel: snapshots (full layer copies; click to restore as a History step) and Create New Document from Current State.
 - **Documents**
   - Tabs.
@@ -120,7 +121,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Image**
   - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Shadows/Highlights and Equalize (destructive here, as in CS6).
   - Image > Mode: RGB Color / Grayscale ("Discard color information?"; all layers to luminosity, colors kept gray, Gray channel, tab shows Gray/8; undoable). Other modes are greyed.
-  - Image and Canvas Size, rotation, crop, Perspective Crop tool (`tools/ps_pcrop.js`: every layer and mask rectified; type/shape layers are rasterized), trim, Reveal All, Duplicate (new tab, optionally merged). File > Revert (back to the opened state, undoable).
+  - Image and Canvas Size, rotation, crop, Perspective Crop tool (`tools/ps_pcrop.js`: every layer and mask rectified; type/shape layers are rasterized), trim, Reveal All, Duplicate (new tab, optionally merged), Apply Image (layer or merged source, invert, blend mode, opacity; RGB channel only). File > Revert (back to the opened state, undoable).
 - **Filters**: Liquify (Shift+Ctrl+X: Forward Warp, Reconstruct, Pucker, Bloat, Push Left; size/density/pressure; Restore All; Show Backdrop; `ps/liquify.js`), Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse, Surface Blur, Smart Blur, Sharpen Edges, Wave, ZigZag, Shear, Crystallize, Pointillize, Facet, Fragment, Mezzotint, Fibers, Lens Flare, Tiles, Trace Contour, Wind, Extrude, Custom. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
   - Free Transform (Ctrl+T works in the full screen modes; otherwise use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Warp/Again. The options bar switches to the CS6 transform bar while transforming (X, Y, W %, H % with link, angle, Warp toggle, Cancel, Commit; Enter in a field applies it). Warp is a 4x4 Bezier patch (drag points/handles or the surface), previewed as a mesh and committed by Newton-inverting the patch per pixel. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
