@@ -1311,18 +1311,23 @@ class Ps_workspace_class {
 			return;
 		}
 		var state = app.State;
+		//History Brush source: the opened state unless another state / snapshot is chosen
+		var src = this.Documents.current().brush_source;
+		if (src == null) src = 0;
+		var is_src = (v) => (typeof v == 'number' && v === src) || (v && src && v.snapshot != null && src.snapshot === v.snapshot);
+		var brush = (attr, v) => '<span class="ps_history_brush' + (is_src(v) ? ' source' : '') + '" ' + attr + ' title="Sets the source for the history brush"></span>';
 		var html = '<div class="ps_history_snapshot' + (state.action_history_index == 0 ? ' active' : '') + '" data-index="0">'
-			+ '<span class="ps_history_brush"></span><span class="ps_history_thumb"></span><span>' + this.document_name() + '</span></div>';
+			+ brush('data-brush-index="0"', 0) + '<span class="ps_history_thumb"></span><span>' + this.document_name() + '</span></div>';
 		var snaps = this.Documents.current().snapshots || [];
 		snaps.forEach((snap, i) => {
-			html += '<div class="ps_history_snapshot ps_user_snapshot" data-snapshot="' + i + '"><span class="ps_history_brush"></span><span class="ps_history_thumb"></span><span>' + this.Helper.escapeHtml(snap.name) + '</span></div>';
+			html += '<div class="ps_history_snapshot ps_user_snapshot" data-snapshot="' + i + '">' + brush('data-brush-snapshot="' + i + '"', { snapshot: i }) + '<span class="ps_history_thumb"></span><span>' + this.Helper.escapeHtml(snap.name) + '</span></div>';
 		});
 		html += '<div class="ps_history_list">';
 		state.action_history.forEach((action, i) => {
 			var classes = 'ps_history_item';
 			if (i + 1 == state.action_history_index) classes += ' active';
 			if (i + 1 > state.action_history_index) classes += ' undone';
-			html += '<div class="' + classes + '" data-index="' + (i + 1) + '"><span class="ps_history_icon"></span>'
+			html += '<div class="' + classes + '" data-index="' + (i + 1) + '">' + brush('data-brush-index="' + (i + 1) + '"', i + 1) + '<span class="ps_history_icon"></span>'
 				+ this.Helper.escapeHtml(action.action_description) + '</div>';
 		});
 		html += '</div>';
@@ -1330,6 +1335,10 @@ class Ps_workspace_class {
 			+ '<button type="button" class="ps_history_snap" title="Create new snapshot"></button>'
 			+ '<button type="button" class="ps_history_delete" title="Delete current state"></button></div>';
 		el.innerHTML = html;
+		el.querySelectorAll('[data-brush-index], [data-brush-snapshot]').forEach((b) => b.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.Documents.set_brush_source(b.dataset.brushSnapshot != null ? { snapshot: parseInt(b.dataset.brushSnapshot) } : parseInt(b.dataset.brushIndex));
+		}));
 		el.querySelectorAll('[data-index]').forEach((row) => {
 			row.addEventListener('click', () => this.goto_history(parseInt(row.dataset.index)));
 		});

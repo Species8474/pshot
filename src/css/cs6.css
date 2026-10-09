@@ -1022,7 +1022,9 @@ body.theme-cs6 .layers_list {
 	cursor: default;
 }
 .ps_history_snapshot { height: 36px; border-bottom: 1px solid #333; }
-.ps_history_brush { width: 16px; }
+.ps_history_brush { width: 16px; height: 16px; flex: none; cursor: default; }
+.ps_history_item .ps_history_brush { margin-right: 2px; }
+.ps_history_brush.source { background: no-repeat center / 14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M15.6 1.8c.5.5-4.8 7.6-6.6 9.2l-1.7-1.7C8.9 7.5 15.1 1.3 15.6 1.8z' fill='%23d8d8d8'/%3E%3Cpath d='M6.6 10c-1.7 0-3 1-3.2 2.8-.2 1.6-.9 2.3-2.1 2.8 2.7 1.3 6.6.6 7.2-2.2.2-1-.3-2.4-1.9-3.4z' fill='%23d8d8d8'/%3E%3Cpath d='M2.5 7.5A5 5 0 0 1 9.5 2.6M2.5 7.5V4.5M2.5 7.5h3' fill='none' stroke='%23d8d8d8' stroke-width='1.2'/%3E%3C/svg%3E"); }
 .ps_history_thumb {
 	width: 30px;
 	height: 24px;

@@ -56,6 +56,13 @@ class Ps_documents_class {
 		if (app.State.action_history_index == 0 && /^(open|new_file)/.test(action.action_id)) {
 			return;
 		}
+		doc.snapshot = { layers: this.capture_layers() };
+	}
+
+	/**
+	 * the pixel layers as they are now (History Brush source data)
+	 */
+	capture_layers() {
 		var layers = {};
 		for (var layer of config.layers) {
 			if (layer.type == 'image' && layer.link) {
@@ -66,7 +73,35 @@ class Ps_documents_class {
 				layers[layer.id] = { canvas: canvas, x: layer.x, y: layer.y, width: layer.width, height: layer.height };
 			}
 		}
-		doc.snapshot = { layers: layers };
+		return layers;
+	}
+
+	/**
+	 * History panel: set the History Brush source to a state (index, 0 = the
+	 * opened state) or a snapshot ({ snapshot: i }). States are captured by
+	 * stepping through History and back.
+	 */
+	async set_brush_source(source) {
+		var doc = this.current();
+		var ws = app.GUI.Ps_workspace;
+		if (source && source.snapshot != null) {
+			var snap = (doc.snapshots || [])[source.snapshot];
+			if (!snap) return;
+			var layers = {};
+			for (var copy of snap.layers || []) {
+				if (copy.type == 'image' && copy.data) layers[copy._old_id] = { canvas: copy.data, x: copy.x, y: copy.y, width: copy.width, height: copy.height };
+			}
+			doc.snapshot = { layers: layers };
+		}
+		else {
+			var here = app.State.action_history_index;
+			if (source != here) await ws.goto_history(source);
+			var captured = this.capture_layers();
+			if (source != here) await ws.goto_history(here);
+			doc.snapshot = { layers: captured };
+		}
+		doc.brush_source = source;
+		ws.render_history();
 	}
 
 	/**
