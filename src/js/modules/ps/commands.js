@@ -188,6 +188,16 @@ class Ps_commands_class {
 
 	fill_with(color, alpha, description) {
 		var Mask = app.GUI.Ps_workspace.Mask;
+		if (this.selection().quick_mask) {
+			//Quick Mask: fill paints the selection (inside any current selection in CS6 it fills all)
+			var qarea = document.createElement('canvas');
+			qarea.width = config.WIDTH;
+			qarea.height = config.HEIGHT;
+			var qctx = qarea.getContext('2d');
+			qctx.fillStyle = '#000';
+			qctx.fillRect(0, 0, qarea.width, qarea.height);
+			return this.selection().paint_quick_mask(qarea, color, alpha, description);
+		}
 		if (Mask.is_editing(config.layer)) {
 			//filling while the layer mask is targeted fills the mask (CS6)
 			var area = document.createElement('canvas');
@@ -608,6 +618,10 @@ class Ps_commands_class {
 
 	deselect() {
 		this.selection().deselect();
+	}
+
+	toggle_quick_mask() {
+		this.selection().toggle_quick_mask();
 	}
 
 	select_all() {

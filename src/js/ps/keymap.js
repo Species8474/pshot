@@ -192,7 +192,7 @@ class Ps_keymap_class {
 					case 'D': ws.default_colors(); return true;
 					case 'X': ws.switch_colors(); return true;
 					case 'F': ws.cycle_screen_mode(event.shiftKey); return true;
-					case 'Q': ws.status_message('Quick Mask mode is not available in pshot yet.'); return true;
+					case 'Q': ws.Selection.toggle_quick_mask(); return true;
 				}
 				return ws.select_by_key(key, event.shiftKey);
 			}

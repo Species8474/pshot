@@ -361,6 +361,7 @@ class Ps_workspace_class {
 		document.getElementById('ps_fg_color').addEventListener('click', () => this.open_color_picker('fg'));
 		document.getElementById('ps_bg_color').addEventListener('click', () => this.open_color_picker('bg'));
 		document.getElementById('ps_screenmode').addEventListener('click', () => this.cycle_screen_mode());
+		document.getElementById('ps_quickmask').addEventListener('click', () => this.Selection.toggle_quick_mask());
 		document.getElementById('ps_screenmode').addEventListener('contextmenu', (event) => {
 			event.preventDefault();
 			var modes = [['standard', 'Standard Screen Mode'], ['menu', 'Full Screen Mode With Menu Bar'], ['full', 'Full Screen Mode']];
@@ -691,6 +692,7 @@ class Ps_workspace_class {
 			case 'rulers': return config.ruler_active == true;
 			case 'snap': return config.SNAP == true;
 			case 'guides_locked': return this.Guides.locked;
+			case 'quick_mask': return this.Selection.quick_mask;
 			case 'options_bar': return !document.getElementById('ps_options').classList.contains('closed');
 			case 'toolbox': return !document.getElementById('ps_toolbox').classList.contains('closed');
 		}
@@ -762,7 +764,7 @@ class Ps_workspace_class {
 		var active = this.Documents.active;
 		var labels = docs.map((doc, i) => {
 			if (i == active) {
-				return this.tab_label(doc.name, this.format_zoom(), config.layer ? config.layer.name : '');
+				return this.tab_label(doc.name, this.format_zoom(), this.Selection.quick_mask ? 'Quick Mask' : (config.layer ? config.layer.name : ''));
 			}
 			var st = doc.state;
 			var layer = st && st.layer ? st.layer.name : '';

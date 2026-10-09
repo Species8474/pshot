@@ -235,7 +235,7 @@ const M = [
 		'-',
 		'Transform Selection',
 		'-',
-		'Edit in Quick Mask Mode',
+		{ name: 'Edit in Quick Mask Mode', target: 'ps/commands.toggle_quick_mask', checked: 'quick_mask' },
 		'-',
 		'Load Selection...',
 		'Save Selection...',

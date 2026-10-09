@@ -88,6 +88,10 @@ function install_pixel_layer_guard() {
 			return;
 		}
 		var tool = config.TOOL.name;
+		if (app.GUI.Ps_workspace.Selection.quick_mask && ['brush', 'pencil', 'gradient'].includes(tool)) {
+			//Quick Mask: painting edits the selection whatever the active layer is
+			return;
+		}
 		if ((PAINT_TOOLS.includes(tool) || PIXEL_TOOLS.includes(tool)) && config.layer && config.layer.type == 'ps_group') {
 			event.stopImmediatePropagation();
 			event.preventDefault();

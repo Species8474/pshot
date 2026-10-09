@@ -67,6 +67,7 @@ class Ps_selection_class {
 		this.overlay = null;
 		this.offset = null;
 		this.decorate = null;
+		this.quick_mask = false;
 		setInterval(() => {
 			if (this.mask || this.preview) {
 				this.phase = (this.phase + 1) % 8;
@@ -442,6 +443,27 @@ class Ps_selection_class {
 		return out;
 	}
 
+	// ---------- Quick Mask ----------
+
+	toggle_quick_mask() {
+		this.quick_mask = !this.quick_mask;
+		var button = document.getElementById('ps_quickmask');
+		if (button) {
+			button.classList.toggle('active', this.quick_mask);
+		}
+		app.GUI.Ps_workspace.last_tab_label = null;
+		this.draw_overlay();
+	}
+
+	/**
+	 * paint into the selection while in Quick Mask mode (white selects, black deselects)
+	 */
+	paint_quick_mask(stroke, color, opacity, description) {
+		var virtual = { x: 0, y: 0, ps_mask_x: 0, ps_mask_y: 0, ps_mask: this.mask || new_canvas(config.WIDTH, config.HEIGHT) };
+		var mask = app.GUI.Ps_workspace.Mask.painted_mask(virtual, stroke, color, opacity);
+		return this.commit(mask, description);
+	}
+
 	// ---------- marching ants ----------
 
 	compute_edges() {
@@ -503,7 +525,7 @@ class Ps_selection_class {
 		var ctx = overlay.getContext('2d');
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, overlay.width, overlay.height);
-		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview) {
+		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview && !this.quick_mask) {
 			return;
 		}
 		var m = zoomView.matrix;
@@ -513,7 +535,19 @@ class Ps_selection_class {
 			ctx.translate(this.offset.x, this.offset.y);
 		}
 		ctx.imageSmoothingEnabled = false;
-		if (this.mask) {
+		if (this.quick_mask) {
+			//Quick Mask: masked (unselected) areas in 50% red
+			var tint = new_canvas(config.WIDTH, config.HEIGHT);
+			var tctx = tint.getContext('2d');
+			tctx.fillStyle = 'rgba(255,0,0,0.5)';
+			tctx.fillRect(0, 0, tint.width, tint.height);
+			if (this.mask) {
+				tctx.globalCompositeOperation = 'destination-out';
+				tctx.drawImage(this.mask, 0, 0);
+			}
+			ctx.drawImage(tint, 0, 0);
+		}
+		else if (this.mask) {
 			if (!this.edges || this.edges.w != this.mask.width) {
 				this.compute_edges();
 			}

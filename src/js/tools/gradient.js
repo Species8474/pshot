@@ -1,6 +1,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { commit_stroke } from './../ps/stroke.js';
+import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 import Helper_class from './../libs/helpers.js';
@@ -34,7 +35,10 @@ class Gradient_class extends Base_tools_class {
 		}
 
 		//pshot: CS6 draws the gradient into the active pixel layer
-		this.paint_target = (config.layer.ps_mask && config.layer.ps_mask_editing) || config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
+		if (app.GUI.Ps_workspace.Selection.quick_mask) {
+			ensure_pixel_layer();
+		}
+		this.paint_target = app.GUI.Ps_workspace.Selection.quick_mask ? config.layer.id : ((config.layer.ps_mask && config.layer.ps_mask_editing) || config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null));
 
 		//register new object - current layer is not ours or params changed
 		this.layer = {

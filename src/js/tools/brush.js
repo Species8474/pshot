@@ -1,6 +1,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { commit_stroke } from './../ps/stroke.js';
+import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 
@@ -205,7 +206,11 @@ class Brush_class extends Base_tools_class {
 		if (config.layer.type != this.name || params_hash != this.params_hash) {
 			//register new object - current layer is not ours or params changed
 			//pshot: remember the pixel layer the stroke belongs to (CS6 paints into it)
-			this.paint_target = (config.layer.ps_mask && config.layer.ps_mask_editing) || config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
+			if (app.GUI.Ps_workspace.Selection.quick_mask) {
+				//keep an empty layer from being turned into the temporary stroke layer
+				ensure_pixel_layer();
+			}
+			this.paint_target = app.GUI.Ps_workspace.Selection.quick_mask ? config.layer.id : ((config.layer.ps_mask && config.layer.ps_mask_editing) || config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null));
 			this.layer = {
 				type: this.name,
 				data: [[]],

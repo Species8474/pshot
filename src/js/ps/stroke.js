@@ -26,6 +26,25 @@ async function commit_stroke(tool, pending, label) {
 		return;
 	}
 	var temp = config.layer;
+	var Selection = app.GUI.Ps_workspace.Selection;
+	if (Selection.quick_mask && temp && temp.type == tool.name) {
+		//Quick Mask mode: the stroke edits the selection, not the pixels
+		var qstroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);
+		var qopacity = (temp.opacity == null ? 100 : temp.opacity) / 100;
+		await app.State.do_action(new app.Actions.Bundle_action(tool.name + '_tool', label, [
+			new app.Actions.Delete_layer_action(temp.id, true),
+		]), { merge_with_history: ['new_' + tool.name + '_layer'] });
+		if (target_id !== 'self' && target_id != null && app.Layers.get_layer(target_id)) {
+			await app.State.do_action(new app.Actions.Select_layer_action(target_id, true));
+			app.State.action_history.pop();
+			app.State.action_history_index = app.State.action_history.length;
+		}
+		//the temp-layer bookkeeping above is not a step of its own
+		app.State.action_history.pop();
+		app.State.action_history_index = app.State.action_history.length;
+		await Selection.paint_quick_mask(qstroke, tool.name == 'gradient' ? null : config.COLOR, qopacity, label);
+		return;
+	}
 	if (target_id === 'self') {
 		//stroke on an empty layer: miniPaint turned that layer into the stroke; make it a pixel layer
 		if (!temp || temp.type != tool.name) {
