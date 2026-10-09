@@ -8,6 +8,7 @@ import config from './../../config.js';
 import Base_layers_class from './../../core/base-layers.js';
 import Dialog_class from './../../libs/popup.js';
 import { ensure_pixel_layer } from './../../ps/pixel-layer.js';
+import { open_document, place, save_psd } from './../../ps/document.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -551,8 +552,26 @@ class Ps_commands_class {
 
 	// ---------- File ----------
 
+	open() {
+		open_document();
+	}
+
 	place() {
-		app.GUI.modules['file/open'].open_file();
+		place();
+	}
+
+	/**
+	 * CS6 Save: a document that came from a PSD (or was saved as one) saves straight
+	 * back to PSD; anything else goes through Save As
+	 */
+	save() {
+		var ws = app.GUI.Ps_workspace;
+		if (ws.saved_as_psd) {
+			save_psd(ws.document_name());
+			app.State.ps_saved_index = app.State.action_history_index;
+			return;
+		}
+		app.GUI.modules['file/save'].save();
 	}
 
 	close_document() {
@@ -560,7 +579,7 @@ class Ps_commands_class {
 		window.State.do_action(new app.Actions.Reset_layers_action(true)).then(function () {
 			_this.purge_histories();
 			app.GUI.Ps_workspace.document_number++;
-			app.GUI.Ps_workspace.render_document_tab();
+			app.GUI.Ps_workspace.set_document_name(null);
 		});
 	}
 

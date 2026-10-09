@@ -711,7 +711,19 @@ class Ps_workspace_class {
 	// =================================================================
 
 	document_name() {
-		return 'Untitled-' + this.document_number;
+		return this.doc_name || 'Untitled-' + this.document_number;
+	}
+
+	/**
+	 * @param {string|null} name document name (null = Untitled-N)
+	 * @param {string} file_name original file name; a .psd saves straight back with Ctrl+S
+	 */
+	set_document_name(name, file_name) {
+		this.doc_name = name;
+		this.saved_as_psd = !!(file_name && /\.psd$/i.test(file_name));
+		this.last_tab_label = null;
+		this.render_document_tab();
+		this.render_history();
 	}
 
 	render_document_tab() {

@@ -5,6 +5,7 @@ import Helper_class from './../../libs/helpers.js';
 import Dialog_class from './../../libs/popup.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 import canvasToBlob from './../../../../node_modules/blueimp-canvas-to-blob/js/canvas-to-blob.min.js';
+import { save_psd } from './../../ps/document.js';
 import filesaver from './../../../../node_modules/file-saver/dist/FileSaver.min.js';
 import GIF from './../../../../node_modules/gif.js.optimized/';
 import CanvasToTIFF from './../../libs/canvastotiff.js';
@@ -35,6 +36,7 @@ class File_save_class {
 
 		//save types config
 		this.SAVE_TYPES = {
+			PSD: "Photoshop (*.PSD)",
 			PNG: "Portable Network Graphics",
 			JPG: "JPG/JPEG Format",
 			//AVIF: "AV1 Image File Format", //just uncomment it in future to make it work
@@ -72,15 +74,9 @@ class File_save_class {
 	 * saves as non destructive mode (including layers, RAW)
 	 */
 	save(){
+		//pshot: CS6 Save As lists every format, Photoshop first
 		var types = JSON.parse(JSON.stringify(this.SAVE_TYPES));
-		for(var i in types){
-			if(i != 'JSON'){
-				delete types[i];
-			}
-		}
-
-		this.save_general(types, 'Save as');
-
+		this.save_general(types, 'Save As');
 	}
 
 	/**
@@ -89,8 +85,9 @@ class File_save_class {
 	export(){
 		var types = JSON.parse(JSON.stringify(this.SAVE_TYPES));
 		delete types.JSON;
+		delete types.PSD;
 
-		this.save_general(types, 'Export');
+		this.save_general(types, 'Save for Web');
 	}
 
 	save_general(file_types, title) {
@@ -118,10 +115,7 @@ class File_save_class {
 			calc_size = true;
 		}
 
-		var file_name = config.layers[0].name;
-		var parts = file_name.split('.');
-		if (parts.length > 1)
-			file_name = parts[parts.length - 2];
+		var file_name = app.GUI.Ps_workspace.document_name();
 		file_name = file_name.replace(/ /g, "-");
 		file_name = this.Helper.escapeHtml(file_name);
 
@@ -465,6 +459,13 @@ class File_save_class {
 			if (this.Helper.strpos(fname, '.' + i.toLowerCase()) !== false) {
 				type = i;
 			}
+		}
+
+		//pshot: Photoshop format
+		if (type == 'PSD') {
+			save_psd(fname);
+			app.GUI.Ps_workspace.set_document_name(fname.replace(/\.psd$/i, ''), fname.replace(/\.psd$/i, '') + '.psd');
+			return;
 		}
 
 		//save default type as cookie

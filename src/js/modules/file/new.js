@@ -120,6 +120,11 @@ class File_new_class {
 		//sleep, lets wait till DOM is finished
 		await new Promise(r => setTimeout(r, 10));
 
+		//pshot: a new document is Untitled-N with a fresh History
+		app.GUI.Ps_workspace.document_number++;
+		app.GUI.Ps_workspace.set_document_name(null);
+		app.GUI.modules['ps/commands'].purge_histories();
+
 		//fit to screen?
 		this.Base_gui.GUI_preview.zoom_auto(true);
 

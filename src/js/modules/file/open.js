@@ -1,4 +1,5 @@
 import app from './../../app.js';
+import { place, is_psd } from './../../ps/document.js';
 import config from './../../config.js';
 import Base_layers_class from './../../core/base-layers.js';
 import Base_gui_class from './../../core/base-gui.js';
@@ -294,6 +295,11 @@ class File_open_class {
 
 		for (var i = 0, f; i < files.length; i++) {
 			f = files[i];
+			//pshot: PSD files dropped on the document are placed as layers (CS6)
+			if (is_psd(f)) {
+				place([f]);
+				continue;
+			}
 			if (!f.type.match('image.*') && !f.name.match('.json')) {
 				if(dir_opened == false) {
 					alertify.error('Wrong file type, must be image or json.');
