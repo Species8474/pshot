@@ -36,10 +36,11 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram',
 };
 
 const STRIP_ICONS = {
+	histogram: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M2 15.5h14M3 15V11M5 15V7M7 15V4M9 15V6M11 15V9M13 15V8M15 15v-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
 	comps: '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2.5" y="5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 5V3h10.5v9.5h-2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	brush: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M15 2.5c.5.5-4.5 7-6.2 8.5l-1.6-1.6C8.6 7.6 14.5 2 15 2.5zM6.7 10.3c-1.6 0-2.8 1-3 2.6-.2 1.5-.8 2.1-1.9 2.6 2.5 1.2 6.1.5 6.6-2 .2-1-.3-2.2-1.7-3.2z" fill="currentColor"/></svg>',
 	character: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 15L7.5 3h1L13 15M5 11h6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
@@ -176,6 +177,7 @@ class Ps_workspace_class {
 			app.GUI.GUI_layers.render_layers();
 			this.render_channels();
 			if (this.open_popout == 'comps') this.Comps.render();
+			if (this.open_popout == 'histogram') this.render_histogram_panel();
 			if (this.paths_signature !== config.ps_paths) {
 				this.paths_signature = config.ps_paths;
 				this.Paths.render_panel();
@@ -690,6 +692,9 @@ class Ps_workspace_class {
 		if (panel == 'character') {
 			render_character(document.getElementById('ps_character'));
 		}
+		if (panel == 'histogram') {
+			this.render_histogram_panel();
+		}
 		if (panel == 'comps') {
 			this.Comps.render();
 		}
@@ -1171,6 +1176,58 @@ class Ps_workspace_class {
 			set('pi_doc', 'Doc: ' + this.format_bytes(config.WIDTH * config.HEIGHT * 3));
 			set('pi_hint', this.active_member ? 'Click and drag to use the ' + this.active_member.name.replace(/ Tool$/, '').toLowerCase() + ' tool.' : '');
 		});
+	}
+
+	/**
+	 * Histogram panel (CS6 expanded view): channel, graph, statistics
+	 */
+	render_histogram_panel() {
+		var el = document.getElementById('ps_histogram');
+		if (!el) return;
+		var channel = this.histogram_channel || 'RGB';
+		var source = this.histogram_source || 'Entire Image';
+		var W = config.WIDTH, H = config.HEIGHT;
+		var c = document.createElement('canvas');
+		c.width = W;
+		c.height = H;
+		var ctx = c.getContext('2d', { willReadFrequently: true });
+		if (source == 'Selected Layer' && config.layer) app.Layers.render_object(ctx, config.layer);
+		else app.Layers.convert_layers_to_canvas(ctx, null, false);
+		var d = ctx.getImageData(0, 0, W, H).data;
+		var hist = new Float64Array(256), n = 0;
+		var step = Math.max(1, Math.floor(W * H / 400000));
+		for (var i = 0; i < W * H; i += step) {
+			var k = i * 4;
+			if (d[k + 3] == 0) continue;
+			var v = channel == 'Red' ? d[k] : channel == 'Green' ? d[k + 1] : channel == 'Blue' ? d[k + 2]
+				: (channel == 'Luminosity' ? Math.round(d[k] * 0.3 + d[k + 1] * 0.59 + d[k + 2] * 0.11) : Math.round((d[k] + d[k + 1] + d[k + 2]) / 3));
+			hist[v]++;
+			n++;
+		}
+		var mean = 0, sq = 0, median = 0, acc = 0;
+		for (var v2 = 0; v2 < 256; v2++) { mean += v2 * hist[v2]; sq += v2 * v2 * hist[v2]; }
+		mean = n ? mean / n : 0;
+		var sd = n ? Math.sqrt(Math.max(0, sq / n - mean * mean)) : 0;
+		for (median = 0; median < 256; median++) { acc += hist[median]; if (acc >= n / 2) break; }
+		var channels = ['RGB', 'Red', 'Green', 'Blue', 'Luminosity'];
+		el.innerHTML = '<div class="ps_hist">'
+			+ '<div class="ps_typ_row"><span>Channel:</span><select id="hist_ch">' + channels.map(ch => '<option' + (ch == channel ? ' selected' : '') + '>' + ch + '</option>').join('') + '</select></div>'
+			+ '<canvas id="hist_graph" width="256" height="100"></canvas>'
+			+ '<div class="ps_typ_row"><span>Source:</span><select id="hist_src">' + ['Entire Image', 'Selected Layer'].map(s => '<option' + (s == source ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_hist_stats"><span>Mean:</span><b>' + mean.toFixed(2) + '</b><span>Std Dev:</span><b>' + sd.toFixed(2) + '</b>'
+			+ '<span>Median:</span><b>' + median + '</b><span>Pixels:</span><b>' + Math.round(n * step) + '</b></div></div>';
+		var g = el.querySelector('#hist_graph').getContext('2d');
+		g.fillStyle = '#fff';
+		g.fillRect(0, 0, 256, 100);
+		var max = 0;
+		for (var v3 = 0; v3 < 256; v3++) max = Math.max(max, hist[v3]);
+		g.fillStyle = { Red: '#c00', Green: '#090', Blue: '#00c' }[channel] || '#000';
+		for (var x = 0; x < 256; x++) {
+			var hgt = max ? Math.round(hist[x] / max * 100) : 0;
+			g.fillRect(x, 100 - hgt, 1, hgt);
+		}
+		el.querySelector('#hist_ch').addEventListener('change', (e) => { this.histogram_channel = e.target.value; this.render_histogram_panel(); });
+		el.querySelector('#hist_src').addEventListener('change', (e) => { this.histogram_source = e.target.value; this.render_histogram_panel(); });
 	}
 
 	/**

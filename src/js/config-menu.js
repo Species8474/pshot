@@ -367,7 +367,7 @@ const M = [
 		'Character Styles',
 		'Clone Source',
 		{ name: 'Color', shortcut: 'F6', target: 'ps/commands.toggle_panel', parameter: 'color', checked: 'panel:color' },
-		'Histogram|image/histogram.histogram',
+		{ name: 'Histogram', target: 'ps/commands.toggle_panel', parameter: 'histogram', checked: 'panel:histogram' },
 		{ name: 'History', target: 'ps/commands.toggle_panel', parameter: 'history', checked: 'panel:history' },
 		{ name: 'Info', shortcut: 'F8', target: 'ps/commands.toggle_panel', parameter: 'info', checked: 'panel:info' },
 		{ name: 'Layer Comps', target: 'ps/commands.toggle_panel', parameter: 'comps', checked: 'panel:comps' },

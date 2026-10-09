@@ -1462,3 +1462,8 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 /* layer color labels (eye column) */
 .ps_eye.label_red { background: #8c4442; } .ps_eye.label_orange { background: #94633a; } .ps_eye.label_yellow { background: #8f843a; }
 .ps_eye.label_green { background: #4f7340; } .ps_eye.label_blue { background: #3f5d82; } .ps_eye.label_violet { background: #674c80; } .ps_eye.label_gray { background: #6a6a6a; }
+/* Histogram panel */
+.ps_hist { padding: 8px; display: flex; flex-direction: column; gap: 6px; width: 264px; }
+#hist_graph { border: 1px solid #222; }
+.ps_hist_stats { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2px 8px; font-size: 11px; color: #ccc; }
+.ps_hist_stats b { font-weight: normal; color: #f0f0f0; }
