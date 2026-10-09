@@ -75,7 +75,7 @@ class Ps_shape_layers_class {
 		ctx.save();
 		if (sh.fill) {
 			ctx.fillStyle = sh.fill;
-			ctx.fill(path);
+			ctx.fill(path, sh.fill_rule || 'nonzero');
 		}
 		if (sh.stroke && sh.stroke.width > 0) {
 			ctx.strokeStyle = sh.stroke.color;
@@ -89,7 +89,7 @@ class Ps_shape_layers_class {
 	/**
 	 * a new shape layer from subpaths (document coordinates)
 	 */
-	async create(name, subpaths, fill, stroke, description) {
+	async create(name, subpaths, fill, stroke, description, fill_rule) {
 		var xs = [], ys = [];
 		subpaths.forEach(sp => sp.pts.forEach(p => { xs.push(p.x); ys.push(p.y); }));
 		var bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys);
@@ -97,7 +97,7 @@ class Ps_shape_layers_class {
 		await app.State.do_action(new app.Actions.Bundle_action('shape_layer', description || name, [
 			new app.Actions.Insert_layer_action({
 				name: name, type: 'ps_shape', x: bx, y: by, width: bw, height: bh, rotate: 0, is_vector: true,
-				ps_shape: { subpaths: subpaths, bx: bx, by: by, bw: bw, bh: bh, fill: fill, stroke: stroke },
+				ps_shape: { subpaths: subpaths, bx: bx, by: by, bw: bw, bh: bh, fill: fill, stroke: stroke, fill_rule: fill_rule || 'nonzero' },
 			}),
 		]));
 		//CS6: the new shape's path is targeted in the Paths panel
@@ -165,7 +165,7 @@ class Ps_shape_layers_class {
 		ctx.fillRect(0, 0, w, h);
 		ctx.setTransform(s, 0, 0, s, (w - config.WIDTH * s) / 2, (h - config.HEIGHT * s) / 2);
 		ctx.fillStyle = '#ffffff';
-		ctx.fill(this.path2d(this.current_subpaths(layer)));
+		ctx.fill(this.path2d(this.current_subpaths(layer)), layer.ps_shape.fill_rule || 'nonzero');
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 	}
 
@@ -182,7 +182,7 @@ class Ps_shape_layers_class {
 			} : { strokeEnabled: false, fillEnabled: !!sh.fill },
 			vectorMask: {
 				paths: subpaths.map(sp => ({
-					open: !sp.closed, fillRule: 'non-zero', operation: 'combine',
+					open: !sp.closed, fillRule: sh.fill_rule == 'evenodd' ? 'even-odd' : 'non-zero', operation: 'combine',
 					knots: sp.pts.map(p => ({ linked: false, points: [p.ix, p.iy, p.x, p.y, p.ox, p.oy] })),
 				})),
 			},

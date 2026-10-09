@@ -173,12 +173,12 @@ const groups = [
 		{ id: 'direct_selection', name: 'Direct Selection Tool', key: 'A', tool: 'ps_path_select', preset: { mode: 'direct' }, icon: I.direct_selection },
 	]},
 	{ members: [
-		{ id: 'rectangle', name: 'Rectangle Tool', key: 'U', tool: 'rectangle', preset: { radius: 0 }, icon: I.rectangle },
-		{ id: 'rounded_rectangle', name: 'Rounded Rectangle Tool', key: 'U', tool: 'rectangle', preset: { radius: 10 }, icon: I.rounded_rectangle },
+		{ id: 'rectangle', name: 'Rectangle Tool', key: 'U', tool: 'rectangle', preset: { radius: 0, custom: '' }, icon: I.rectangle },
+		{ id: 'rounded_rectangle', name: 'Rounded Rectangle Tool', key: 'U', tool: 'rectangle', preset: { radius: 10, custom: '' }, icon: I.rounded_rectangle },
 		{ id: 'ellipse', name: 'Ellipse Tool', key: 'U', tool: 'ellipse', icon: I.ellipse },
 		{ id: 'polygon', name: 'Polygon Tool', key: 'U', tool: 'pentagon', icon: I.polygon },
 		{ id: 'line', name: 'Line Tool', key: 'U', tool: 'line', icon: I.line },
-		{ id: 'custom_shape', name: 'Custom Shape Tool', key: 'U', tool: 'shape', icon: I.custom_shape },
+		{ id: 'custom_shape', name: 'Custom Shape Tool', key: 'U', tool: 'rectangle', preset: { radius: 0, custom: 'Heart' }, icon: I.custom_shape },
 	]},
 	{ separator: true, members: [
 		{ id: 'hand', name: 'Hand Tool', key: 'H', tool: 'hand', icon: I.hand },

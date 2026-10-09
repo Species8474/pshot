@@ -314,6 +314,7 @@ config.TOOLS = [
 			},
 			square: false,
 			shape_mode: 'Shape',
+			custom: '',
 		},
 	},
 	{

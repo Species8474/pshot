@@ -10,6 +10,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { point } from './paths.js';
+import { fitted } from './custom-shapes.js';
 
 const SHAPE_TOOLS = ['rectangle', 'ellipse', 'pentagon', 'line'];
 const KAPPA = 0.5522847498;
@@ -83,8 +84,9 @@ async function convert(job) {
 	if (job.mode == 'Shape') {
 		var sx0 = Math.min(layer.x, layer.x + w), sy0 = Math.min(layer.y, layer.y + h), sw = Math.abs(w), shh = Math.abs(h);
 		var radius = (layer.params && layer.params.radius && (layer.params.radius.value != null ? layer.params.radius.value : layer.params.radius)) || 0;
-		var shape_path = null, name = 'Shape';
-		if (layer.type == 'rectangle') { shape_path = rect_subpath(sx0, sy0, sw, shh, radius); name = radius ? 'Rounded Rectangle' : 'Rectangle'; }
+		var shape_path = null, name = 'Shape', custom = layer.type == 'rectangle' && config.TOOL.attributes.custom;
+		if (custom) { shape_path = fitted(custom, sx0, sy0, sw, shh); name = 'Shape'; }
+		else if (layer.type == 'rectangle') { shape_path = rect_subpath(sx0, sy0, sw, shh, radius); name = radius ? 'Rounded Rectangle' : 'Rectangle'; }
 		else if (layer.type == 'ellipse') { shape_path = ellipse_subpath(sx0, sy0, sw, shh); name = 'Ellipse'; }
 		else if (layer.type == 'pentagon') { shape_path = polygon_subpath(sx0, sy0, sw, shh); name = 'Polygon'; }
 		else if (layer.type == 'line') {
@@ -103,13 +105,14 @@ async function convert(job) {
 		}
 		app.State.action_history.length = app.State.action_history_index;
 		var Shapes = app.GUI.Ps_workspace.Shapes;
-		var tool_names = { rectangle: 'Rectangle Tool', ellipse: 'Ellipse Tool', line: 'Line Tool', pentagon: 'Polygon Tool' };
-		await Shapes.create(Shapes.next_name(name), [shape_path], fill, stroke, tool_names[layer.type]);
+		var tool_names = { rectangle: custom ? 'Custom Shape Tool' : 'Rectangle Tool', ellipse: 'Ellipse Tool', line: 'Line Tool', pentagon: 'Polygon Tool' };
+		await Shapes.create(Shapes.next_name(name), Array.isArray(shape_path) ? shape_path : [shape_path], fill, stroke, tool_names[layer.type], custom ? 'evenodd' : 'nonzero');
 		return;
 	}
 	if (job.mode == 'Path') {
 		var x = Math.min(layer.x, layer.x + w), y = Math.min(layer.y, layer.y + h), aw = Math.abs(w), ah = Math.abs(h);
-		if (layer.type == 'rectangle') subpath = rect_subpath(x, y, aw, ah, (layer.params && layer.params.radius && (layer.params.radius.value || layer.params.radius)) || 0);
+		if (layer.type == 'rectangle' && config.TOOL.attributes.custom) subpath = fitted(config.TOOL.attributes.custom, x, y, aw, ah);
+		else if (layer.type == 'rectangle') subpath = rect_subpath(x, y, aw, ah, (layer.params && layer.params.radius && (layer.params.radius.value || layer.params.radius)) || 0);
 		else if (layer.type == 'ellipse') subpath = ellipse_subpath(x, y, aw, ah);
 		else if (layer.type == 'line') subpath = { closed: false, pts: [point(layer.x, layer.y), point(layer.x + w, layer.y + h)] };
 		else if (layer.type == 'pentagon') subpath = polygon_subpath(x, y, aw, ah);
@@ -123,7 +126,14 @@ async function convert(job) {
 			color: config.COLOR,
 			params: Object.assign({}, layer.params, { fill: true, fill_color: config.COLOR, border: false }),
 		});
-		app.Layers.render_object(pixels.getContext('2d'), job.mode == 'Pixels' ? as_pixels : layer);
+		if (layer.type == 'rectangle' && config.TOOL.attributes.custom) {
+			//custom shapes paint their path with the foreground color
+			var cx0 = Math.min(layer.x, layer.x + w), cy0 = Math.min(layer.y, layer.y + h);
+			var pctx = pixels.getContext('2d');
+			pctx.fillStyle = config.COLOR;
+			pctx.fill(app.GUI.Ps_workspace.Shapes.path2d(fitted(config.TOOL.attributes.custom, cx0, cy0, Math.abs(w), Math.abs(h))), 'evenodd');
+		}
+		else app.Layers.render_object(pixels.getContext('2d'), job.mode == 'Pixels' ? as_pixels : layer);
 	}
 	//remove the temporary shape layer from the document and History
 	while (app.State.action_history_index > job.history && app.State.can_undo()) {
@@ -135,7 +145,7 @@ async function convert(job) {
 		if (config.ps_path_active == 'layer') config.ps_path_active = -1;
 		if (subpath) {
 			var ed = Paths.editable();
-			ed.path.subpaths.push(subpath);
+			(Array.isArray(subpath) ? subpath : [subpath]).forEach(sp => ed.path.subpaths.push(sp));
 			await Paths.commit(ed.paths, ed.index, ed.path.subpaths.length == 1 ? 'New Work Path' : 'Add Shape');
 		}
 		else {

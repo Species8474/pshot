@@ -8,6 +8,7 @@
  */
 
 import app from './../app.js';
+import { names as custom_shape_names } from './custom-shapes.js';
 import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 import Patterns from './patterns.js';
@@ -537,6 +538,7 @@ const LAYOUTS = {
 	rectangle: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
 	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', value: true }]),
 	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
+	custom_shape: SHAPE_COMMON([{ type: 'select', label: 'Shape:', values: custom_shape_names(), bind: 'custom', map: Object.fromEntries(custom_shape_names().map(n => [n, n])) }, { type: 'check', label: 'Align Edges', value: true }]),
 	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', bind: 'sides', width: 36 }, { type: 'check', label: 'Align Edges', value: true }]),
 	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', value: true }]),
 	type: [
