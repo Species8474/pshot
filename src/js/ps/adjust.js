@@ -424,9 +424,9 @@ class Ps_adjust_class {
 			state.h = state.h || 0; state.s = state.s || 0; state.l = state.l || 0; state.colorize = !!state.colorize;
 			root.querySelector('#hs_colorize').checked = state.colorize;
 			for (let [id, key] of [['hs_hue', 'h'], ['hs_sat', 's'], ['hs_light', 'l']]) {
-				var range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
+				let range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
 				range.value = num.value = state[key];
-				var set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
+				let set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
 				range.addEventListener('input', () => set(parseInt(range.value)));
 				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
 			}
@@ -453,9 +453,9 @@ class Ps_adjust_class {
 			state.b = state.b || 0; state.c = state.c || 0; state.legacy = !!state.legacy;
 			root.querySelector('#bc_legacy').checked = state.legacy;
 			for (let [id, key] of [['bc_b', 'b'], ['bc_c', 'c']]) {
-				var range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
+				let range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
 				range.value = num.value = state[key];
-				var set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
+				let set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
 				range.addEventListener('input', () => set(parseInt(range.value)));
 				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
 			}
@@ -555,6 +555,253 @@ class Ps_adjust_class {
 					dst[i + 2] = lut[src[i + 2]];
 				}
 			};
+	}
+
+	// ---------- generic slider dialogs (Exposure, Vibrance, Color Balance, ...) ----------
+
+	/**
+	 * fields: [{ key, label, min, max, step, value }] ; extra_html / extra_setup optional
+	 */
+	sliders(title, kind, fields, extra_html, extra_setup) {
+		var row = (f) => '<div class="ps_adj_slider"><span>' + f.label + '</span><input type="number" id="adj_' + f.key + '_n" value="' + f.value + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '">'
+			+ '<input type="range" id="adj_' + f.key + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '" value="' + f.value + '"></div>';
+		var html = (extra_html || '') + fields.map(row).join('');
+		this.show(title, html, (root, state, update) => {
+			for (let f of fields) {
+				if (state[f.key] === undefined) state[f.key] = f.value;
+				let range = root.querySelector('#adj_' + f.key), num = root.querySelector('#adj_' + f.key + '_n');
+				range.value = num.value = state[f.key];
+				let set = (v) => { state[f.key] = v; range.value = v; num.value = v; update(); };
+				range.addEventListener('input', () => set(parseFloat(range.value)));
+				num.addEventListener('input', () => { var v = parseFloat(num.value); if (!isNaN(v)) set(v); });
+			}
+			if (extra_setup) extra_setup(root, state, update);
+		}, (state) => this['build_' + kind](state), kind);
+	}
+
+	exposure() {
+		this.sliders('Exposure', 'exposure', [
+			{ key: 'exposure', label: 'Exposure:', min: -20, max: 20, step: 0.01, value: 0 },
+			{ key: 'offset', label: 'Offset:', min: -0.5, max: 0.5, step: 0.0001, value: 0 },
+			{ key: 'gamma', label: 'Gamma Correction:', min: 0.01, max: 9.99, step: 0.01, value: 1 },
+		]);
+	}
+
+	vibrance() {
+		this.sliders('Vibrance', 'vibrance', [
+			{ key: 'vibrance', label: 'Vibrance:', min: -100, max: 100, value: 0 },
+			{ key: 'saturation', label: 'Saturation:', min: -100, max: 100, value: 0 },
+		]);
+	}
+
+	color_balance() {
+		var extra = '<div class="ps_adj_row"><span>Tone:</span><select id="cb_tone"><option>Shadows</option><option selected>Midtones</option><option>Highlights</option></select></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="cb_preserve" checked> Preserve Luminosity</label>';
+		this.sliders('Color Balance', 'color_balance', [
+			{ key: 'cr', label: 'Cyan / Red:', min: -100, max: 100, value: 0 },
+			{ key: 'mg', label: 'Magenta / Green:', min: -100, max: 100, value: 0 },
+			{ key: 'yb', label: 'Yellow / Blue:', min: -100, max: 100, value: 0 },
+		], extra, (root, state, update) => {
+			//one set of sliders per tone; the visible sliders show the current tone
+			state.tones = state.tones || { Shadows: [0, 0, 0], Midtones: [0, 0, 0], Highlights: [0, 0, 0] };
+			state.tone = state.tone || 'Midtones';
+			state.preserve = state.preserve !== false;
+			var keys = ['cr', 'mg', 'yb'];
+			var load = () => keys.forEach((k, i) => {
+				state[k] = state.tones[state.tone][i];
+				root.querySelector('#adj_' + k).value = root.querySelector('#adj_' + k + '_n').value = state[k];
+			});
+			keys.forEach((k, i) => {
+				var sync = () => { state.tones[state.tone][i] = state[k]; update(); };
+				root.querySelector('#adj_' + k).addEventListener('input', sync);
+				root.querySelector('#adj_' + k + '_n').addEventListener('input', sync);
+			});
+			root.querySelector('#cb_tone').value = state.tone;
+			root.querySelector('#cb_tone').addEventListener('change', (e) => { state.tone = e.target.value; load(); });
+			root.querySelector('#cb_preserve').checked = state.preserve;
+			root.querySelector('#cb_preserve').addEventListener('change', (e) => { state.preserve = e.target.checked; update(); });
+			load();
+		});
+	}
+
+	photo_filter() {
+		var filters = { 'Warming Filter (85)': '#ec8a00', 'Warming Filter (LBA)': '#fa9600', 'Warming Filter (81)': '#ebb113', 'Cooling Filter (80)': '#006dff',
+			'Cooling Filter (LBB)': '#005dff', 'Cooling Filter (82)': '#00b5ff', 'Red': '#ea1a1a', 'Orange': '#f28418', 'Yellow': '#f9e31c', 'Green': '#19c919',
+			'Cyan': '#1de4e4', 'Blue': '#1d35ea', 'Violet': '#9b1dea', 'Magenta': '#e31ce3', 'Sepia': '#ac7a33', 'Deep Red': '#ff0000', 'Deep Blue': '#0022cd',
+			'Deep Emerald': '#008c00', 'Deep Yellow': '#ffd500', 'Underwater': '#00c1b1' };
+		var extra = '<div class="ps_adj_row"><span>Filter:</span><select id="pf_filter">' + Object.keys(filters).map(n => '<option>' + n + '</option>').join('') + '</select></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="pf_preserve" checked> Preserve Luminosity</label>';
+		this.sliders('Photo Filter', 'photo_filter', [
+			{ key: 'density', label: 'Density:', min: 1, max: 100, value: 25 },
+		], extra, (root, state, update) => {
+			state.filter = state.filter || 'Warming Filter (85)';
+			state.color = filters[state.filter] || state.color;
+			state.preserve = state.preserve !== false;
+			root.querySelector('#pf_filter').value = state.filter;
+			root.querySelector('#pf_filter').addEventListener('change', (e) => { state.filter = e.target.value; state.color = filters[state.filter]; update(); });
+			root.querySelector('#pf_preserve').checked = state.preserve;
+			root.querySelector('#pf_preserve').addEventListener('change', (e) => { state.preserve = e.target.checked; update(); });
+		});
+	}
+
+	channel_mixer() {
+		var extra = '<div class="ps_adj_row"><span>Output:</span><select id="cm_out"><option>Red</option><option>Green</option><option>Blue</option></select></div>';
+		this.sliders('Channel Mixer', 'channel_mixer', [
+			{ key: 'r', label: 'Red:', min: -200, max: 200, value: 100 },
+			{ key: 'g', label: 'Green:', min: -200, max: 200, value: 0 },
+			{ key: 'b', label: 'Blue:', min: -200, max: 200, value: 0 },
+			{ key: 'k', label: 'Constant:', min: -200, max: 200, value: 0 },
+		], extra + '<label class="ps_adj_check"><input type="checkbox" id="cm_mono"> Monochrome</label>', (root, state, update) => {
+			state.matrix = state.matrix || { Red: [100, 0, 0, 0], Green: [0, 100, 0, 0], Blue: [0, 0, 100, 0] };
+			state.out = state.out || 'Red';
+			state.mono = !!state.mono;
+			var keys = ['r', 'g', 'b', 'k'];
+			var load = () => keys.forEach((k, i) => {
+				state[k] = state.matrix[state.out][i];
+				root.querySelector('#adj_' + k).value = root.querySelector('#adj_' + k + '_n').value = state[k];
+			});
+			keys.forEach((k, i) => {
+				var sync = () => { state.matrix[state.out][i] = state[k]; if (state.mono) { state.matrix.Green = state.matrix.Red.slice(); state.matrix.Blue = state.matrix.Red.slice(); } update(); };
+				root.querySelector('#adj_' + k).addEventListener('input', sync);
+				root.querySelector('#adj_' + k + '_n').addEventListener('input', sync);
+			});
+			root.querySelector('#cm_out').value = state.out;
+			root.querySelector('#cm_out').addEventListener('change', (e) => { state.out = e.target.value; load(); });
+			root.querySelector('#cm_mono').checked = state.mono;
+			root.querySelector('#cm_mono').addEventListener('change', (e) => {
+				state.mono = e.target.checked;
+				if (state.mono) {
+					state.out = 'Red';
+					root.querySelector('#cm_out').value = 'Red';
+					state.matrix.Red = [40, 40, 20, 0];
+					state.matrix.Green = state.matrix.Red.slice();
+					state.matrix.Blue = state.matrix.Red.slice();
+					load();
+				}
+				update();
+			});
+			load();
+		});
+	}
+
+	gradient_map() {
+		var extra = '<div class="ps_adj_row"><span>Gradient:</span><span class="ps_adj_gradient" id="gm_preview"></span></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="gm_reverse"> Reverse</label>';
+		this.show('Gradient Map', extra, (root, state, update) => {
+			state.c1 = state.c1 || config.COLOR;
+			state.c2 = state.c2 || config.BG_COLOR;
+			state.reverse = !!state.reverse;
+			var paint = () => { root.querySelector('#gm_preview').style.background = 'linear-gradient(90deg,' + (state.reverse ? state.c2 : state.c1) + ',' + (state.reverse ? state.c1 : state.c2) + ')'; };
+			root.querySelector('#gm_reverse').checked = state.reverse;
+			root.querySelector('#gm_reverse').addEventListener('change', (e) => { state.reverse = e.target.checked; paint(); update(); });
+			paint();
+		}, (state) => this.build_gradient_map(state), 'gradient_map');
+	}
+
+	// ---------- pixel functions for the slider adjustments ----------
+
+	build_exposure(state) {
+		var lut = new Uint8ClampedArray(256);
+		var mult = Math.pow(2, state.exposure || 0), off = state.offset || 0, g = 1 / Math.max(0.01, state.gamma || 1);
+		for (var x = 0; x < 256; x++) {
+			var v = Math.max(0, x / 255 * mult + off);
+			lut[x] = Math.pow(v, g) * 255;
+		}
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) { dst[i] = lut[src[i]]; dst[i + 1] = lut[src[i + 1]]; dst[i + 2] = lut[src[i + 2]]; }
+		};
+	}
+
+	build_vibrance(state) {
+		var vib = (state.vibrance || 0) / 100, sat = (state.saturation || 0) / 100;
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i], g = src[i + 1], b = src[i + 2];
+				var max = Math.max(r, g, b), min = Math.min(r, g, b);
+				var avg = (r + g + b) / 3;
+				var s_now = max == 0 ? 0 : (max - min) / max;
+				//vibrance: stronger on low-saturated pixels
+				var amount = sat + vib * (1 - s_now) * (vib > 0 ? 1.5 : 1);
+				dst[i] = r + (r - avg) * amount;
+				dst[i + 1] = g + (g - avg) * amount;
+				dst[i + 2] = b + (b - avg) * amount;
+			}
+		};
+	}
+
+	build_color_balance(state) {
+		var tones = state.tones || { Shadows: [0, 0, 0], Midtones: [0, 0, 0], Highlights: [0, 0, 0] };
+		var preserve = state.preserve !== false;
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i], g = src[i + 1], b = src[i + 2];
+				var l = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+				var ws = Math.max(0, 1 - l * 2.5) , wh = Math.max(0, l * 2.5 - 1.5), wm = Math.max(0, 1 - Math.abs(l - 0.5) * 2.2);
+				var dr = 0, dg = 0, db = 0;
+				for (var [t, w] of [['Shadows', ws], ['Midtones', wm], ['Highlights', wh]]) {
+					var v = tones[t];
+					dr += v[0] * w; dg += v[1] * w; db += v[2] * w;
+				}
+				var nr = r + dr * 0.6, ng = g + dg * 0.6, nb = b + db * 0.6;
+				if (preserve) {
+					var nl = (nr * 0.299 + ng * 0.587 + nb * 0.114) / 255;
+					var k = nl > 0 ? l / nl : 1;
+					nr *= k; ng *= k; nb *= k;
+				}
+				dst[i] = nr; dst[i + 1] = ng; dst[i + 2] = nb;
+			}
+		};
+	}
+
+	build_photo_filter(state) {
+		var hex = state.color || '#ec8a00';
+		var fr = parseInt(hex.substr(1, 2), 16), fg = parseInt(hex.substr(3, 2), 16), fb = parseInt(hex.substr(5, 2), 16);
+		var d = (state.density == null ? 25 : state.density) / 100;
+		var preserve = state.preserve !== false;
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i], g = src[i + 1], b = src[i + 2];
+				var nr = r * (1 - d) + (r * fr / 255) * d * 1 + fr * d * 0.3;
+				var ng = g * (1 - d) + (g * fg / 255) * d * 1 + fg * d * 0.3;
+				var nb = b * (1 - d) + (b * fb / 255) * d * 1 + fb * d * 0.3;
+				if (preserve) {
+					var l0 = r * 0.299 + g * 0.587 + b * 0.114, l1 = nr * 0.299 + ng * 0.587 + nb * 0.114;
+					var k = l1 > 0 ? l0 / l1 : 1;
+					nr *= k; ng *= k; nb *= k;
+				}
+				dst[i] = nr; dst[i + 1] = ng; dst[i + 2] = nb;
+			}
+		};
+	}
+
+	build_channel_mixer(state) {
+		var m = state.matrix || { Red: [100, 0, 0, 0], Green: [0, 100, 0, 0], Blue: [0, 0, 100, 0] };
+		var rows = [m.Red, m.Green, m.Blue];
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i], g = src[i + 1], b = src[i + 2];
+				for (var c = 0; c < 3; c++) {
+					var row = rows[c];
+					dst[i + c] = (r * row[0] + g * row[1] + b * row[2]) / 100 + row[3] * 2.55;
+				}
+			}
+		};
+	}
+
+	build_gradient_map(state) {
+		var c1 = state.reverse ? state.c2 : state.c1, c2 = state.reverse ? state.c1 : state.c2;
+		c1 = c1 || '#000000';
+		c2 = c2 || '#ffffff';
+		var a = [parseInt(c1.substr(1, 2), 16), parseInt(c1.substr(3, 2), 16), parseInt(c1.substr(5, 2), 16)];
+		var b = [parseInt(c2.substr(1, 2), 16), parseInt(c2.substr(3, 2), 16), parseInt(c2.substr(5, 2), 16)];
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var l = (src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114) / 255;
+				dst[i] = a[0] + (b[0] - a[0]) * l;
+				dst[i + 1] = a[1] + (b[1] - a[1]) * l;
+				dst[i + 2] = a[2] + (b[2] - a[2]) * l;
+			}
+		};
 	}
 }
 

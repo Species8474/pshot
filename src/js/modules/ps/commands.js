@@ -36,6 +36,12 @@ class Ps_commands_class {
 	}
 
 	levels() { this.Adjust.levels(); }
+	exposure() { this.Adjust.exposure(); }
+	vibrance() { this.Adjust.vibrance(); }
+	color_balance() { this.Adjust.color_balance(); }
+	photo_filter() { this.Adjust.photo_filter(); }
+	channel_mixer() { this.Adjust.channel_mixer(); }
+	gradient_map() { this.Adjust.gradient_map(); }
 
 	new_adjustment_layer(kind) { app.GUI.Ps_workspace.Adjustment_layers.create(kind); }
 
