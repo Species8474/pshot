@@ -13,6 +13,7 @@ import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 import Patterns from './patterns.js';
 import { show_popup_menu } from './popup-menu.js';
+import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
 function measure_tool() {
 	return app.GUI.GUI_tools.tools_modules.ps_measure.object;
@@ -312,18 +313,18 @@ const LAYOUTS = {
 		{ type: 'gradient' },
 		{ type: 'sep' },
 		{ type: 'icons', items: [
-			{ icon: IC.grad_linear, title: 'Linear Gradient', bind: 'radial', bind_value: false },
-			{ icon: IC.grad_radial, title: 'Radial Gradient', bind: 'radial', bind_value: true },
-			{ icon: IC.grad_angle, title: 'Angle Gradient' },
-			{ icon: IC.grad_reflected, title: 'Reflected Gradient' },
-			{ icon: IC.grad_diamond, title: 'Diamond Gradient' },
+			{ icon: IC.grad_linear, title: 'Linear Gradient', bind: 'type', bind_value: 'linear' },
+			{ icon: IC.grad_radial, title: 'Radial Gradient', bind: 'type', bind_value: 'radial' },
+			{ icon: IC.grad_angle, title: 'Angle Gradient', bind: 'type', bind_value: 'angle' },
+			{ icon: IC.grad_reflected, title: 'Reflected Gradient', bind: 'type', bind_value: 'reflected' },
+			{ icon: IC.grad_diamond, title: 'Diamond Gradient', bind: 'type', bind_value: 'diamond' },
 		] },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
 		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
-		{ type: 'check', label: 'Reverse', value: false },
-		{ type: 'check', label: 'Dither', value: true },
-		{ type: 'check', label: 'Transparency', value: true },
+		{ type: 'check', label: 'Reverse', bind: 'reverse' },
+		{ type: 'check', label: 'Dither', bind: 'dither' },
+		{ type: 'check', label: 'Transparency', bind: 'transparency' },
 	],
 	paint_bucket: [
 		{ type: 'select', values: ['Foreground', 'Pattern'], value: 'Foreground', disabled_values: ['Pattern'] },
@@ -1167,10 +1168,22 @@ class Ps_options_bar_class {
 			var g = document.createElement('button');
 			g.type = 'button';
 			g.className = 'ps_opt_gradient';
-			var c1 = this.has('color_1') ? this.get('color_1') : config.COLOR;
-			var c2 = this.has('color_2') ? this.get('color_2') : config.BG_COLOR;
-			g.innerHTML = '<span style="background:linear-gradient(90deg,' + c1 + ',' + c2 + ')"></span><span class="ps_caret">&#9662;</span>';
+			var grad = this.has('gradient') ? this.get('gradient') : null;
+			var preview = grad ? gradient_css(grad) : 'linear-gradient(90deg,' + config.COLOR + ',' + config.BG_COLOR + ')';
+			g.innerHTML = '<span class="ps_opt_gradient_bar" style="background:' + preview + '"></span><span class="ps_caret ps_opt_gradient_caret">&#9662;</span>';
 			g.title = 'Click to edit the gradient';
+			if (grad) {
+				var set_gradient = (ng) => { this.set('gradient', ng); this.render(); };
+				var open_editor = () => gradient_editor(this.get('gradient'), set_gradient, (ng) => {
+					//live preview in the bar while editing
+					var bar = document.querySelector('#action_attributes .ps_opt_gradient_bar');
+					if (bar) bar.style.background = gradient_css(ng);
+				});
+				g.addEventListener('click', (e) => {
+					if (e.target.classList.contains('ps_opt_gradient_caret')) gradient_picker(g, set_gradient, open_editor);
+					else open_editor();
+				});
+			}
 			wrap.appendChild(g);
 			return wrap;
 		}

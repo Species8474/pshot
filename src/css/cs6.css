@@ -1706,3 +1706,30 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 #ps_tool_presets .ps_panel_footer .ps_tpre_only { margin-right: auto; padding: 0; }
 .ps_tool_preset:not([disabled]) { cursor: pointer; }
 .ps_dialog_note { color: var(--ps-text-dim); font-size: 11px; }
+
+/* Gradients: options bar swatch, preset picker, Gradient Editor */
+.ps_opt_gradient_bar { display: inline-block; width: 70px; height: 16px; border: 1px solid #222; }
+.ps_grad_picker { position: fixed; z-index: 1000; padding: 6px; background: var(--ps-panel); border: 1px solid #1e1e1e; box-shadow: 0 4px 16px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 6px; }
+.ps_grad_grid, .ps_ge_presets { display: grid; grid-template-columns: repeat(6, 32px); gap: 4px; }
+.ps_grad_cell { width: 32px; height: 32px; border: 1px solid #222; cursor: pointer; }
+.ps_grad_cell:hover { outline: 1px solid var(--ps-select-light); }
+.ps_grad_picker button { height: 22px; font-size: 11px; }
+.ps_grad_editor_wrap { position: fixed; inset: 0; z-index: 1001; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; }
+.ps_grad_editor { width: 520px; background: var(--ps-panel); color: var(--ps-text); border: 1px solid #1e1e1e; box-shadow: 0 6px 24px rgba(0,0,0,0.6); padding: 10px 14px 14px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ps_ge_title { font-weight: 600; margin-bottom: 2px; }
+.ps_ge_top { display: flex; gap: 12px; }
+.ps_ge_presets { flex: 1; max-height: 140px; overflow-y: auto; padding: 4px; background: var(--ps-panel-dark); border: 1px solid var(--ps-border); grid-template-columns: repeat(auto-fill, 32px); }
+.ps_ge_buttons { display: flex; flex-direction: column; gap: 6px; width: 80px; }
+.ps_ge_buttons button { height: 24px; }
+.ps_ge_row { display: flex; align-items: center; gap: 6px; }
+.ps_ge_row input[type=number] { width: 52px; }
+.ps_ge_name { flex: 1; }
+.ps_ge_barwrap { position: relative; padding: 12px 8px; }
+.ps_ge_bar { height: 28px; border: 1px solid #222; }
+.ps_ge_alpha_track, .ps_ge_color_track { position: relative; height: 14px; cursor: copy; }
+.ps_ge_stop { position: absolute; width: 10px; height: 12px; margin-left: -5px; cursor: pointer; background: var(--c); border: 1px solid #111; box-sizing: border-box; }
+.ps_ge_stop.alpha { top: 0; }
+.ps_ge_stop.color { top: 2px; }
+.ps_ge_stop.active { outline: 2px solid var(--ps-select-light); }
+.ps_ge_stops { border: 1px solid var(--ps-border); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; }
+.ps_ge_swatch { width: 40px; height: 18px; border: 1px solid #222; cursor: pointer; display: inline-block; }

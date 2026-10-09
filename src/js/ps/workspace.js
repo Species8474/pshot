@@ -414,10 +414,6 @@ class Ps_workspace_class {
 		if (tool_config.name == 'text' && typeof attrs.fill == 'string') {
 			attrs.fill = config.COLOR;
 		}
-		if (tool_config.name == 'gradient') {
-			attrs.color_1 = config.COLOR;
-			attrs.color_2 = config.BG_COLOR;
-		}
 	}
 
 	/**

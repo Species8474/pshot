@@ -599,11 +599,11 @@ config.TOOLS = [
 	{
 		name: 'gradient',
 		attributes: {
-			color_1: '#008000',
-			color_2: '#ffffff',
-			alpha: 100,
-			radial: false,
-			radial_power: 50,
+			gradient: { name: 'Foreground to Background', stops: [{ pos: 0, color: 'fg' }, { pos: 1, color: 'bg' }], alphas: [{ pos: 0, a: 1 }, { pos: 1, a: 1 }] },
+			type: 'linear',
+			reverse: false,
+			dither: true,
+			transparency: true,
 			opacity: 100,
 			blend: 'Normal',
 		},
