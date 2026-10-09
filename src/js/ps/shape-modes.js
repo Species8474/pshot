@@ -11,6 +11,7 @@ import app from './../app.js';
 import config from './../config.js';
 import { point } from './paths.js';
 import { fitted } from './custom-shapes.js';
+import Dialog_class from './../libs/popup.js';
 
 const SHAPE_TOOLS = ['rectangle', 'ellipse', 'pentagon', 'line'];
 const KAPPA = 0.5522847498;
@@ -58,17 +59,59 @@ function polygon_subpath(x, y, w, h) {
 	return { closed: true, pts: pts };
 }
 
+/**
+ * the options bar stroke (width, color, type, alignment, caps, corners)
+ */
+function stroke_from(p) {
+	return { color: p.border_color || '#000000', width: p.border_size || 1, dash: p.stroke_dash || 'solid', align: p.stroke_align || 'center', cap: p.stroke_cap || 'butt', join: p.stroke_join || 'miter' };
+}
+
+/**
+ * CS6: a click (no drag) with a shape tool asks for the size
+ */
+function create_dialog(x, y) {
+	var t = config.TOOL.name;
+	var title = { rectangle: config.TOOL.attributes.custom ? 'Create Custom Shape' : 'Create Rectangle', ellipse: 'Create Ellipse', pentagon: 'Create Polygon' }[t];
+	if (!title || (config.TOOL.attributes.shape_mode || 'Shape') != 'Shape') return;
+	var POP = new Dialog_class();
+	POP.show({
+		title: title,
+		params: [
+			{ name: 'w', title: 'Width:', value: 100 },
+			{ name: 'h', title: 'Height:', value: 100 },
+			{ name: 'center', title: 'From Center', value: false },
+		],
+		on_finish: (params) => {
+			var w = Math.max(1, parseFloat(params.w) || 100), h = Math.max(1, parseFloat(params.h) || 100);
+			var x0 = params.center ? x - w / 2 : x, y0 = params.center ? y - h / 2 : y;
+			if (config.TOOL.attributes.align_edges !== false) { x0 = Math.round(x0); y0 = Math.round(y0); }
+			var a = config.TOOL.attributes;
+			var radius = a.radius && (a.radius.value != null ? a.radius.value : a.radius) || 0;
+			var path = t == 'ellipse' ? ellipse_subpath(x0, y0, w, h) : (t == 'pentagon' ? polygon_subpath(x0, y0, w, h) : (a.custom ? fitted(a.custom, x0, y0, w, h) : rect_subpath(x0, y0, w, h, radius)));
+			var name = { rectangle: a.custom ? 'Shape' : (radius ? 'Rounded Rectangle' : 'Rectangle'), ellipse: 'Ellipse', pentagon: 'Polygon' }[t];
+			var Shapes = app.GUI.Ps_workspace.Shapes;
+			Shapes.create(Shapes.next_name(name), Array.isArray(path) ? path : [path], a.fill === false ? null : (a.fill_color || config.COLOR), a.border ? stroke_from(a) : null, title.replace('Create ', '') + ' Tool', a.custom ? 'evenodd' : 'nonzero');
+		},
+	});
+}
+
 function install_shape_modes() {
 	var pending = null;
-	document.addEventListener('mousedown', () => {
+	document.addEventListener('mousedown', (e) => {
 		if (!SHAPE_TOOLS.includes(config.TOOL.name)) return;
 		var mode = config.TOOL.attributes.shape_mode || 'Shape';
-		pending = { mode: mode, before: config.layer, history: app.State.action_history_index };
+		pending = { mode: mode, before: config.layer, history: app.State.action_history_index, sx: e.clientX, sy: e.clientY, on_canvas: !!(e.target.closest && e.target.closest('#main_wrapper')) };
 	}, true);
-	document.addEventListener('mouseup', () => {
+	document.addEventListener('mouseup', (e) => {
 		if (!pending) return;
 		var job = pending;
 		pending = null;
+		if (job.on_canvas && Math.hypot(e.clientX - job.sx, e.clientY - job.sy) < 3 && config.TOOL.name != 'line') {
+			var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+			var at = app.Layers.get_world_coords(e.clientX - rect.left, e.clientY - rect.top);
+			setTimeout(() => create_dialog(at.x, at.y), 60);
+			return;
+		}
 		//let the tool finish its own mouseup (async History merge)
 		setTimeout(() => convert(job), 60);
 	});
@@ -83,6 +126,12 @@ async function convert(job) {
 	var subpath = null, pixels = null;
 	if (job.mode == 'Shape') {
 		var sx0 = Math.min(layer.x, layer.x + w), sy0 = Math.min(layer.y, layer.y + h), sw = Math.abs(w), shh = Math.abs(h);
+		//Align Edges: the shape's box on whole pixels
+		if (config.TOOL.attributes.align_edges !== false) {
+			var ex = Math.round(sx0 + sw), ey = Math.round(sy0 + shh);
+			sx0 = Math.round(sx0); sy0 = Math.round(sy0);
+			sw = Math.max(1, ex - sx0); shh = Math.max(1, ey - sy0);
+		}
 		var radius = (layer.params && layer.params.radius && (layer.params.radius.value != null ? layer.params.radius.value : layer.params.radius)) || 0;
 		var shape_path = null, name = 'Shape', custom = layer.type == 'rectangle' && config.TOOL.attributes.custom;
 		if (custom) { shape_path = fitted(custom, sx0, sy0, sw, shh); name = 'Shape'; }
@@ -99,7 +148,7 @@ async function convert(job) {
 		var p = layer.params || {};
 		var line = layer.type == 'line';
 		var fill = line ? (layer.color || config.COLOR) : (p.fill === false ? null : (p.fill_color || config.COLOR));
-		var stroke = !line && p.border ? { color: p.border_color || '#000000', width: p.border_size || 1 } : null;
+		var stroke = !line && p.border ? stroke_from(p) : null;
 		while (app.State.action_history_index > job.history && app.State.can_undo()) {
 			await app.State.undo_action();
 		}
@@ -181,4 +230,4 @@ async function convert(job) {
 	]));
 }
 
-export { install_shape_modes };
+export { install_shape_modes, stroke_from };

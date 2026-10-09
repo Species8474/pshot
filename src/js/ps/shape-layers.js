@@ -9,6 +9,7 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import { stroke_from } from './shape-modes.js';
 
 function hex_rgb(hex) {
 	return { r: parseInt(hex.substr(1, 2), 16), g: parseInt(hex.substr(3, 2), 16), b: parseInt(hex.substr(5, 2), 16) };
@@ -115,12 +116,91 @@ class Ps_shape_layers_class {
 			ctx.fill(path, sh.fill_rule || 'nonzero');
 		}
 		if (sh.stroke && sh.stroke.width > 0) {
-			ctx.strokeStyle = sh.stroke.color;
-			ctx.lineWidth = sh.stroke.width;
-			ctx.lineJoin = 'miter';
-			ctx.stroke(path);
+			this.stroke_path(ctx, path, sh.stroke, sh.fill_rule);
 		}
 		ctx.restore();
+	}
+
+	/**
+	 * the shape's stroke: type (solid / dashed / dotted), alignment (inside /
+	 * center / outside: drawn twice as wide and cut by the shape), caps, corners
+	 */
+	stroke_path(ctx, path, st, rule) {
+		var align = st.align || 'center', w = st.width;
+		var target = ctx, temp = null;
+		if (align != 'center') {
+			temp = document.createElement('canvas');
+			temp.width = ctx.canvas.width;
+			temp.height = ctx.canvas.height;
+			target = temp.getContext('2d');
+			target.setTransform(ctx.getTransform());
+			w *= 2;
+		}
+		target.strokeStyle = st.color;
+		target.lineWidth = w;
+		target.lineJoin = st.join || 'miter';
+		target.lineCap = st.cap || 'butt';
+		if (st.dash == 'dashed') target.setLineDash([st.width * 4, st.width * 2]);
+		else if (st.dash == 'dotted') {
+			target.lineCap = 'round';
+			target.setLineDash([0, st.width * 2]);
+		}
+		target.stroke(path);
+		if (temp) {
+			target.setLineDash([]);
+			target.globalCompositeOperation = align == 'inside' ? 'destination-in' : 'destination-out';
+			target.fillStyle = '#000';
+			target.fill(path, rule || 'nonzero');
+			ctx.save();
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.drawImage(temp, 0, 0);
+			ctx.restore();
+		}
+	}
+
+	/**
+	 * options bar changes with a shape tool apply to the selected shape layer (CS6)
+	 */
+	option_changed(key, value) {
+		var layer = config.layer;
+		if (!layer || layer.type != 'ps_shape' || !['rectangle', 'ellipse', 'pentagon', 'line'].includes(config.TOOL.name)) return;
+		var a = config.TOOL.attributes, sh = layer.ps_shape;
+		var settings = null;
+		if (key == 'fill_color' || key == 'fill') {
+			settings = { ps_shape: Object.assign({}, sh, { fill: a.fill === false ? null : a.fill_color }) };
+		}
+		else if (['border_color', 'border', 'border_size', 'stroke_dash', 'stroke_align', 'stroke_cap', 'stroke_join'].includes(key)) {
+			settings = { ps_shape: Object.assign({}, sh, { stroke: a.border ? stroke_from(a) : null }) };
+		}
+		else if ((key == 'shape_w' || key == 'shape_h') && parseFloat(value) > 0) {
+			settings = key == 'shape_w' ? { width: parseFloat(value) } : { height: parseFloat(value) };
+		}
+		if (!settings) return;
+		app.State.do_action(new app.Actions.Bundle_action('shape_layer', key.indexOf('shape_') == 0 ? 'Transform Shape' : 'Shape Change', [
+			new app.Actions.Update_layer_action(layer.id, settings),
+		]));
+	}
+
+	/**
+	 * the options bar shows the selected shape layer's fill, stroke and size
+	 */
+	sync_options() {
+		var layer = config.layer;
+		if (!layer || layer.type != 'ps_shape' || !layer.ps_shape || !['rectangle', 'ellipse', 'pentagon'].includes(config.TOOL.name)) return;
+		var a = config.TOOL.attributes, sh = layer.ps_shape, st = sh.stroke;
+		a.fill = !!sh.fill;
+		if (sh.fill) a.fill_color = sh.fill;
+		a.border = !!st;
+		if (st) {
+			a.border_color = st.color;
+			a.border_size = st.width;
+			a.stroke_dash = st.dash || 'solid';
+			a.stroke_align = st.align || 'center';
+			a.stroke_cap = st.cap || 'butt';
+			a.stroke_join = st.join || 'miter';
+		}
+		a.shape_w = Math.round(layer.width * 100) / 100;
+		a.shape_h = Math.round(layer.height * 100) / 100;
 	}
 
 	/**
@@ -290,7 +370,9 @@ class Ps_shape_layers_class {
 			vectorFill: sh.fill ? { type: 'color', color: hex_rgb(sh.fill) } : undefined,
 			vectorStroke: sh.stroke ? {
 				strokeEnabled: true, fillEnabled: !!sh.fill, lineWidth: { units: 'Pixels', value: sh.stroke.width },
-				lineAlignment: 'center', content: { type: 'color', color: hex_rgb(sh.stroke.color) }, opacity: 1,
+				lineAlignment: sh.stroke.align || 'center', lineCapType: sh.stroke.cap || 'butt', lineJoinType: sh.stroke.join || 'miter',
+				lineDashSet: sh.stroke.dash == 'dashed' ? [{ units: 'None', value: 4 }, { units: 'None', value: 2 }] : (sh.stroke.dash == 'dotted' ? [{ units: 'None', value: 0 }, { units: 'None', value: 2 }] : []),
+				content: { type: 'color', color: hex_rgb(sh.stroke.color) }, opacity: 1,
 			} : { strokeEnabled: false, fillEnabled: !!sh.fill },
 			vectorMask: {
 				paths: subpaths.map((sp, i) => ({
@@ -324,7 +406,12 @@ class Ps_shape_layers_class {
 		var bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys);
 		var bw = Math.max(1, Math.max.apply(null, xs) - bx), bh = Math.max(1, Math.max.apply(null, ys) - by);
 		var vs = child.vectorStroke;
-		var stroke = vs && vs.strokeEnabled && vs.content && vs.content.color ? { color: rgb_hex(vs.content.color), width: vs.lineWidth && vs.lineWidth.value != null ? vs.lineWidth.value : 3 } : null;
+		var dashes = vs && vs.lineDashSet || [];
+		var stroke = vs && vs.strokeEnabled && vs.content && vs.content.color ? {
+			color: rgb_hex(vs.content.color), width: vs.lineWidth && vs.lineWidth.value != null ? vs.lineWidth.value : 3,
+			align: vs.lineAlignment || 'center', cap: vs.lineCapType || 'butt', join: vs.lineJoinType || 'miter',
+			dash: dashes.length ? ((dashes[0].value != null ? dashes[0].value : dashes[0]) == 0 ? 'dotted' : 'dashed') : 'solid',
+		} : null;
 		var fill = vs && vs.fillEnabled === false ? null : rgb_hex(child.vectorFill.color);
 		return {
 			name: child.name || 'Shape', type: 'ps_shape', x: bx, y: by, width: bw, height: bh, rotate: 0, is_vector: true,

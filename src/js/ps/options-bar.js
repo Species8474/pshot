@@ -153,14 +153,31 @@ const SHAPE_COMMON = (extra) => [
 	{ type: 'swatch', label: 'Fill:', bind: 'fill_color', toggle: 'fill' },
 	{ type: 'swatch', label: 'Stroke:', bind: 'border_color', toggle: 'border' },
 	{ type: 'num', bind: 'border_size', unit: 'pt', width: 46 },
-	{ type: 'select', values: ['———'], value: '———' },
+	{ type: 'icon', icon: SVG('<path d="M2 9h14" stroke="currentColor" stroke-width="2"/>') + '<span class="ps_caret">&#9662;</span>', title: 'Set shape stroke type', action: (e) => stroke_options_menu(e.currentTarget) },
 	{ type: 'sep' },
-	{ type: 'num', label: 'W:', unit: 'px', width: 50 },
-	{ type: 'num', label: 'H:', unit: 'px', width: 50 },
+	{ type: 'num', label: 'W:', unit: 'px', width: 50, get bind() { return config.layer && config.layer.type == 'ps_shape' ? 'shape_w' : null; } },
+	{ type: 'num', label: 'H:', unit: 'px', width: 50, get bind() { return config.layer && config.layer.type == 'ps_shape' ? 'shape_h' : null; } },
 	{ type: 'icon', icon: IC.path_ops, title: 'Path operations', action: (e) => shape_ops_menu(e.currentTarget) },
 	{ type: 'icon', icon: IC.gear, title: 'Set additional shape and path options' },
 	...extra,
 ];
+
+/**
+ * CS6 Stroke Options: type, alignment, caps, corners
+ */
+function stroke_options_menu(anchor) {
+	var ob = app.GUI.Ps_workspace.Options_bar, a = config.TOOL.attributes;
+	var item = (name, key, value) => ({ name: name, checked: a[key] == value, action: () => { ob.set(key, value); ob.render(); } });
+	show_popup_menu(anchor, [
+		item('Solid', 'stroke_dash', 'solid'), item('Dashed', 'stroke_dash', 'dashed'), item('Dotted', 'stroke_dash', 'dotted'),
+		{ divider: true },
+		item('Align: Inside', 'stroke_align', 'inside'), item('Align: Center', 'stroke_align', 'center'), item('Align: Outside', 'stroke_align', 'outside'),
+		{ divider: true },
+		item('Caps: Butt', 'stroke_cap', 'butt'), item('Caps: Round', 'stroke_cap', 'round'), item('Caps: Square', 'stroke_cap', 'square'),
+		{ divider: true },
+		item('Corners: Miter', 'stroke_join', 'miter'), item('Corners: Round', 'stroke_join', 'round'), item('Corners: Bevel', 'stroke_join', 'bevel'),
+	]);
+}
 
 //CS6 Mixer Brush presets: [wet, load, mix]
 const MIXER_PRESETS = {
@@ -589,12 +606,12 @@ const LAYOUTS = {
 	add_anchor: [],
 	delete_anchor: [],
 	convert_point: [],
-	rectangle: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
-	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', value: true }]),
-	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
-	custom_shape: SHAPE_COMMON([{ type: 'select', label: 'Shape:', get values() { return custom_shape_names(); }, bind: 'custom', get map() { return Object.fromEntries(custom_shape_names().map(n => [n, n])); } }, { type: 'check', label: 'Align Edges', value: true }]),
-	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', bind: 'sides', width: 36 }, { type: 'check', label: 'Align Edges', value: true }]),
-	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', value: true }]),
+	rectangle: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
+	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
+	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
+	custom_shape: SHAPE_COMMON([{ type: 'select', label: 'Shape:', get values() { return custom_shape_names(); }, bind: 'custom', get map() { return Object.fromEntries(custom_shape_names().map(n => [n, n])); } }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
+	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', bind: 'sides', width: 36 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
+	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	type: [
 		{ type: 'icon', icon: IC.type_orient, title: 'Toggle text orientation' },
 		{ type: 'sep' },
@@ -685,6 +702,8 @@ class Ps_options_bar_class {
 			var module = app.GUI.GUI_tools.tools_modules[config.TOOL.name];
 			module.object[config.TOOL.on_update]({ key: key, value: value });
 		}
+		//shape tools edit the selected shape layer
+		if (this.workspace.Shapes) this.workspace.Shapes.option_changed(key, value);
 	}
 
 	toggle(key) {
@@ -860,6 +879,7 @@ class Ps_options_bar_class {
 		if (!layout) {
 			return false;
 		}
+		if (this.workspace.Shapes) this.workspace.Shapes.sync_options();
 		var bar = document.getElementById('action_attributes');
 		bar.innerHTML = '';
 		bar.classList.add('ps_cs6_options');

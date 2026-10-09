@@ -539,6 +539,12 @@ class GUI_layers_class {
 		if (!target) {
 			return;
 		}
+		//pshot: with a shape tool the options bar shows the selected shape layer
+		var ws_bar = app.GUI && app.GUI.Ps_workspace;
+		if (ws_bar && config.layer && ['rectangle', 'ellipse', 'pentagon'].includes(config.TOOL.name) && this.bar_layer !== config.layer.id) {
+			this.bar_layer = config.layer.id;
+			setTimeout(() => ws_bar.Options_bar.render(), 0);
+		}
 		var Groups = app.GUI && app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Groups : null;
 		var layers = Groups ? Groups.ordered() : config.layers.concat().sort((a, b) => b.order - a.order);
 		var html = '';
