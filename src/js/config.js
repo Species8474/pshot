@@ -638,6 +638,11 @@ config.TOOLS = [
 		on_leave: 'on_leave',
 		attributes: {
 			crop: true,
+			ratio_preset: 'Unconstrained',
+			ratio_w: '',
+			ratio_h: '',
+			view: 'Rule of Thirds',
+			delete_pixels: true,
 		},
 	},
 	{

@@ -106,6 +106,8 @@ const SELECTION_OPS = { type: 'icons', items: [
 	{ icon: IC.sel_sub, title: 'Subtract from selection', bind: 'op', bind_value: 'subtract' },
 	{ icon: IC.sel_int, title: 'Intersect with selection', bind: 'op', bind_value: 'intersect' },
 ] };
+const CROP_RATIOS = ['Unconstrained', 'Original Ratio', '1 x 1 (Square)', '4 x 5 (8 x 10)', '8.5 x 11', '4 x 3', '5 x 7', '2 x 3 (4 x 6)', '16 x 9'];
+const CROP_VIEWS = ['Rule of Thirds', 'Grid', 'Diagonal', 'Triangle', 'Golden Ratio', 'Golden Spiral'];
 const TONE_MODES = ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'];
 const SAMPLE_SIZES = ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'];
 const EYEDROPPER_SAMPLES = ['Current Layer', 'Current & Below', 'All Layers', 'All Layers No Adjustments', 'Current & Below No Adjustments'];
@@ -253,17 +255,17 @@ const LAYOUTS = {
 		{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 	],
 	crop: [
-		{ type: 'select', values: ['Unconstrained', 'Original Ratio', '1 x 1 (Square)', '4 x 5 (8 x 10)', '8.5 x 11', '4 x 3', '5 x 7', '2 x 3 (4 x 6)', '16 x 9'], value: 'Unconstrained' },
-		{ type: 'num', width: 46 },
-		{ type: 'label', text: '⇄' },
-		{ type: 'num', width: 46 },
-		{ type: 'button', text: 'Clear' },
+		{ type: 'select', values: CROP_RATIOS, bind: 'ratio_preset', map: Object.fromEntries(CROP_RATIOS.map(v => [v, v])) },
+		{ type: 'num', width: 46, bind: 'ratio_w' },
+		{ type: 'icon', icon: SVG('<path d="M4 7h10l-3-3M14 11H4l3 3" fill="none" stroke="currentColor" stroke-width="1.3"/>'), title: 'Swaps height and width', action: () => app.GUI.GUI_tools.tools_modules.crop.object.swap_ratio() },
+		{ type: 'num', width: 46, bind: 'ratio_h' },
+		{ type: 'button', text: 'Clear', action: () => app.GUI.GUI_tools.tools_modules.crop.object.clear_ratio() },
 		{ type: 'sep' },
-		{ type: 'button', text: 'Straighten' },
-		{ type: 'select', label: 'View:', values: ['Rule of Thirds', 'Grid', 'Diagonal', 'Triangle', 'Golden Ratio', 'Golden Spiral'], value: 'Rule of Thirds' },
+		{ type: 'button', text: 'Straighten', action: () => app.GUI.GUI_tools.tools_modules.crop.object.start_straighten() },
+		{ type: 'select', label: 'View:', values: CROP_VIEWS, bind: 'view', map: Object.fromEntries(CROP_VIEWS.map(v => [v, v])) },
 		{ type: 'icon', icon: IC.gear, title: 'Set additional Crop options' },
 		{ type: 'sep' },
-		{ type: 'check', label: 'Delete Cropped Pixels', value: true, always_disabled: true },
+		{ type: 'check', label: 'Delete Cropped Pixels', bind: 'delete_pixels' },
 		{ type: 'sep' },
 		{ type: 'icons', items: [
 			{ icon: SVG('<path d="M4 9.5l3.5 3.5L14.5 5" fill="none" stroke="currentColor" stroke-width="1.8"/>'), title: 'Commit current crop operation (Enter)', action: () => app.GUI.GUI_tools.tools_modules.crop.object.on_params_update() },

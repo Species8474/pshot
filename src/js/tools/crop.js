@@ -24,7 +24,7 @@ class Crop_class extends Base_tools_class {
 			height: null,
 		};
 		var sel_config = {
-			enable_background: true,
+			enable_background: false,
 			enable_borders: true,
 			enable_controls: true,
 			crop_lines: true,
@@ -40,6 +40,26 @@ class Crop_class extends Base_tools_class {
 
 	load() {
 		this.default_events();
+		//pshot: CS6 darkens what will be cropped away (the crop shield)
+		setTimeout(() => {
+			var Selection = app.GUI.Ps_workspace && app.GUI.Ps_workspace.Selection;
+			if (!Selection) return;
+			Selection.overlays = Selection.overlays || [];
+			Selection.overlays.push({
+				active: () => config.TOOL.name == this.name && this.selection.width,
+				draw: (ctx) => {
+					var s = this.selection;
+					var x = Math.min(s.x, s.x + s.width), y = Math.min(s.y, s.y + s.height);
+					ctx.save();
+					ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+					ctx.beginPath();
+					ctx.rect(0, 0, config.WIDTH, config.HEIGHT);
+					ctx.rect(x, y, Math.abs(s.width), Math.abs(s.height));
+					ctx.fill('evenodd');
+					ctx.restore();
+				},
+			});
+		}, 0);
 	}
 
 	default_dragStart(event) {
@@ -82,10 +102,13 @@ class Crop_class extends Base_tools_class {
 
 		var width = mouse.x - mouse.click_x;
 		var height = mouse.y - mouse.click_y;
+		//pshot: the options bar ratio (W x H), or Ctrl for the document's ratio
+		var params = this.getParams();
+		var rw = parseFloat(params.ratio_w), rh = parseFloat(params.ratio_h);
+		var fixed = rw > 0 && rh > 0;
 		
-		if(e.ctrlKey == true || e.metaKey){
-			//ctrl is pressed - crop will be calculated based on global width and height ratio
-			var ratio = config.WIDTH / config.HEIGHT;
+		if(fixed || e.ctrlKey == true || e.metaKey){
+			var ratio = fixed ? rw / rh : config.WIDTH / config.HEIGHT;
 			var width_new = Math.round(height * ratio);
 			var height_new = Math.round(width / ratio);
 
@@ -160,6 +183,13 @@ class Crop_class extends Base_tools_class {
 		if (this.selection.y + this.selection.height > config.HEIGHT) {
 			this.selection.height = config.HEIGHT - this.selection.y;
 		}
+		//pshot: clamping must not break the options bar ratio
+		var rw = parseFloat(this.getParams().ratio_w), rh = parseFloat(this.getParams().ratio_h);
+		if (rw > 0 && rh > 0 && this.selection.height > 0) {
+			var ratio = rw / rh;
+			if (this.selection.width / this.selection.height > ratio) this.selection.width = Math.round(this.selection.height * ratio);
+			else this.selection.height = Math.round(this.selection.width / ratio);
+		}
 
 		app.State.do_action(
 			new app.Actions.Set_selection_action(this.selection.x, this.selection.y, this.selection.width, this.selection.height, this.mousedown_selection)
@@ -173,8 +203,13 @@ class Crop_class extends Base_tools_class {
 	/**
 	 * do actual crop
 	 */
-	async on_params_update() {
+	async on_params_update(change) {
 		var params = this.getParams();
+		//pshot: options bar changes are not a commit
+		if (change && change.key) {
+			this.option_changed(change.key, change.value);
+			return;
+		}
 		var selection = this.selection;
 		params.crop = true;
 		this.GUI_tools.show_action_attributes();
@@ -225,7 +260,8 @@ class Crop_class extends Base_tools_class {
 			x -= parseInt(selection.x);
 			y -= parseInt(selection.y);
 
-			if (link.type == 'image') {
+			//pshot: Delete Cropped Pixels off keeps the pixels outside the canvas (Image > Reveal All)
+			if (link.type == 'image' && params.delete_pixels !== false) {
 				//also remove unvisible data
 				let left = 0;
 				if (x < 0)
@@ -296,9 +332,121 @@ class Crop_class extends Base_tools_class {
 	}
 
 	on_leave() {
+		this.straightening = null;
 		return [
 			new app.Actions.Reset_selection_action()
 		];
+	}
+
+	/**
+	 * options bar: a ratio preset fills W and H; Clear empties them
+	 */
+	option_changed(key, value) {
+		var a = config.TOOL.attributes;
+		if (key == 'ratio_preset') {
+			var R = { 'Original Ratio': [config.WIDTH, config.HEIGHT], '1 x 1 (Square)': [1, 1], '4 x 5 (8 x 10)': [4, 5], '8.5 x 11': [8.5, 11], '4 x 3': [4, 3], '5 x 7': [5, 7], '2 x 3 (4 x 6)': [2, 3], '16 x 9': [16, 9] }[value];
+			a.ratio_w = R ? R[0] : '';
+			a.ratio_h = R ? R[1] : '';
+			app.GUI.Ps_workspace.Options_bar.render();
+		}
+		config.need_render = true;
+	}
+
+	swap_ratio() {
+		var a = config.TOOL.attributes, t = a.ratio_w;
+		a.ratio_w = a.ratio_h;
+		a.ratio_h = t;
+		app.GUI.Ps_workspace.Options_bar.render();
+	}
+
+	clear_ratio() {
+		var a = config.TOOL.attributes;
+		a.ratio_w = '';
+		a.ratio_h = '';
+		a.ratio_preset = 'Unconstrained';
+		app.GUI.Ps_workspace.Options_bar.render();
+	}
+
+	/**
+	 * Straighten: drag a line along what should be level; the canvas is rotated
+	 * and the crop box set to the largest rectangle inside the rotated image
+	 */
+	start_straighten() {
+		this.straightening = { active: true };
+		app.GUI.Ps_workspace.status_message('Straighten: drag a line along the horizon or a vertical edge.');
+		var Selection = app.GUI.Ps_workspace.Selection;
+		if (!this.straighten_overlay) {
+			this.straighten_overlay = true;
+			Selection.overlays = Selection.overlays || [];
+			Selection.overlays.push({
+				active: () => this.straightening && this.straightening.a && config.TOOL.name == 'crop',
+				draw: (ctx, scale) => {
+					var s = this.straightening;
+					ctx.save();
+					ctx.lineWidth = 1 / scale;
+					ctx.strokeStyle = '#000';
+					ctx.setLineDash([4 / scale, 4 / scale]);
+					ctx.beginPath();
+					ctx.moveTo(s.a.x, s.a.y);
+					ctx.lineTo(s.b.x, s.b.y);
+					ctx.stroke();
+					ctx.strokeStyle = '#fff';
+					ctx.lineDashOffset = 4 / scale;
+					ctx.stroke();
+					ctx.restore();
+				},
+			});
+			var world = (e) => {
+				var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+				return app.Layers.get_world_coords(e.clientX - rect.left, e.clientY - rect.top);
+			};
+			document.addEventListener('mousedown', (e) => {
+				if (!this.straightening || config.TOOL.name != 'crop' || e.button != 0 || !e.target.closest('#main_wrapper')) return;
+				e.stopImmediatePropagation();
+				var p = world(e);
+				this.straightening.a = p;
+				this.straightening.b = p;
+			}, true);
+			document.addEventListener('mousemove', (e) => {
+				if (!this.straightening || !this.straightening.a) return;
+				this.straightening.b = world(e);
+				Selection.draw_overlay();
+			}, true);
+			document.addEventListener('mouseup', (e) => {
+				var s = this.straightening;
+				if (!s || !s.a) return;
+				e.stopImmediatePropagation();
+				this.straightening = null;
+				Selection.draw_overlay();
+				var dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
+				if (Math.hypot(dx, dy) < 2) return;
+				var a = Math.atan2(dy, dx) * 180 / Math.PI;
+				var level = Math.round(a / 90) * 90;
+				this.straighten_by(level - a);
+			}, true);
+		}
+	}
+
+	async straighten_by(deg) {
+		if (Math.abs(deg) < 0.01) return;
+		var W = config.WIDTH, H = config.HEIGHT;
+		await app.GUI.modules['ps/commands'].rotate_canvas_by(deg);
+		//the largest axis-aligned rectangle inside the rotated W x H image
+		var t = Math.abs(deg) * Math.PI / 180, sin = Math.sin(t), cos = Math.cos(t);
+		var long = Math.max(W, H), short = Math.min(W, H), wr, hr;
+		if (short <= 2 * sin * cos * long || Math.abs(sin - cos) < 1e-10) {
+			var half = short / 2;
+			wr = W >= H ? half / sin : half / cos;
+			hr = W >= H ? half / cos : half / sin;
+		}
+		else {
+			var cos2 = cos * cos - sin * sin;
+			wr = (W * cos - H * sin) / cos2;
+			hr = (H * cos - W * sin) / cos2;
+		}
+		var x = Math.ceil((config.WIDTH - wr) / 2), y = Math.ceil((config.HEIGHT - hr) / 2);
+		this.selection = { x: x, y: y, width: Math.floor(wr), height: Math.floor(hr) };
+		config.need_render = true;
 	}
 
 }

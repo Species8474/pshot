@@ -223,37 +223,75 @@ class Base_selection_class {
 
 		//show crop lines
 		if(settings.crop_lines === true){
-
-			for(var part = 1; part < 3; part++) {
-				this.ctx.lineWidth = wholeLineWidth;
-				this.ctx.strokeStyle = 'rgb(255, 255, 255)';
-				this.ctx.beginPath();
-				this.ctx.moveTo(x + w / 3 * part - halfLineWidth, y);
-				this.ctx.lineTo(x + w / 3 * part - halfLineWidth, y + h);
-				this.ctx.stroke();
-
-				this.ctx.lineWidth = halfLineWidth;
-				this.ctx.strokeStyle = 'rgb(0, 0, 0)';
-				this.ctx.beginPath();
-				this.ctx.moveTo(x + w / 3 * part - halfLineWidth, y);
-				this.ctx.lineTo(x + w / 3 * part - halfLineWidth, y + h);
-				this.ctx.stroke();
+			//pshot: the Crop tool's View overlay
+			var view = config.TOOL && config.TOOL.name == 'crop' ? (config.TOOL.attributes.view || 'Rule of Thirds') : 'Rule of Thirds';
+			var ctx = this.ctx;
+			var line = (draw) => {
+				ctx.lineWidth = wholeLineWidth;
+				ctx.strokeStyle = 'rgb(255, 255, 255)';
+				ctx.beginPath();
+				draw();
+				ctx.stroke();
+				ctx.lineWidth = halfLineWidth;
+				ctx.strokeStyle = 'rgb(0, 0, 0)';
+				ctx.beginPath();
+				draw();
+				ctx.stroke();
+			};
+			var seg = (x1, y1, x2, y2) => line(() => { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); });
+			var verticals = (fractions) => fractions.forEach(f => seg(x + w * f, y, x + w * f, y + h));
+			var horizontals = (fractions) => fractions.forEach(f => seg(x, y + h * f, x + w, y + h * f));
+			if (view == 'Grid') {
+				var step = Math.max(8, 40 / config.ZOOM);
+				var fx = [], fy = [];
+				for (var gx = step; gx < Math.abs(w); gx += step) fx.push(gx / Math.abs(w));
+				for (var gy = step; gy < Math.abs(h); gy += step) fy.push(gy / Math.abs(h));
+				verticals(fx);
+				horizontals(fy);
 			}
-
-			for(var part = 1; part < 3; part++) {
-				this.ctx.lineWidth = wholeLineWidth;
-				this.ctx.strokeStyle = 'rgb(255, 255, 255)';
-				this.ctx.beginPath();
-				this.ctx.moveTo(x, y + h / 3 * part - halfLineWidth);
-				this.ctx.lineTo(x + w, y + h / 3 * part - halfLineWidth);
-				this.ctx.stroke();
-
-				this.ctx.lineWidth = halfLineWidth;
-				this.ctx.strokeStyle = 'rgb(0, 0, 0)';
-				this.ctx.beginPath();
-				this.ctx.moveTo(x, y + h / 3 * part - halfLineWidth);
-				this.ctx.lineTo(x + w, y + h / 3 * part - halfLineWidth);
-				this.ctx.stroke();
+			else if (view == 'Diagonal') {
+				//45 degree lines from each corner
+				var m = Math.min(Math.abs(w), Math.abs(h)) * Math.sign(w || 1), n = Math.min(Math.abs(w), Math.abs(h)) * Math.sign(h || 1);
+				seg(x, y, x + m, y + n);
+				seg(x + w, y, x + w - m, y + n);
+				seg(x, y + h, x + m, y + h - n);
+				seg(x + w, y + h, x + w - m, y + h - n);
+			}
+			else if (view == 'Triangle') {
+				//a diagonal, and the perpendiculars to it from the other two corners
+				seg(x, y + h, x + w, y);
+				var len2 = w * w + h * h || 1;
+				var foot = (px, py) => { var t = ((px - x) * w - (py - y - h) * h) / len2; return [x + w * t, y + h - h * t]; };
+				var f1 = foot(x, y), f2 = foot(x + w, y + h);
+				seg(x, y, f1[0], f1[1]);
+				seg(x + w, y + h, f2[0], f2[1]);
+			}
+			else if (view == 'Golden Ratio') {
+				verticals([0.382, 0.618]);
+				horizontals([0.382, 0.618]);
+			}
+			else if (view == 'Golden Spiral') {
+				//quarter arcs through nested golden rectangles
+				line(() => {
+					var rx = x, ry = y, rw = w, rh = h, dir = 0;
+					for (var k = 0; k < 8 && Math.abs(rw) > 1 && Math.abs(rh) > 1; k++) {
+						if (dir % 2 == 0) {
+							var sq = rw * 0.618;
+							if (dir == 0) { ctx.moveTo(rx + sq, ry); ctx.ellipse(rx + sq, ry + rh, sq, rh, 0, -Math.PI / 2, -Math.PI, true); rx += 0; rw -= sq; rx += sq; }
+							else { ctx.moveTo(rx + rw - sq, ry + rh); ctx.ellipse(rx + rw - sq, ry, sq, rh, 0, Math.PI / 2, 0, true); rw -= sq; }
+						}
+						else {
+							var sh = rh * 0.618;
+							if (dir == 1) { ctx.moveTo(rx + rw, ry + sh); ctx.ellipse(rx, ry + sh, rw, sh, 0, 0, -Math.PI / 2, true); ry += sh; rh -= sh; }
+							else { ctx.moveTo(rx, ry + rh - sh); ctx.ellipse(rx + rw, ry + rh - sh, rw, sh, 0, Math.PI, Math.PI / 2, true); rh -= sh; }
+						}
+						dir = (dir + 1) % 4;
+					}
+				});
+			}
+			else {
+				verticals([1 / 3, 2 / 3]);
+				horizontals([1 / 3, 2 / 3]);
 			}
 		}
 
