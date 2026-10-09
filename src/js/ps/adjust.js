@@ -1286,6 +1286,110 @@ class Ps_adjust_class {
 	}
 
 	/**
+	 * Image > Mode > Bitmap (from Grayscale, like CS6): 50% Threshold, Pattern
+	 * Dither, Diffusion Dither, Halftone Screen
+	 */
+	bitmap_mode() {
+		if (config.ps_mode != 'Grayscale') {
+			alertify.error('Bitmap mode conversion requires a Grayscale image (Image > Mode > Grayscale first).');
+			return;
+		}
+		var html = '<div class="ps_adj_label">Resolution</div><div class="ps_adj_row"><span>Output:</span><input type="number" value="72" disabled style="width:60px"><span>Pixels/Inch</span></div>'
+			+ '<div class="ps_adj_label">Method</div><div class="ps_adj_row"><span>Use:</span><select id="bm_method"><option>50% Threshold</option><option>Pattern Dither</option><option selected>Diffusion Dither</option><option>Halftone Screen</option><option disabled>Custom Pattern</option></select></div>'
+			+ '<div class="ps_adj_row" id="bm_screen"><span>Frequency:</span><input type="number" id="bm_freq" value="12" min="2" max="64" style="width:60px"><span>px cells</span><span>Angle:</span><input type="number" id="bm_angle" value="45" style="width:50px"><span>°</span></div>';
+		var open = () => this.show('Bitmap', html, (root, state, update) => {
+			Object.assign(state, { method: 'Diffusion Dither', cell: 12, angle: 45 });
+			var screen = root.querySelector('#bm_screen');
+			var sync = () => { screen.style.display = state.method == 'Halftone Screen' ? '' : 'none'; };
+			root.querySelector('#bm_method').addEventListener('change', (e) => { state.method = e.target.value; sync(); update(); });
+			root.querySelector('#bm_freq').addEventListener('change', (e) => { state.cell = Math.max(2, Math.min(64, parseInt(e.target.value) || 12)); update(); });
+			root.querySelector('#bm_angle').addEventListener('change', (e) => { state.angle = parseFloat(e.target.value) || 0; update(); });
+			sync();
+		}, (state) => (src, dst, w, h) => {
+			var n = w * h, g = new Float32Array(n);
+			for (var i = 0; i < n; i++) g[i] = src[i * 4] * 0.299 + src[i * 4 + 1] * 0.587 + src[i * 4 + 2] * 0.114;
+			var BAYER = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22, 3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21];
+			var a = state.angle * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), cell = state.cell;
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var k = y * w + x, v = g[k], on;
+					if (state.method == '50% Threshold') on = v >= 128;
+					else if (state.method == 'Pattern Dither') on = v > (BAYER[(y % 8) * 8 + (x % 8)] + 0.5) * 4;
+					else if (state.method == 'Halftone Screen') {
+						//round dots on a rotated grid; dot size follows the darkness
+						var u = (x * ca + y * sa) / cell, t = (-x * sa + y * ca) / cell;
+						var du = u - Math.floor(u) - 0.5, dt = t - Math.floor(t) - 0.5;
+						on = Math.hypot(du, dt) * 1.42 > 1 - v / 255;
+					}
+					else {
+						on = v >= 128;
+						var e = v - (on ? 255 : 0);
+						if (x + 1 < w) g[k + 1] += e * 7 / 16;
+						if (y + 1 < h) {
+							if (x > 0) g[k + w - 1] += e * 3 / 16;
+							g[k + w] += e * 5 / 16;
+							if (x + 1 < w) g[k + w + 1] += e / 16;
+						}
+					}
+					var o = k * 4, c = on ? 255 : 0;
+					dst[o] = dst[o + 1] = dst[o + 2] = c;
+				}
+			}
+		}, 'bitmap', { extra: () => [new app.Actions.Update_config_action({ ps_mode: 'Bitmap' })], after: () => app.GUI.Ps_workspace.enforce_mode() });
+		if (config.layers.filter(l => l.type != null).length > 1) {
+			if (!window.confirm('Flatten layers?')) return;
+			var res = app.GUI.modules['ps/commands'].flatten_image();
+			if (res && res.then) return res.then(open);
+		}
+		return open();
+	}
+
+	/**
+	 * Image > Mode > Duotone (from Grayscale): Monotone / Duotone / Tritone /
+	 * Quadtone inks; the gray value is mapped through the ink colors
+	 */
+	duotone_mode() {
+		if (config.ps_mode != 'Grayscale' && config.ps_mode != 'Duotone') {
+			alertify.error('Duotone mode conversion requires a Grayscale image (Image > Mode > Grayscale first).');
+			return;
+		}
+		var inks = [['#000000', 'Black'], ['#e85a1e', 'PANTONE 165 C'], ['#2a6db0', 'PANTONE 285 C'], ['#f2c400', 'PANTONE 116 C']];
+		var html = '<div class="ps_adj_row"><span>Preset:</span><select disabled><option>Custom</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Type:</span><select id="dt_type"><option>Monotone</option><option selected>Duotone</option><option>Tritone</option><option>Quadtone</option></select></div>'
+			+ inks.map((k, i) => '<div class="ps_adj_row" data-ink="' + i + '"><span>Ink ' + (i + 1) + ':</span><button type="button" class="ps_sfw_matte" data-ink-color="' + i + '" style="background:' + k[0] + '"></button><span>' + k[1] + '</span></div>').join('');
+		var state0 = this.duotone_state || { type: 'Duotone', inks: inks.map(k => k[0]) };
+		this.show('Duotone Options', html, (root, state, update) => {
+			Object.assign(state, JSON.parse(JSON.stringify(state0)));
+			var n = { Monotone: 1, Duotone: 2, Tritone: 3, Quadtone: 4 };
+			var sync = () => root.querySelectorAll('[data-ink]').forEach(r => { r.style.display = parseInt(r.dataset.ink) < n[state.type] ? '' : 'none'; });
+			root.querySelector('#dt_type').value = state.type;
+			root.querySelector('#dt_type').addEventListener('change', (e) => { state.type = e.target.value; sync(); update(); });
+			root.querySelectorAll('[data-ink-color]').forEach(b => {
+				var i = parseInt(b.dataset.inkColor);
+				b.style.background = state.inks[i];
+				b.addEventListener('click', () => app.GUI.Ps_workspace.color_dialog('Ink ' + (i + 1), state.inks[i], (hex) => { state.inks[i] = hex; b.style.background = hex; update(); }));
+			});
+			sync();
+		}, (state) => {
+			this.duotone_state = JSON.parse(JSON.stringify(state));
+			var n = { Monotone: 1, Duotone: 2, Tritone: 3, Quadtone: 4 }[state.type];
+			var cols = state.inks.slice(0, n).map(h => [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]);
+			return (src, dst) => {
+				for (var i = 0; i < src.length; i += 4) {
+					var d = 1 - (src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114) / 255;
+					//each ink multiplies paper white; the first ink takes the whole range, the others the midtones
+					var r = 255, g = 255, b = 255;
+					cols.forEach((c, k) => {
+						var cover = k == 0 ? d : Math.max(0, Math.sin(Math.PI * d)) * 0.6;
+						r *= 1 - cover * (1 - c[0] / 255); g *= 1 - cover * (1 - c[1] / 255); b *= 1 - cover * (1 - c[2] / 255);
+					});
+					dst[i] = r; dst[i + 1] = g; dst[i + 2] = b;
+				}
+			};
+		}, 'duotone', { extra: () => [new app.Actions.Update_config_action({ ps_mode: 'Duotone' })], after: () => app.GUI.Ps_workspace.enforce_mode() });
+	}
+
+	/**
 	 * Image > Mode > Color Table (Indexed Color mode)
 	 */
 	color_table() {
