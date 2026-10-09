@@ -65,7 +65,7 @@ const M = [
 		'Stroke...|ps/commands.stroke',
 		'-',
 		'Content-Aware Scale|Alt+Shift+Ctrl+C|ps/commands.content_aware_scale',
-		'Puppet Warp',
+		'Puppet Warp|ps/commands.puppet_warp',
 		'Free Transform|Ctrl+T|ps/commands.free_transform',
 		['Transform', [
 			'Again|Shift+Ctrl+T|ps/commands.transform_again', '-',

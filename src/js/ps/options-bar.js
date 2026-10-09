@@ -731,6 +731,34 @@ class Ps_options_bar_class {
 		bar.querySelector('[data-tf-commit]').addEventListener('click', () => T.commit());
 	}
 
+	/**
+	 * Puppet Warp options bar (CS6): Mode, Density, Expansion, Show Mesh, Pin Depth, Rotate
+	 */
+	render_puppet() {
+		var P = this.workspace.Puppet, j = P.job;
+		if (!j) return;
+		var bar = document.getElementById('action_attributes');
+		bar.classList.add('ps_cs6_options');
+		var sel = (key, label, values) => '<span class="ps_opt"><span class="ps_opt_label">' + label + '</span><select class="ps_opt_select" data-pw="' + key + '">'
+			+ values.map(v => '<option' + (v == j[key] ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></span>';
+		bar.innerHTML = '<div class="ps_opt_group">' + sel('mode', 'Mode:', ['Rigid', 'Normal', 'Distort']) + sel('density', 'Density:', ['Fewer Points', 'Normal', 'More Points'])
+			+ '<span class="ps_opt"><span class="ps_opt_label">Expansion:</span><input class="ps_opt_field" data-pw-exp style="width:46px" value="' + j.expansion + ' px"></span>'
+			+ '<label class="ps_opt ps_opt_check"><input type="checkbox" data-pw-mesh' + (j.show_mesh ? ' checked' : '') + '> Show Mesh</label></div>'
+			+ '<div class="ps_opt_group"><span class="ps_opt_label disabled">Pin Depth:</span><button type="button" class="ps_opt_icon" disabled title="Set pin forward">&#8679;</button><button type="button" class="ps_opt_icon" disabled title="Set pin backward">&#8681;</button>'
+			+ '<span class="ps_opt"><span class="ps_opt_label disabled">Rotate:</span><select class="ps_opt_select" disabled><option>Auto</option></select></span></div>'
+			+ '<div class="ps_opt_group"><button type="button" class="ps_opt_icon" data-pw-clear title="Remove all pins">&#8634;</button>'
+			+ '<button type="button" class="ps_opt_icon" data-pw-cancel title="Cancel Puppet Warp (Esc)">&#8856;</button>'
+			+ '<button type="button" class="ps_opt_icon" data-pw-commit title="Commit Puppet Warp (Return)">&#10004;</button></div>';
+		bar.querySelectorAll('[data-pw]').forEach((s) => s.addEventListener('change', () => P.set_option(s.dataset.pw, s.value)));
+		var exp = bar.querySelector('[data-pw-exp]');
+		exp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter') exp.blur(); });
+		exp.addEventListener('change', () => { var v = parseFloat(exp.value); if (!isNaN(v)) P.set_option('expansion', Math.max(-20, Math.min(100, v))); exp.value = j.expansion + ' px'; });
+		bar.querySelector('[data-pw-mesh]').addEventListener('change', (e) => P.set_option('show_mesh', e.target.checked));
+		bar.querySelector('[data-pw-clear]').addEventListener('click', () => P.remove_all());
+		bar.querySelector('[data-pw-cancel]').addEventListener('click', () => P.cancel());
+		bar.querySelector('[data-pw-commit]').addEventListener('click', () => P.commit());
+	}
+
 	update_transform_fields() {
 		var job = this.workspace.Transform.job;
 		if (!job) return;
@@ -745,6 +773,10 @@ class Ps_options_bar_class {
 		var member = this.workspace.active_member;
 		if (this.workspace.Transform && this.workspace.Transform.active()) {
 			this.render_transform();
+			return true;
+		}
+		if (this.workspace.Puppet && this.workspace.Puppet.active()) {
+			this.render_puppet();
 			return true;
 		}
 		if (!member || member.tool != config.TOOL.name) {

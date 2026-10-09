@@ -27,6 +27,7 @@ import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
 import Ps_blur_gallery_class from './blur-gallery.js';
 import Ps_notes_class from './notes.js';
+import Ps_puppet_warp_class from './puppet-warp.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
@@ -98,6 +99,7 @@ class Ps_workspace_class {
 		this.Shortcuts = new Ps_shortcuts_class(this);
 		this.Blur_gallery = new Ps_blur_gallery_class();
 		this.Notes = new Ps_notes_class();
+		this.Puppet = new Ps_puppet_warp_class();
 		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
