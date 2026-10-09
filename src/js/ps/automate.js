@@ -10,6 +10,7 @@ import Dialog_class from './../libs/popup.js';
 import { file_to_layers, is_psd } from './document.js';
 import { best_offset } from './auto-align.js';
 import { make_pdf, canvas_page } from './pdf.js';
+import { fuse } from './hdr.js';
 import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
@@ -465,6 +466,89 @@ class Ps_automate_class {
 				if (p.target == 'Indexed Color' && current != 'Indexed') cmd.mode_indexed();
 			},
 		});
+	}
+
+	// ---------- Merge to HDR Pro ----------
+
+	/**
+	 * File > Automate > Merge to HDR Pro: bracketed exposures fused into one 8-bit image
+	 */
+	hdr_pro() {
+		var files = [];
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Merge to HDR Pro',
+			params: [
+				{ title: 'Source Files:', html: '<button type="button" id="hdr_browse">Browse...</button> <span id="hdr_count">No files</span>' },
+				{ name: 'align', title: 'Attempt to Automatically Align Source Images', value: true },
+				{ title: '', html: '<span class="ps_dialog_note">Mode: 8 Bit (exposure fusion). 32-bit HDR and Remove Ghosts are not available in pshot.</span>' },
+			],
+			on_load: (params, pop) => {
+				pop.el.querySelector('#hdr_browse').addEventListener('click', async () => {
+					files = await pick(true);
+					pop.el.querySelector('#hdr_count').textContent = files.length + ' file' + (files.length == 1 ? '' : 's');
+				});
+			},
+			on_finish: (p) => {
+				if (files.length < 2) {
+					alertify.error('Merge to HDR Pro needs two or more exposures.');
+					return;
+				}
+				this.merge_hdr(files, p.align);
+			},
+		});
+	}
+
+	async merge_hdr(files, align) {
+		var ws = app.GUI.Ps_workspace;
+		ws.status_message('Merge to HDR Pro: loading files...');
+		var items = [];
+		for (var f of files) {
+			var c = await file_canvas(f);
+			items.push({ canvas: c, link: c, width: c.width, height: c.height, x: 0, y: 0 });
+		}
+		if (align) {
+			//exposures differ, so they are matched by where their edges are: the
+			//strongest 10% of each image's gradients (log brightness), as a bitmap
+			var edges = items.map(it => {
+				var w = it.width, h = it.height;
+				var c = new_canvas(w, h), ctx = c.getContext('2d', { willReadFrequently: true });
+				ctx.drawImage(it.canvas, 0, 0);
+				var img = ctx.getImageData(0, 0, w, h), d = img.data, lg = new Float32Array(w * h), gm = new Float32Array(w * h);
+				for (var i = 0; i < w * h; i++) lg[i] = Math.log(1 + 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]);
+				for (var y = 1; y < h - 1; y++) for (var x = 1; x < w - 1; x++) {
+					var q = y * w + x;
+					gm[q] = Math.abs(lg[q + 1] - lg[q - 1]) + Math.abs(lg[q + w] - lg[q - w]);
+				}
+				var sorted = Array.from(gm).sort((a, b) => b - a), cut = sorted[Math.floor(sorted.length * 0.1)] || 0;
+				for (var j = 0; j < w * h; j++) {
+					var v = gm[j] > cut && gm[j] > 0.02 ? 255 : 0;
+					d[j * 4] = d[j * 4 + 1] = d[j * 4 + 2] = v;
+					d[j * 4 + 3] = 255;
+				}
+				ctx.putImageData(img, 0, 0);
+				return { link: c, width: w, height: h };
+			});
+			for (var k = 1; k < items.length; k++) {
+				var o = best_offset(edges[0], edges[k], { x: 0, y: 0 }, 0.05);
+				items[k].x = o.x;
+				items[k].y = o.y;
+			}
+		}
+		ws.status_message('Merge to HDR Pro: merging...');
+		await wait(20);
+		var W = items[0].width, H = items[0].height;
+		var data = items.map(it => {
+			var c = new_canvas(W, H), ctx = c.getContext('2d', { willReadFrequently: true });
+			//edges uncovered after alignment take the reference image
+			ctx.drawImage(items[0].canvas, 0, 0);
+			ctx.drawImage(it.canvas, it.x, it.y);
+			return ctx.getImageData(0, 0, W, H).data;
+		});
+		var out = new_canvas(W, H), octx = out.getContext('2d');
+		octx.putImageData(new ImageData(fuse(data, W, H), W, H), 0, 0);
+		await new_document('Untitled_HDR', W, H, [{ name: 'Background', canvas: out }], 'Merge to HDR Pro');
+		ws.status_message('Merge to HDR Pro done.');
 	}
 
 	// ---------- Statistics ----------

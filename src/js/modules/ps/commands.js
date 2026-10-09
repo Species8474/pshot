@@ -754,6 +754,7 @@ class Ps_commands_class {
 	effects_label() { return app.GUI.Ps_workspace.Extras.effects_label(); }
 	pdf_presentation() { app.GUI.Ps_workspace.Automate.pdf_presentation(); }
 	comps_to_pdf() { app.GUI.Ps_workspace.Automate.comps_to_pdf(); }
+	hdr_pro() { app.GUI.Ps_workspace.Automate.hdr_pro(); }
 	photomerge() { app.GUI.Ps_workspace.Automate.photomerge(); }
 	crop_straighten() { app.GUI.Ps_workspace.Automate.crop_straighten(); }
 	contact_sheet() { app.GUI.Ps_workspace.Automate.contact_sheet(); }
