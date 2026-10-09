@@ -4,6 +4,7 @@ import { commit_stroke } from './../ps/stroke.js';
 import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
+import { tip_canvas } from './../ps/brush-tips.js';
 
 /**
  * Color Dynamics: the dab color from the foreground/background mix and the
@@ -373,7 +374,8 @@ class Brush_class extends Base_tools_class {
 	use_dabs(params) {
 		return (params.spacing != null && params.spacing != 25) || (params.roundness != null && params.roundness != 100) || params.angle
 			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100)
-			|| params.angle_jitter > 0 || params.roundness_jitter > 0 || params.count > 1 || params.color_dynamics || params.noise || params.wet_edges;
+			|| params.angle_jitter > 0 || params.roundness_jitter > 0 || params.count > 1 || params.color_dynamics || params.noise || params.wet_edges
+			|| !!params.tip;
 	}
 
 	/**
@@ -382,7 +384,7 @@ class Brush_class extends Base_tools_class {
 	stamp(size, params, color, k) {
 		var hardness = params.hardness == null ? 100 : params.hardness;
 		var roundness = (params.roundness == null ? 100 : params.roundness) / 100;
-		var key = [Math.round(size * k), hardness, roundness, params.angle || 0, color, params.noise ? 1 : 0, params.wet_edges ? 1 : 0].join('|');
+		var key = [Math.round(size * k), hardness, roundness, params.angle || 0, color, params.noise ? 1 : 0, params.wet_edges ? 1 : 0, params.tip || ''].join('|');
 		this.stamp_cache = this.stamp_cache || {};
 		if (this.stamp_cache[key]) return this.stamp_cache[key];
 		var d = Math.max(2, Math.ceil(size * k) + 2);
@@ -392,6 +394,21 @@ class Brush_class extends Base_tools_class {
 		g.translate(d / 2, d / 2);
 		g.rotate(-(params.angle || 0) * Math.PI / 180);
 		g.scale(1, roundness);
+		//sampled tip (Brush Presets): the tip mask scaled to the size, in the paint color
+		var tip = params.tip ? tip_canvas(params.tip) : null;
+		if (tip) {
+			var tk = size * k / Math.max(tip.width, tip.height);
+			g.drawImage(tip, -tip.width * tk / 2, -tip.height * tk / 2, tip.width * tk, tip.height * tk);
+			g.setTransform(1, 0, 0, 1, 0, 0);
+			g.globalCompositeOperation = 'source-in';
+			g.fillStyle = color;
+			g.fillRect(0, 0, d, d);
+			g.globalCompositeOperation = 'source-over';
+			var tkeys = Object.keys(this.stamp_cache);
+			if (tkeys.length > 256) delete this.stamp_cache[tkeys[0]];
+			this.stamp_cache[key] = c;
+			return c;
+		}
 		var r = size * k / 2;
 		var grad = g.createRadialGradient(0, 0, 0, 0, 0, Math.max(0.5, r));
 		grad.addColorStop(0, color);

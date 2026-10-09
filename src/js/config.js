@@ -243,6 +243,7 @@ config.TOOLS = [
 			pressure: false,
 			opacity: 100,
 			blend: 'Normal',
+			tip: '',
 		},
 	},
 	{

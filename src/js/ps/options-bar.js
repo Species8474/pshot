@@ -1187,6 +1187,12 @@ class Ps_options_bar_class {
 		var hardness = hard ? this.get('hardness') : 100;
 		pop.innerHTML = '<div class="ps_bp_row"><span>Size:</span><input type="range" min="1" max="500" value="' + size + '"><input type="text" class="ps_opt_field" value="' + size + ' px"></div>'
 			+ '<div class="ps_bp_row' + (hard ? '' : ' disabled') + '"><span>Hardness:</span><input type="range" class="ps_bp_hard" min="0" max="100"' + (hard ? '' : ' disabled') + ' value="' + hardness + '"><input type="text" class="ps_opt_field ps_bp_hard_field"' + (hard ? '' : ' disabled') + ' value="' + hardness + '%"></div>';
+		//CS6: the preset grid under Size and Hardness
+		var grid = document.createElement('div');
+		grid.className = 'ps_bpre_grid';
+		pop.appendChild(grid);
+		this.workspace.Brush_presets.fill(grid, false);
+		grid.addEventListener('click', () => setTimeout(close, 0));
 		document.body.appendChild(pop);
 		var rect = anchor.getBoundingClientRect();
 		pop.style.left = rect.left + 'px';

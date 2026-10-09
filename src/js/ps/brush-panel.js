@@ -56,11 +56,12 @@ class Ps_brush_panel_class {
 		else if (this.section == 'wet') right = '<div class="ps_typ_hint">Paint builds up along the edges of the brush stroke, like watercolor.</div>';
 		else right = '<div class="ps_typ_hint">Not available in pshot.</div>';
 		host.innerHTML = '<div class="ps_brushp">'
-			+ '<div class="ps_bp_list"><button type="button" class="ps_bp_presets disabled">Brush Presets</button>'
+			+ '<div class="ps_bp_list"><button type="button" class="ps_bp_presets">Brush Presets</button>'
 			+ SECTIONS.map(([k, t, keys]) => '<div class="ps_bp_item' + (k == this.section ? ' active' : '') + (k == 'tip' || keys ? '' : ' disabled') + '" data-section="' + k + '">'
 				+ (k == 'tip' ? '' : '<input type="checkbox"' + (keys && keys.some(x => a[x] === true || a[x] > 0) ? ' checked' : '') + (keys ? '' : ' disabled') + ' data-enable="' + (keys ? keys.join(',') : '') + '">') + t + '</div>').join('')
 			+ '</div><div class="ps_bp_right">' + right + '</div></div>'
 			+ '<canvas class="ps_bp_preview" width="300" height="60"></canvas>';
+		host.querySelector('.ps_bp_presets').addEventListener('click', () => app.GUI.Ps_workspace.toggle_panel('brush_presets'));
 		host.querySelectorAll('.ps_bp_item').forEach((item) => item.addEventListener('click', (e) => {
 			if (item.classList.contains('disabled')) return;
 			var en = e.target.dataset && e.target.dataset.enable;
