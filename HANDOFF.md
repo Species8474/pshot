@@ -126,6 +126,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Warp/Again. Warp is a 4x4 Bezier patch (drag points/handles or the surface), previewed as a mesh and committed by Newton-inverting the patch per pixel. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
   - Guides from the rulers. Pixel Grid at 500%+ (View > Show > Pixel Grid).
   - Type > Create Work Path (traces the glyphs).
+  - Move tool: Alt+drag duplicates the layer and moves the copy; arrows nudge 1 px (Shift 10 px).
   - Hand, Zoom and Space-to-pan.
   - CS6 zoom steps.
   - Ctrl+Z toggles a single undo; Alt+Ctrl+Z and Shift+Ctrl+Z step through History.

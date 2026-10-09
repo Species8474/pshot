@@ -115,6 +115,7 @@ class Ps_workspace_class {
 		install_pixel_layer_guard();
 		install_move_selection();
 		install_shape_modes();
+		this.install_alt_drag_duplicate();
 		this.render_document_tab();
 		this.render_history();
 		this.render_channels();
@@ -738,6 +739,31 @@ class Ps_workspace_class {
 		var el = document.getElementById(area == 'options' ? 'ps_options' : 'ps_toolbox');
 		el.classList.toggle('closed');
 		this.relayout();
+	}
+
+	/**
+	 * Move tool: Alt+drag (no selection) duplicates the layer and drags the copy (CS6)
+	 */
+	install_alt_drag_duplicate() {
+		var busy = false;
+		document.addEventListener('mousedown', (e) => {
+			if (config.TOOL.name != 'select' || !e.altKey || e.button != 0 || busy || e.ps_synthetic) return;
+			if (e.target.id != 'canvas_minipaint' && e.target.id != 'main_wrapper') return;
+			if (this.Selection.has() || !config.layer || config.layer.type == null || this.Multi.multiple()) return;
+			var locks = config.layer.ps_lock || {};
+			if (locks.all || locks.position) return;
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			busy = true;
+			var target = e.target, x = e.clientX, y = e.clientY;
+			var group = this.Groups.is_group(config.layer);
+			Promise.resolve(group ? null : app.GUI.modules['layer/duplicate'].duplicate()).then(() => {
+				busy = false;
+				var again = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: 1 });
+				again.ps_synthetic = true;
+				target.dispatchEvent(again);
+			});
+		}, true);
 	}
 
 	/**

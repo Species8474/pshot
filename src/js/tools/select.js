@@ -511,11 +511,8 @@ class Select_tool_class extends Base_tools_class {
 				y: config.layer.y
 			}
 		}
-		var power = 10;
-		if (event.ctrlKey == true || event.metaKey)
-			power = 50;
-		if (event.shiftKey == true)
-			power = 1;
+		//pshot: CS6 nudges 1 px, Shift 10 px
+		var power = event.shiftKey == true ? 10 : 1;
 
 		config.layer.x += direction_x * power;
 		config.layer.y += direction_y * power;

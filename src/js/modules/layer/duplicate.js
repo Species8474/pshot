@@ -48,6 +48,9 @@ class Layer_duplicate_class {
 		}
 		params.name = name;
 		var source = config.layer;
+		//pshot: smart object sources are canvases (not JSON); copies are not linked (CS6)
+		if (source.ps_smart) params.ps_smart = Object.assign({}, source.ps_smart);
+		delete params.ps_link;
 		delete params.ps_mask;
 		delete params.ps_mask_x;
 		delete params.ps_mask_y;
@@ -66,7 +69,7 @@ class Layer_duplicate_class {
 		}
 
 		var actions = [new app.Actions.Insert_layer_action(params)];
-		app.State.do_action(
+		return app.State.do_action(
 			new app.Actions.Bundle_action('duplicate_layer', 'Duplicate Layer', actions)
 		).then(() => {
 			//the layer mask comes along (canvas can't go through JSON)
