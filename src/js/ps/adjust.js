@@ -1381,11 +1381,48 @@ class Ps_adjust_class {
 		});
 	}
 
+	/**
+	 * CS6 Shadows/Highlights; Show More Options adds Tone Width, Radius and the
+	 * Adjustments group
+	 */
 	shadows_highlights() {
-		this.sliders('Shadows/Highlights', 'shadows_highlights', [
-			{ key: 'shadows', label: 'Shadows Amount:', min: 0, max: 100, value: 35 },
-			{ key: 'highlights', label: 'Highlights Amount:', min: 0, max: 100, value: 0 },
-		]);
+		var F = [
+			['shadows', 'Amount:', 0, 100, 35, '%', 'Shadows'], ['s_width', 'Tone Width:', 0, 100, 50, '%', 'Shadows'], ['s_radius', 'Radius:', 0, 2500, 30, 'px', 'Shadows'],
+			['highlights', 'Amount:', 0, 100, 0, '%', 'Highlights'], ['h_width', 'Tone Width:', 0, 100, 50, '%', 'Highlights'], ['h_radius', 'Radius:', 0, 2500, 30, 'px', 'Highlights'],
+			['color', 'Color Correction:', -100, 100, 20, '', 'Adjustments'], ['midtone', 'Midtone Contrast:', -100, 100, 0, '', 'Adjustments'],
+			['black_clip', 'Black Clip:', 0, 50, 0.01, '%', 'Adjustments'], ['white_clip', 'White Clip:', 0, 50, 0.01, '%', 'Adjustments'],
+		];
+		var simple = { shadows: 'Shadows Amount:', highlights: 'Highlights Amount:' };
+		var html = '';
+		var group = null;
+		for (var f of F) {
+			if (f[6] != group) {
+				group = f[6];
+				html += '<div class="ps_adj_label ps_sh_more">' + group + '</div>';
+			}
+			var step = f[0].indexOf('clip') > 0 ? 0.01 : 1;
+			html += '<div class="ps_adj_slider' + (simple[f[0]] ? '' : ' ps_sh_more') + '" data-sh="' + f[0] + '"><span data-label="' + f[0] + '">' + f[1] + '</span><input type="number" id="sh_' + f[0] + '_n" min="' + f[2] + '" max="' + f[3] + '" step="' + step + '">'
+				+ '<span class="ps_adj_unit">' + f[5] + '</span><input type="range" id="sh_' + f[0] + '" min="' + f[2] + '" max="' + f[3] + '" step="' + step + '"></div>';
+		}
+		html += '<label class="ps_adj_check ps_sh_more disabled"><input type="checkbox" disabled> Save As Defaults</label>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="sh_more"> Show More Options</label>';
+		this.show('Shadows/Highlights', html, (root, state, update) => {
+			for (let f of F) {
+				if (state[f[0]] === undefined) state[f[0]] = f[4];
+				let r = root.querySelector('#sh_' + f[0]), n = root.querySelector('#sh_' + f[0] + '_n');
+				r.value = n.value = state[f[0]];
+				let set = (v) => { if (isNaN(v)) return; state[f[0]] = Math.max(f[2], Math.min(f[3], v)); r.value = n.value = state[f[0]]; update(); };
+				r.addEventListener('input', () => set(parseFloat(r.value)));
+				n.addEventListener('change', () => set(parseFloat(n.value)));
+			}
+			var more = root.querySelector('#sh_more');
+			var layout = () => {
+				root.querySelectorAll('.ps_sh_more').forEach(e => e.style.display = more.checked ? '' : 'none');
+				for (var k in simple) root.querySelector('[data-label="' + k + '"]').textContent = more.checked ? 'Amount:' : simple[k];
+			};
+			more.addEventListener('change', layout);
+			layout();
+		}, (state) => this.build_shadows_highlights(state), 'shadows_highlights');
 	}
 
 	/**
@@ -1454,9 +1491,14 @@ class Ps_adjust_class {
 	}
 
 	build_shadows_highlights(state) {
-		var sa = (state.shadows == null ? 35 : state.shadows) / 100, ha = (state.highlights || 0) / 100;
-		return (src, dst, w, h) => {
-			//local brightness: blurred luminance (CS6 radius 30 px)
+		var v = (k, d) => state[k] == null ? d : state[k];
+		var sa = v('shadows', 35) / 100, ha = v('highlights', 0) / 100;
+		var sw = Math.max(0.01, v('s_width', 50) / 100), hw = Math.max(0.01, v('h_width', 50) / 100);
+		var sr = v('s_radius', 30), hr = v('h_radius', 30);
+		var cc = v('color', 20) / 100, mc = v('midtone', 0) / 100;
+		var bclip = v('black_clip', 0.01) / 100, wclip = v('white_clip', 0.01) / 100;
+		//local brightness: blurred luminance at a radius
+		var local = (src, w, h, radius) => {
 			var lum = document.createElement('canvas');
 			lum.width = w;
 			lum.height = h;
@@ -1468,22 +1510,63 @@ class Ps_adjust_class {
 				img.data[i + 3] = 255;
 			}
 			lctx.putImageData(img, 0, 0);
+			if (radius < 0.5) return img.data;
 			var blur = document.createElement('canvas');
 			blur.width = w;
 			blur.height = h;
 			var bctx = blur.getContext('2d', { willReadFrequently: true });
-			bctx.filter = 'blur(30px)';
+			bctx.filter = 'blur(' + radius + 'px)';
 			bctx.drawImage(lum, 0, 0);
-			var B = bctx.getImageData(0, 0, w, h).data;
+			return bctx.getImageData(0, 0, w, h).data;
+		};
+		return (src, dst, w, h) => {
+			var BS = sa > 0 ? local(src, w, h, sr) : null;
+			var BH = ha > 0 ? (hr == sr && BS ? BS : local(src, w, h, hr)) : null;
 			for (var j = 0; j < src.length; j += 4) {
-				var lb = B[j] / 255;
-				var ws = Math.max(0, 1 - lb * 2), wh = Math.max(0, lb * 2 - 1);
+				var ws = BS ? Math.max(0, 1 - BS[j] / 255 / sw) : 0;
+				var wh = BH ? Math.max(0, (BH[j] / 255 - (1 - hw)) / hw) : 0;
 				var gs = 1 / (1 + sa * ws * 2.5), gh = 1 / (1 + ha * wh * 2.5);
+				var l0 = (src[j] * 0.299 + src[j + 1] * 0.587 + src[j + 2] * 0.114) / 255;
+				var out = [0, 0, 0];
 				for (var c = 0; c < 3; c++) {
 					var x = src[j + c] / 255;
 					if (ws > 0 && sa > 0) x = Math.pow(x, gs);
 					if (wh > 0 && ha > 0) x = 1 - Math.pow(1 - x, gh);
-					dst[j + c] = x * 255;
+					out[c] = x;
+				}
+				var l1 = out[0] * 0.299 + out[1] * 0.587 + out[2] * 0.114;
+				//Color Correction: saturation in the changed areas
+				var changed = Math.min(1, Math.abs(l1 - l0) * 4);
+				if (cc && changed > 0) {
+					var f = 1 + cc * changed;
+					for (var c2 = 0; c2 < 3; c2++) out[c2] = l1 + (out[c2] - l1) * f;
+				}
+				//Midtone Contrast
+				if (mc) {
+					for (var c3 = 0; c3 < 3; c3++) {
+						var y = out[c3];
+						out[c3] = y + (y - 0.5) * mc * (1 - Math.abs(2 * y - 1));
+					}
+				}
+				dst[j] = out[0] * 255; dst[j + 1] = out[1] * 255; dst[j + 2] = out[2] * 255;
+			}
+			//Black Clip / White Clip: the given share of pixels becomes black / white
+			if (bclip > 0.0001 || wclip > 0.0001) {
+				var hist = new Uint32Array(256), n = 0;
+				for (var q = 0; q < dst.length; q += 4) {
+					if (src[q + 3] == 0) continue;
+					hist[Math.max(0, Math.min(255, Math.round(dst[q] * 0.299 + dst[q + 1] * 0.587 + dst[q + 2] * 0.114)))]++;
+					n++;
+				}
+				var lo = 0, hi = 255, acc = 0;
+				while (lo < 254 && (acc += hist[lo]) <= n * bclip) lo++;
+				acc = 0;
+				while (hi > lo + 1 && (acc += hist[hi]) <= n * wclip) hi--;
+				if (lo > 0 || hi < 255) {
+					var scale = 255 / Math.max(1, hi - lo);
+					for (var z = 0; z < dst.length; z += 4) {
+						dst[z] = (dst[z] - lo) * scale; dst[z + 1] = (dst[z + 1] - lo) * scale; dst[z + 2] = (dst[z + 2] - lo) * scale;
+					}
 				}
 			}
 		};
