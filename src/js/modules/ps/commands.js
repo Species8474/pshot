@@ -50,6 +50,7 @@ class Ps_commands_class {
 	gradient_map() { this.Adjust.gradient_map(); }
 	selective_color() { this.Adjust.selective_color(); }
 	black_white() { this.Adjust.black_white(); }
+	replace_color() { this.Adjust.replace_color(); }
 	auto_tone() { this.Adjust.auto('tone'); }
 	auto_contrast() { this.Adjust.auto('contrast'); }
 	auto_color() { this.Adjust.auto('color'); }

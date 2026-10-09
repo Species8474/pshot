@@ -107,7 +107,7 @@ const M = [
 			'Vibrance...|ps/commands.vibrance', 'Hue/Saturation...|Ctrl+U|ps/commands.hue_saturation', 'Color Balance...|Ctrl+B|ps/commands.color_balance', 'Black & White...|Alt+Shift+Ctrl+B|ps/commands.black_white', 'Photo Filter...|ps/commands.photo_filter', 'Channel Mixer...|ps/commands.channel_mixer', 'Color Lookup...', '-',
 			'Invert|Ctrl+I|effects/common/invert.invert', 'Posterize...|ps/commands.posterize', 'Threshold...|ps/commands.threshold', 'Gradient Map...|ps/commands.gradient_map', 'Selective Color...|ps/commands.selective_color', '-',
 			'Shadows/Highlights...|ps/commands.shadows_highlights', 'HDR Toning...', 'Variations...', '-',
-			'Desaturate|Shift+Ctrl+U|effects/common/grayscale.grayscale', 'Match Color...', 'Replace Color...|tools/replace_color.replace_color', 'Equalize|ps/commands.equalize',
+			'Desaturate|Shift+Ctrl+U|effects/common/grayscale.grayscale', 'Match Color...', 'Replace Color...|ps/commands.replace_color', 'Equalize|ps/commands.equalize',
 		]],
 		'-',
 		'Auto Tone|Shift+Ctrl+L|ps/commands.auto_tone',

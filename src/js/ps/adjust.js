@@ -753,6 +753,85 @@ class Ps_adjust_class {
 	}
 
 	/**
+	 * CS6 Replace Color: sampled color + Fuzziness selects; Hue/Saturation/Lightness change it
+	 */
+	replace_color() {
+		var html = '<div class="ps_adj_label">Selection</div>'
+			+ '<div class="ps_adj_slider"><span>Fuzziness:</span><input type="number" id="rc_fz_n" min="0" max="200"><span class="ps_adj_unit"></span><input type="range" id="rc_fz" min="0" max="200"></div>'
+			+ '<canvas id="rc_preview" class="ps_cr_preview" width="220" height="160" title="Click to sample the color to replace"></canvas>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="rc_invert"> Invert</label>'
+			+ '<div class="ps_adj_label">Replacement</div>'
+			+ '<div class="ps_adj_slider"><span>Hue:</span><input type="number" id="rc_h_n" min="-180" max="180"><span class="ps_adj_unit"></span><input type="range" id="rc_h" min="-180" max="180"></div>'
+			+ '<div class="ps_adj_slider"><span>Saturation:</span><input type="number" id="rc_s_n" min="-100" max="100"><span class="ps_adj_unit"></span><input type="range" id="rc_s" min="-100" max="100"></div>'
+			+ '<div class="ps_adj_slider"><span>Lightness:</span><input type="number" id="rc_l_n" min="-100" max="100"><span class="ps_adj_unit"></span><input type="range" id="rc_l" min="-100" max="100"></div>';
+		this.show('Replace Color', html, (root, state, update, job) => {
+			Object.assign(state, { fuzz: 40, h: 0, s: 0, l: 0, invert: false }, state);
+			if (!state.color) state.color = [parseInt(config.COLOR.substr(1, 2), 16), parseInt(config.COLOR.substr(3, 2), 16), parseInt(config.COLOR.substr(5, 2), 16)];
+			var preview = root.querySelector('#rc_preview');
+			var W = job.w, H = job.h, sc = Math.min(220 / W, 160 / H);
+			preview.width = Math.max(1, Math.round(W * sc));
+			preview.height = Math.max(1, Math.round(H * sc));
+			var draw = () => {
+				var m = this.replace_mask(job.original.data, state);
+				var c = document.createElement('canvas');
+				c.width = W;
+				c.height = H;
+				var ctx = c.getContext('2d');
+				var img = ctx.createImageData(W, H);
+				for (var i = 0; i < m.length; i++) { img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = m[i] * 255; img.data[i * 4 + 3] = 255; }
+				ctx.putImageData(img, 0, 0);
+				preview.getContext('2d').drawImage(c, 0, 0, preview.width, preview.height);
+			};
+			var bind = (id, key) => {
+				var r = root.querySelector('#' + id), n = root.querySelector('#' + id + '_n');
+				r.value = n.value = state[key];
+				var set = (v) => { if (isNaN(v)) return; state[key] = v; r.value = n.value = v; if (key == 'fuzz') draw(); update(); };
+				r.addEventListener('input', () => set(parseFloat(r.value)));
+				n.addEventListener('change', () => set(parseFloat(n.value)));
+			};
+			bind('rc_fz', 'fuzz'); bind('rc_h', 'h'); bind('rc_s', 's'); bind('rc_l', 'l');
+			var inv = root.querySelector('#rc_invert');
+			inv.checked = state.invert;
+			inv.addEventListener('change', () => { state.invert = inv.checked; draw(); update(); });
+			preview.addEventListener('click', (e) => {
+				var rect = preview.getBoundingClientRect();
+				var x = Math.floor((e.clientX - rect.left) / rect.width * W), y = Math.floor((e.clientY - rect.top) / rect.height * H);
+				var k = (Math.max(0, Math.min(H - 1, y)) * W + Math.max(0, Math.min(W - 1, x))) * 4, d = job.original.data;
+				state.color = [d[k], d[k + 1], d[k + 2]];
+				draw();
+				update();
+			});
+			draw();
+		}, (state) => this.build_replace_color(state), 'replace_color');
+	}
+
+	replace_mask(d, state) {
+		var n = d.length / 4, m = new Float32Array(n), c = state.color, f = state.fuzz / 2;
+		for (var i = 0; i < n; i++) {
+			var dist = Math.max(Math.abs(d[i * 4] - c[0]), Math.abs(d[i * 4 + 1] - c[1]), Math.abs(d[i * 4 + 2] - c[2]));
+			var v = dist <= f ? 1 : Math.max(0, 1 - (dist - f) / Math.max(1, f));
+			m[i] = state.invert ? 1 - v : v;
+		}
+		return m;
+	}
+
+	build_replace_color(state) {
+		return (src, dst) => {
+			var m = this.replace_mask(src, state);
+			for (var i = 0; i < m.length; i++) {
+				if (m[i] <= 0) continue;
+				var k = i * 4;
+				var hsl = rgb_to_hsl(src[k], src[k + 1], src[k + 2]);
+				var h = (hsl[0] + state.h / 360 + 1) % 1;
+				var s = clamp(hsl[1] * (1 + state.s / 100), 0, 1);
+				var l = state.l >= 0 ? hsl[2] + (1 - hsl[2]) * state.l / 100 : hsl[2] * (1 + state.l / 100);
+				var rgb = hsl_to_rgb(h, s, clamp(l, 0, 1));
+				for (var c = 0; c < 3; c++) dst[k + c] = src[k + c] + (rgb[c] - src[k + c]) * m[i];
+			}
+		};
+	}
+
+	/**
 	 * CS6 Black & White: six color sliders and an optional Tint
 	 */
 	black_white() {
