@@ -91,6 +91,12 @@ class Retouch_class extends Base_tools_class {
 		if (mode == 'red_eye') {
 			this.box_start = this.last;
 		}
+		if (mode == 'color_replace') {
+			var cctx = this.canvas.getContext('2d', { willReadFrequently: true });
+			this.original = cctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+			this.replace_target = this.sample_at(this.last);
+			this.replace_dab(this.last);
+		}
 		if (mode == 'history') {
 			this.original = this.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height);
 			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
@@ -127,6 +133,17 @@ class Retouch_class extends Base_tools_class {
 		}
 		else if (mode == 'red_eye') {
 			this.box_end = p;
+		}
+		else if (mode == 'color_replace') {
+			if (dist >= step) {
+				var cp = this.last;
+				for (var tc = step; tc <= dist; tc += step) {
+					cp = { x: this.last.x + dx * tc / dist, y: this.last.y + dy * tc / dist };
+					if (this.getParams().sampling == 'Continuous') this.replace_target = this.sample_at(cp);
+					this.replace_dab(cp);
+				}
+				this.last = cp;
+			}
 		}
 		else if (mode == 'history') {
 			if (dist >= step) {
@@ -174,7 +191,7 @@ class Retouch_class extends Base_tools_class {
 			this.box_end = null;
 		}
 		delete config.layer.link_canvas;
-		var labels = { history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { color_replace: 'Color Replacement Tool', history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		]));
@@ -183,6 +200,108 @@ class Retouch_class extends Base_tools_class {
 		this.original = null;
 		this.source_data = null;
 		this.history_mask = null;
+	}
+
+	/**
+	 * Color Replacement: the sampled color (Continuous / Once / Background Swatch)
+	 */
+	sample_at(p) {
+		var params = this.getParams();
+		if (params.sampling == 'Background Swatch') {
+			var bg = config.BG_COLOR;
+			return [parseInt(bg.substr(1, 2), 16), parseInt(bg.substr(3, 2), 16), parseInt(bg.substr(5, 2), 16)];
+		}
+		var w = this.canvas.width, x = Math.max(0, Math.min(w - 1, Math.round(p.x))), y = Math.max(0, Math.min(this.canvas.height - 1, Math.round(p.y)));
+		var d = this.original.data, i = (y * w + x) * 4;
+		return [d[i], d[i + 1], d[i + 2]];
+	}
+
+	/**
+	 * Color Replacement dab: pixels within Tolerance of the sampled color take the
+	 * foreground color's hue/saturation (Color), or only hue / saturation / luminosity
+	 */
+	replace_dab(p) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var r = Math.max(1, params.size / 2 * (layer.width_original / layer.width));
+		var w = this.canvas.width, h = this.canvas.height;
+		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
+		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
+		if (x1 <= x0 || y1 <= y0) return;
+		var bw = x1 - x0, bh = y1 - y0;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(x0, y0, bw, bh);
+		var D = img.data, O = this.original.data;
+		var t = this.replace_target, tol = (params.tolerance == null ? 30 : params.tolerance) / 100 * 255 * 1.2;
+		var fg = config.COLOR;
+		var fr = parseInt(fg.substr(1, 2), 16), fgc = parseInt(fg.substr(3, 2), 16), fb = parseInt(fg.substr(5, 2), 16);
+		var fh = this.hsl(fr, fgc, fb);
+		var mode = params.replace_mode || 'Color';
+		var match = new Uint8Array(bw * bh);
+		for (var y = y0; y < y1; y++) {
+			for (var x = x0; x < x1; x++) {
+				if (Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) > r) continue;
+				var i = (y * w + x) * 4;
+				if (Math.abs(O[i] - t[0]) + Math.abs(O[i + 1] - t[1]) + Math.abs(O[i + 2] - t[2]) <= tol * 1.5) match[(y - y0) * bw + (x - x0)] = 1;
+			}
+		}
+		if (params.limits != 'Discontiguous') {
+			//Contiguous: only matching pixels connected to the brush center
+			var keep = new Uint8Array(bw * bh), stack = [];
+			var cx = Math.max(0, Math.min(bw - 1, Math.round(p.x) - x0)), cy = Math.max(0, Math.min(bh - 1, Math.round(p.y) - y0));
+			if (match[cy * bw + cx]) { stack.push(cy * bw + cx); keep[cy * bw + cx] = 1; }
+			while (stack.length) {
+				var k = stack.pop(), kx = k % bw, ky = (k / bw) | 0;
+				for (var [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+					var nx = kx + ax, ny = ky + ay;
+					if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
+					var nk = ny * bw + nx;
+					if (match[nk] && !keep[nk]) { keep[nk] = 1; stack.push(nk); }
+				}
+			}
+			match = keep;
+		}
+		for (var j = 0; j < match.length; j++) {
+			if (!match[j]) continue;
+			var px = x0 + (j % bw), py = y0 + ((j / bw) | 0), oi = (py * w + px) * 4, di = j * 4;
+			var c = this.hsl(O[oi], O[oi + 1], O[oi + 2]);
+			var hh = c[0], ss = c[1], ll = c[2];
+			if (mode == 'Color') { hh = fh[0]; ss = fh[1]; }
+			else if (mode == 'Hue') { hh = fh[0]; }
+			else if (mode == 'Saturation') { ss = fh[1]; }
+			else if (mode == 'Luminosity') { ll = fh[2]; }
+			var rgb = this.rgb(hh, ss, ll);
+			D[di] = rgb[0]; D[di + 1] = rgb[1]; D[di + 2] = rgb[2];
+		}
+		ctx.putImageData(img, x0, y0);
+	}
+
+	hsl(r, g, b) {
+		r /= 255; g /= 255; b /= 255;
+		var max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, h = 0, s = 0;
+		if (max != min) {
+			var d = max - min;
+			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+			if (max == r) h = (g - b) / d + (g < b ? 6 : 0);
+			else if (max == g) h = (b - r) / d + 2;
+			else h = (r - g) / d + 4;
+			h /= 6;
+		}
+		return [h, s, l];
+	}
+
+	rgb(h, s, l) {
+		if (s == 0) return [l * 255, l * 255, l * 255];
+		var f = (p, q, t) => {
+			if (t < 0) t += 1;
+			if (t > 1) t -= 1;
+			if (t < 1 / 6) return p + (q - p) * 6 * t;
+			if (t < 1 / 2) return q;
+			if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+			return p;
+		};
+		var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+		return [f(p, q, h + 1 / 3) * 255, f(p, q, h) * 255, f(p, q, h - 1 / 3) * 255];
 	}
 
 	/**

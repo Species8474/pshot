@@ -78,6 +78,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen, sponge, dodge, burn and smudge.
   - Retouching: Spot Healing Brush, Healing Brush (Alt+click source), Patch, Content-Aware Move and Red Eye (`tools/retouch.js`, `tools/ps_patch.js`, `ps/inpaint.js`).
   - All of them respect the selection, layer locks and mask targeting.
+  - Color Replacement Tool (B): Hue/Saturation/Color/Luminosity, Continuous/Once/Background Swatch sampling, Contiguous/Discontiguous, Tolerance.
   - History Brush (Y): paints back the document's opening snapshot, which is captured just before the first edit (`Documents.before_action`, hooked in `base-state.js`).
   - Quick Mask (Q): painting edits the selection, shown as a red overlay.
 - **Paths** (`ps/paths.js`, tools `ps_pen.js`, `ps_path_select.js`)
@@ -114,7 +115,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Warp transform. Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
+- Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.

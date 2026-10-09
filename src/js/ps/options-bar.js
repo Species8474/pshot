@@ -39,6 +39,9 @@ const SVG = (body, size = 16) => '<svg viewBox="0 0 18 18" width="' + size + '" 
 const ST = 'fill="none" stroke="currentColor" stroke-width="1.2"';
 
 const IC = {
+	sample_cont: SVG(`<path d="M3 15l8-8M11 7l2-4 2 2-4 2" ${ST}/><path d="M2 5h3M3.5 3.5v3" ${ST}/>`),
+	sample_once: SVG(`<path d="M3 15l8-8M11 7l2-4 2 2-4 2" ${ST}/><path d="M2 3.5h3" ${ST}/>`),
+	sample_bg: SVG(`<rect x="2" y="2" width="8" height="8" fill="currentColor"/><rect x="7" y="7" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.2"/>`),
 	sel_new: SVG(`<rect x="3" y="4" width="12" height="10" fill="currentColor"/>`),
 	sel_add: SVG(`<rect x="2" y="3" width="9" height="8" fill="currentColor"/><rect x="7" y="7" width="9" height="8" fill="currentColor"/>`),
 	sel_sub: SVG(`<rect x="2" y="3" width="9" height="8" fill="currentColor"/><rect x="7" y="7" width="9" height="8" ${ST}/>`),
@@ -319,6 +322,21 @@ const LAYOUTS = {
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
 		{ type: 'check', label: 'Sample All Layers', value: false },
 		{ type: 'check', label: 'Finger Painting', value: false },
+	],
+	color_replacement: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Mode:', values: ['Hue', 'Saturation', 'Color', 'Luminosity'], bind: 'replace_mode', map: { Hue: 'Hue', Saturation: 'Saturation', Color: 'Color', Luminosity: 'Luminosity' } },
+		{ type: 'sep' },
+		{ type: 'icons', items: [
+			{ icon: IC.sample_cont, title: 'Sampling: Continuous', bind: 'sampling', bind_value: 'Continuous' },
+			{ icon: IC.sample_once, title: 'Sampling: Once', bind: 'sampling', bind_value: 'Once' },
+			{ icon: IC.sample_bg, title: 'Sampling: Background Swatch', bind: 'sampling', bind_value: 'Background Swatch' },
+		] },
+		{ type: 'select', label: 'Limits:', values: ['Discontiguous', 'Contiguous', 'Find Edges'], bind: 'limits', map: { Discontiguous: 'Discontiguous', Contiguous: 'Contiguous', 'Find Edges': 'Contiguous' } },
+		{ type: 'pct', label: 'Tolerance:', bind: 'tolerance' },
+		{ type: 'check', label: 'Anti-alias', value: true },
+		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
 	],
 	history_brush: [
 		{ type: 'brush', bind: 'size' },

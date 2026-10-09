@@ -116,6 +116,10 @@ config.TOOLS = [
 			mode: 'smudge',
 			strength: 50,
 			opacity: 100,
+			replace_mode: 'Color',
+			sampling: 'Continuous',
+			limits: 'Contiguous',
+			tolerance: 30,
 		},
 	},
 	{
