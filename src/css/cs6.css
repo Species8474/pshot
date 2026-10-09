@@ -1072,7 +1072,9 @@ body.theme-cs6 #popups .popup h2 {
 	font-size: 12px;
 	font-weight: normal;
 	margin: 0;
-	padding: 6px 10px;
+	height: 26px;
+	line-height: 26px;
+	padding: 0 10px;
 	border-bottom: 1px solid #2c2c2c;
 }
 body.theme-cs6 #popups .popup .button, body.theme-cs6 #popups .popup button.button,
@@ -1113,3 +1115,142 @@ body.theme-cs6 ::-webkit-scrollbar-thumb { background: #6a6a6a; border: 2px soli
 
 .ps_layer_name.background { font-style: italic; }
 .ps_layer_lock { margin-right: 10px; color: inherit; line-height: 0; opacity: 0.9; }
+
+/* CS6 dialog layout: content on the left, OK / Cancel stacked top-right */
+body.theme-cs6 #popups .popup > .dialog_content { margin-right: 104px; padding: 12px 14px; }
+body.theme-cs6 #popups .popup { padding: 34px 0 10px 0; }
+body.theme-cs6 #popups .popup > .dialog_content { max-height: calc(80vh - 60px); }
+body.theme-cs6 #popups .popup > .buttons .button { width: 100%; }
+body.theme-cs6 #popups .popup > .buttons {
+	position: absolute;
+	top: 40px;
+	right: 12px;
+	left: auto;
+	bottom: auto;
+	height: auto;
+	line-height: normal;
+	width: 84px;
+	text-align: left;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 0;
+	margin: 0;
+	border: none;
+	background: none;
+	width: auto;
+}
+body.theme-cs6 #popups .popup > .buttons .button { margin: 0; }
+body.theme-cs6 #popups .popup > .close { top: 4px; right: 6px; color: #ddd; background: transparent; border: none; box-shadow: none; }
+body.theme-cs6 #popups .popup td, body.theme-cs6 #popups .popup th { color: var(--ps-text); font-size: 12px; font-weight: normal; }
+body.theme-cs6 #popups .popup input[type="text"], body.theme-cs6 #popups .popup input[type="number"] { color: #f0f0f0; }
+body.theme-cs6 #popups .popup { min-height: 120px; }
+
+/* Properties panel (miniPaint layer details) laid out as label: field rows */
+body.theme-cs6 #toggle_details { display: block; }
+body.theme-cs6 #toggle_details .row, body.theme-cs6 #toggle_details .ui_input_group { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; }
+body.theme-cs6 #toggle_details label { width: 56px; flex: none; color: var(--ps-text); }
+body.theme-cs6 #toggle_details input { height: 18px; font-size: 11px; }
+body.theme-cs6 #toggle_details button { height: 18px; padding: 0 6px; font-size: 11px; }
+
+/* ========== CS6 options bar controls ====================================== */
+body.theme-cs6 .ps_options .attributes.ps_cs6_options { gap: 0; }
+.ps_opt_group {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 100%;
+	padding: 0 8px;
+	border-right: 1px solid #404040;
+	box-shadow: 1px 0 0 #626262;
+	white-space: nowrap;
+}
+.ps_opt_group:last-child { border-right: none; box-shadow: none; }
+.ps_opt { display: inline-flex; align-items: center; gap: 4px; }
+.ps_opt_label { color: var(--ps-text); }
+.ps_opt_label.disabled, .ps_opt_check.disabled { color: var(--ps-text-disabled); }
+body.theme-cs6 .ps_opt select {
+	height: 20px;
+	font-size: 11px;
+	background: var(--ps-field);
+	color: var(--ps-text);
+	border: 1px solid var(--ps-field-border);
+	border-radius: 1px;
+	padding: 0 2px;
+}
+body.theme-cs6 .ps_opt select:disabled { color: var(--ps-text-disabled); }
+body.theme-cs6 .ps_opt_field {
+	width: 46px;
+	height: 18px;
+	padding: 0 4px;
+	font-size: 11px;
+	background: var(--ps-field);
+	color: var(--ps-text);
+	border: 1px solid var(--ps-field-border);
+	border-radius: 1px;
+}
+body.theme-cs6 .ps_opt_field:disabled { color: var(--ps-text-disabled); }
+.ps_opt_caret { font-size: 8px; color: #cfcfcf; margin-left: -2px; }
+.ps_opt_caret.disabled { color: #808080; }
+.ps_opt_check { display: inline-flex; align-items: center; gap: 4px; color: var(--ps-text); }
+.ps_opt_check input { margin: 0; width: 13px; height: 13px; zoom: 1; accent-color: #6e9bd6; }
+.ps_opt_icon, .ps_opt_button, .ps_opt_brush, .ps_opt_gradient {
+	height: 22px;
+	min-width: 22px;
+	padding: 0 3px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 2px;
+	color: #e0e0e0;
+	font-size: 11px;
+}
+.ps_opt_icon:hover, .ps_opt_brush:hover, .ps_opt_gradient:hover { background: #5f5f5f; border-color: #3d3d3d; }
+.ps_opt_icon.pressed { background: #3a3a3a; border-color: #262626; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
+.ps_opt_icon.disabled { color: #858585; }
+.ps_opt_icon.disabled:hover { background: transparent; border-color: transparent; }
+.ps_opt_button {
+	padding: 0 10px;
+	background: linear-gradient(#636363, #4f4f4f);
+	border-color: #2d2d2d;
+}
+.ps_opt_button:hover { background: linear-gradient(#6d6d6d, #585858); }
+.ps_opt_button.disabled { color: #8a8a8a; }
+.ps_opt_button.disabled:hover { background: linear-gradient(#636363, #4f4f4f); }
+.ps_brush_tip { display: inline-block; border-radius: 50%; background: #e8e8e8; }
+.ps_brush_size { min-width: 16px; text-align: left; }
+.ps_opt_swatch {
+	width: 22px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid #1d1d1d;
+	box-shadow: inset 0 0 0 1px #8a8a8a;
+}
+.ps_opt_swatch.none { background: #fff linear-gradient(to top right, transparent 46%, #d00 46%, #d00 54%, transparent 54%) !important; }
+.ps_opt_gradient > span:first-child { display: block; width: 70px; height: 16px; border: 1px solid #1d1d1d; }
+.ps_brush_picker {
+	position: fixed;
+	z-index: 2000;
+	width: 250px;
+	padding: 10px;
+	background: var(--ps-panel);
+	border: 1px solid #222;
+	box-shadow: 2px 3px 8px rgba(0,0,0,.55);
+	color: var(--ps-text);
+}
+.ps_bp_row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.ps_bp_row > span { width: 58px; }
+.ps_bp_row input[type="range"] { flex: 1; }
+.ps_bp_row.disabled { color: var(--ps-text-disabled); }
+body.theme-cs6 .ps_options .ps_tool_preset { visibility: visible; }
+body.theme-cs6 label.ps_opt_check.disabled { color: var(--ps-text-disabled); }
+body.theme-cs6 label.ps_opt_check.disabled input { opacity: 0.5; }
+body.theme-cs6 button, body.theme-cs6 select, body.theme-cs6 a { cursor: default; }
+.ps_alert_text { max-width: 320px; line-height: 1.45; margin: 4px 0; }
+.ps_opt_font { width: 150px; }
+body.theme-cs6 #popups .popup > .close { top: 3px; height: 20px; line-height: 16px; }
+body.theme-cs6 #popups .popup input[type="text"], body.theme-cs6 #popups .popup input[type="number"],
+body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important; -webkit-text-fill-color: #f0f0f0; }

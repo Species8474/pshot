@@ -17,7 +17,8 @@ class Layer_raster_class {
 		//show
 		var params = {
 			type: 'image',
-			name: config.layer.name + ' + raster',
+			name: config.layer.name, //pshot: CS6 keeps the layer name
+			order: current_layer.order,
 			data: canvas.toDataURL("image/png"),
 			x: parseInt(canvas.dataset.x),
 			y: parseInt(canvas.dataset.y),
@@ -26,7 +27,7 @@ class Layer_raster_class {
 			opacity: current_layer.opacity,
 		};
 		app.State.do_action(
-			new app.Actions.Bundle_action('convert_to_raster', 'Convert to Raster', [
+			new app.Actions.Bundle_action('convert_to_raster', 'Rasterize Layer', [
 				new app.Actions.Insert_layer_action(params, false),
 				new app.Actions.Delete_layer_action(current_id)
 			])

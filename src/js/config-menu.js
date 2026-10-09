@@ -99,7 +99,7 @@ const M = [
 	['Image', [
 		['Mode', [
 			'Bitmap...', 'Grayscale', 'Duotone...', 'Indexed Color...|image/decrease_colors.decrease_colors', { name: 'RGB Color', checked: true, target: 'ps/commands.noop' }, 'CMYK Color', 'Lab Color', 'Multichannel', '-',
-			{ name: '8 Bits/Channel', checked: true, target: 'ps/commands.noop' }, '16 Bits/Channel', '32 Bits/Channel', '-', 'Color Table...|image/palette.palette',
+			{ name: '8 Bits/Channel', checked: true, target: 'ps/commands.noop' }, '16 Bits/Channel', '32 Bits/Channel', '-', 'Color Table...',
 		]],
 		'-',
 		['Adjustments', [

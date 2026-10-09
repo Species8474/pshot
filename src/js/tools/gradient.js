@@ -1,5 +1,6 @@
 import app from './../app.js';
 import config from './../config.js';
+import { commit_stroke } from './../ps/stroke.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 import Helper_class from './../libs/helpers.js';
@@ -31,6 +32,9 @@ class Gradient_class extends Base_tools_class {
 			name = 'Radial gradient';
 			is_vector = true;
 		}
+
+		//pshot: CS6 draws the gradient into the active pixel layer
+		this.paint_target = config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
 
 		//register new object - current layer is not ours or params changed
 		this.layer = {
@@ -116,10 +120,10 @@ class Gradient_class extends Base_tools_class {
 		}
 		new_settings.status = null;
 
-		app.State.do_action(
+		commit_stroke(this, app.State.do_action(
 			new app.Actions.Update_layer_action(config.layer.id, new_settings),
 			{ merge_with_history: 'new_gradient_layer' }
-		);
+		), 'Gradient Tool');
 
 		this.Base_layers.render();
 	}

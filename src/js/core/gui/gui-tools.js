@@ -95,9 +95,8 @@ class GUI_tools_class {
 	}
 
 	async activate_tool(key) {
-		return app.State.do_action(
-			new app.Actions.Activate_tool_action(key)
-		);
+		//pshot: CS6 doesn't record tool changes in History
+		return new app.Actions.Activate_tool_action(key).do();
 	}
 
 	action_data() {
@@ -121,6 +120,11 @@ class GUI_tools_class {
 
 		const itemContainer = document.getElementById(target_id);
 
+		//pshot: CS6 options bar layout when one exists for the active tool
+		if (this.Base_gui.Ps_workspace.Options_bar.render()) {
+			return;
+		}
+		itemContainer.classList.remove('ps_cs6_options');
 		itemContainer.innerHTML = "";
 
 		const attributes = this.action_data().attributes;

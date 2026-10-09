@@ -53,10 +53,36 @@ var template = `
 		<div data-id="params_content"></div>
 	</div>
 	<div class="buttons">
-		<button type="button" data-id="popup_ok" class="button trn">Ok</button>
+		<button type="button" data-id="popup_ok" class="button trn">OK</button>
 		<button type="button" data-id="popup_cancel" class="button trn">Cancel</button>
 	</div>
 `;
+
+// pshot: miniPaint dialog titles -> Photoshop CS6 names
+const CS6_TITLES = {
+	'Resize': 'Image Size',
+	'Settings': 'Preferences',
+	'New file': 'New',
+	'Composition': 'Layer Style',
+	'Decrease Color Depth': 'Posterize',
+	'Black and White': 'Black & White',
+	'Box blur': 'Box Blur',
+	'Zoom blur': 'Radial Blur',
+	'Grains': 'Add Noise',
+	'Denoise': 'Reduce Noise',
+	'Dot Screen': 'Color Halftone',
+	'Oil': 'Oil Paint',
+	'Tilt Shift': 'Tilt-Shift',
+	'Effects browser': 'Filter Gallery',
+	'Sharpen': 'Unsharp Mask',
+	'Insert guides': 'New Guide',
+	'Replace color': 'Replace Color',
+	'Information': 'File Info',
+	'Keyboard Shortcuts': 'Keyboard Shortcuts and Menus',
+	'About': 'About pshot',
+	'Color Corrections': 'Hue/Saturation',
+	'Rename': 'Layer Properties',
+};
 
 class Dialog_class {
 
@@ -105,6 +131,7 @@ class Dialog_class {
 		}
 
 		this.title = config.title || '';
+		this.title = CS6_TITLES[this.title] || this.title;
 		this.parameters = config.params || [];
 		this.onfinish = config.on_finish || false;
 		this.oncancel = config.on_cancel || false;

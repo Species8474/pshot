@@ -2074,9 +2074,20 @@ class Text_class extends Base_tools_class {
 				if (editor) {
 					let value = JSON.stringify(editor.document.lines);
 					if (this.focusedValue !== value) {
+						const old_text = this.ps_plain_text(JSON.parse(this.focusedValue));
 						this.layer.data = JSON.parse(this.focusedValue);
+						const settings = { data: JSON.parse(value) };
+						//pshot: CS6 names a type layer after its text until it is renamed
+						if (/^Layer \d+$/.test(this.layer.name) || this.layer.name === old_text) {
+							const new_text = this.ps_plain_text(settings.data);
+							if (new_text) {
+								settings.name = new_text;
+							}
+						}
 						app.State.do_action(
-							new app.Actions.Update_layer_action(this.layer.id, { data: JSON.parse(value) })
+							new app.Actions.Bundle_action('type_tool', 'Type Tool', [
+								new app.Actions.Update_layer_action(this.layer.id, settings)
+							])
 						);
 					}
 				}
@@ -2120,6 +2131,12 @@ class Text_class extends Base_tools_class {
 			}, true);
 
 			this.textarea.addEventListener('keydown', (e) => {
+				//pshot: Esc, Ctrl+Enter and numpad Enter end text editing (CS6)
+				if (e.key == 'Escape' || (e.key == 'Enter' && (e.ctrlKey || e.metaKey || e.code == 'NumpadEnter'))) {
+					e.preventDefault();
+					this.textarea.blur();
+					return;
+				}
 				if (config.layer) {
 					let handled = true;
 					const editor = this.get_editor(config.layer);
@@ -2172,7 +2189,7 @@ class Text_class extends Base_tools_class {
 						case 'b':
 							if (e.ctrlKey) {
 								e.preventDefault();
-								document.querySelector('#action_attributes #bold').click();
+								app.GUI.Ps_workspace.Options_bar.toggle('bold');
 								break;
 							}
 						case 'c':
@@ -2188,13 +2205,13 @@ class Text_class extends Base_tools_class {
 						case 'i':
 							if (e.ctrlKey) {
 								e.preventDefault();
-								document.querySelector('#action_attributes #italic').click();
+								app.GUI.Ps_workspace.Options_bar.toggle('italic');
 								break;
 							}
 						case 'u':
 							if (e.ctrlKey) {
 								e.preventDefault();
-								document.querySelector('#action_attributes #underline').click();
+								app.GUI.Ps_workspace.Options_bar.toggle('underline');
 								break;
 							}
 						case 'x':
@@ -2265,6 +2282,14 @@ class Text_class extends Base_tools_class {
 		document.addEventListener('touchend', (event) => {
 			this.dragEnd(event);
 		});
+	}
+
+	ps_plain_text(lines) {
+		try {
+			return lines.map(line => line.map(span => span.text).join('')).join(' ').trim().slice(0, 40);
+		} catch (e) {
+			return '';
+		}
 	}
 
 	mousedown(e) {

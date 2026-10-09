@@ -7,6 +7,7 @@ import app from './../../app.js';
 import config from './../../config.js';
 import Base_layers_class from './../../core/base-layers.js';
 import Dialog_class from './../../libs/popup.js';
+import { ensure_pixel_layer } from './../../ps/pixel-layer.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -43,6 +44,7 @@ class Ps_commands_class {
 	}
 
 	require_image_layer() {
+		ensure_pixel_layer();
 		if (config.layer.type != 'image') {
 			alertify.error('Could not complete your request because the layer is not a pixel layer. Rasterize it first (Layer > Rasterize > Layer).');
 			return false;

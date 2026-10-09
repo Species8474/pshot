@@ -12,6 +12,8 @@ import { groups } from './tools-def.js';
 import { ADJUSTMENTS, run_target } from './adjustments-def.js';
 import { show_popup_menu, close_popup_menu } from './popup-menu.js';
 import Ps_keymap_class from './keymap.js';
+import Ps_options_bar_class from './options-bar.js';
+import { install_pixel_layer_guard } from './pixel-layer.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -54,6 +56,7 @@ class Ps_workspace_class {
 		this.status_message_timer = null;
 		this.last_history_signature = null;
 		this.Keymap = new Ps_keymap_class(this);
+		this.Options_bar = new Ps_options_bar_class(this);
 	}
 
 	// =================================================================
@@ -73,6 +76,7 @@ class Ps_workspace_class {
 		this.init_statusbar();
 		this.hook_state();
 		this.Keymap.install();
+		install_pixel_layer_guard();
 		this.render_document_tab();
 		this.render_history();
 		this.render_channels();
@@ -101,7 +105,7 @@ class Ps_workspace_class {
 		if (signature !== this.last_history_signature) {
 			this.last_history_signature = signature;
 			this.render_history();
-			this.refresh_thumbnails();
+			app.GUI.GUI_layers.render_layers();
 			this.render_channels();
 		}
 	}
@@ -236,8 +240,12 @@ class Ps_workspace_class {
 		if ('fill_color' in attrs) {
 			attrs.fill_color = config.COLOR;
 		}
-		if (tool_config.name == 'text' && 'stroke_color' in attrs === false && 'fill' in attrs && typeof attrs.fill == 'string') {
+		if (tool_config.name == 'text' && typeof attrs.fill == 'string') {
 			attrs.fill = config.COLOR;
+		}
+		if (tool_config.name == 'gradient') {
+			attrs.color_1 = config.COLOR;
+			attrs.color_2 = config.BG_COLOR;
 		}
 	}
 
@@ -297,6 +305,7 @@ class Ps_workspace_class {
 		}
 		this.highlight_active();
 		this.render_tool_preset();
+		this.Options_bar.render();
 	}
 
 	highlight_active() {
@@ -376,24 +385,33 @@ class Ps_workspace_class {
 	 * CS6 Color Picker dialog for the foreground or background color
 	 */
 	open_color_picker(which) {
+		var title = which == 'fg' ? 'Foreground Color' : 'Background Color';
+		this.color_dialog(title, which == 'fg' ? config.COLOR : config.BG_COLOR, (hex) => {
+			if (which == 'fg') {
+				this.set_fg(hex);
+			}
+			else {
+				config.BG_COLOR = hex;
+				this.render_fg_bg();
+			}
+		});
+	}
+
+	/**
+	 * CS6 Color Picker dialog
+	 */
+	color_dialog(title, initial, callback) {
 		var POP = new Dialog_class();
 		var picker = new GUI_colors_class();
-		var _this = this;
 		POP.show({
-			title: which == 'fg' ? 'Color Picker (Foreground Color)' : 'Color Picker (Background Color)',
+			title: 'Color Picker (' + title + ')',
 			params: [{ function() { return '<div id="dialog_color_picker"></div>'; } }],
 			on_finish() {
-				if (which == 'fg') {
-					_this.set_fg(picker.COLOR);
-				}
-				else {
-					config.BG_COLOR = picker.COLOR;
-					_this.render_fg_bg();
-				}
+				callback(picker.COLOR);
 			},
 		});
 		picker.render_main_colors('dialog');
-		picker.set_color({hex: which == 'fg' ? config.COLOR : config.BG_COLOR, a: 255});
+		picker.set_color({hex: initial, a: 255});
 	}
 
 	// =================================================================

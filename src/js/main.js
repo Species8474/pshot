@@ -51,6 +51,7 @@ window.addEventListener('load', function (e) {
 	window.State = Base_state;
 	window.FileOpen = File_open;
 	window.FileSave = File_save;
+	window.pshot = app;
 
 	// Render all
 	GUI.init();
