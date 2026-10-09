@@ -133,6 +133,20 @@ function install_pixel_layer_guard() {
 			alert_box('Could not complete your request because the target is an adjustment layer. Paint on its layer mask with the Brush, Pencil or Gradient tool.');
 			return;
 		}
+		if ((PAINT_TOOLS.includes(tool) || tool == 'ps_patch') && config.layer && config.layer.ps_smart
+			&& !(config.layer.ps_mask_editing && config.layer.ps_mask)) {
+			//CS6: "This smart object must be rasterized before proceeding"
+			event.stopImmediatePropagation();
+			event.preventDefault();
+			blocked = true;
+			var POP = new Dialog_class();
+			POP.show({
+				title: 'Adobe Photoshop',
+				params: [{ html: '<p class="ps_alert_text">This smart object must be rasterized before proceeding. Its contents will no longer be editable. Rasterize the smart object?</p>' }],
+				on_finish: () => app.GUI.modules['ps/commands'].rasterize_smart_object(),
+			});
+			return;
+		}
 		if (PAINT_TOOLS.includes(tool) && config.layer && KIND[config.layer.type]) {
 			event.stopImmediatePropagation();
 			event.preventDefault();

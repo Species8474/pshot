@@ -493,7 +493,7 @@ class GUI_layers_class {
 					html += '<span class="ps_clip_arrow">' + ICON.clip + '</span>';
 				}
 				var editing_mask = !!(value.ps_mask && value.ps_mask_editing);
-				html += '<canvas class="ps_thumb' + (value.ps_mask && !editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="layer_thumb"></canvas>';
+				html += '<span class="ps_thumb_wrap' + (value.ps_smart ? ' smart' : '') + '"><canvas class="ps_thumb' + (value.ps_mask && !editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="layer_thumb"></canvas></span>';
 				if (value.ps_mask) {
 					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
 					html += '<span class="ps_mask_wrap' + (value.ps_mask_disabled ? ' disabled' : '') + '">'

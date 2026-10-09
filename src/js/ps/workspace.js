@@ -547,7 +547,7 @@ class Ps_workspace_class {
 				{ divider: true },
 				{ name: 'Lock Layers...' },
 				{ divider: true },
-				{ name: 'Convert to Smart Object' },
+				{ name: 'Convert to Smart Object', action: () => run_target('ps/commands.convert_to_smart_object') },
 				{ divider: true },
 				{ name: 'Edit Contents' },
 				{ name: 'Blending Options...', action: () => run_target('layer/composition.composition') },

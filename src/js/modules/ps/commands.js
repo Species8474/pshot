@@ -953,6 +953,72 @@ class Ps_commands_class {
 		app.GUI.GUI_layers.render_layers();
 	}
 
+	/**
+	 * Layer > Smart Objects > Convert to Smart Object: keeps the original pixels so
+	 * Free Transform resamples from them (non-destructive)
+	 */
+	async convert_to_smart_object() {
+		var layer = config.layer;
+		if (!layer || layer.type == null || layer.type == 'ps_group' || layer.type == 'ps_adjust' || layer.ps_smart) return;
+		var full = this.Base_layers.convert_layer_to_canvas(layer.id, false, false);
+		var t = app.GUI.Ps_workspace.Transform;
+		var b = t.alpha_bounds(full);
+		if (!b) return;
+		var source = document.createElement('canvas');
+		source.width = b.width;
+		source.height = b.height;
+		source.getContext('2d').drawImage(full, -b.x, -b.y);
+		var doc = document.createElement('canvas');
+		doc.width = config.WIDTH;
+		doc.height = config.HEIGHT;
+		doc.getContext('2d').drawImage(source, b.x, b.y);
+		var settings = {
+			type: 'image', x: 0, y: 0, width: doc.width, height: doc.height, width_original: doc.width, height_original: doc.height, rotate: 0,
+			ps_smart: { source: source, box: { cx: b.x + b.width / 2, cy: b.y + b.height / 2, w: b.width, h: b.height, angle: 0 }, quad: null, lx: 0, ly: 0 },
+		};
+		if (layer.type != 'image') Object.assign(settings, { render_function: null, is_vector: false, params: {}, data: null });
+		await app.State.do_action(new app.Actions.Bundle_action('smart_object', 'Convert to Smart Object', [
+			new app.Actions.Update_layer_action(layer.id, settings),
+			new app.Actions.Update_layer_image_action(doc, layer.id),
+		]));
+		app.GUI.GUI_layers.render_layers();
+	}
+
+	async new_smart_object_via_copy() {
+		var layer = config.layer;
+		if (!layer || !layer.ps_smart) return;
+		await app.State.do_action(new app.Actions.Bundle_action('smart_object', 'New Smart Object via Copy', [
+			new app.Actions.Insert_layer_action({
+				type: 'image', name: layer.name + ' copy', x: layer.x, y: layer.y, width: layer.width, height: layer.height,
+				width_original: layer.width_original, height_original: layer.height_original, data: layer.link.src || this.layer_canvas().toDataURL('image/png'),
+				ps_smart: Object.assign({}, layer.ps_smart, { source: layer.ps_smart.source }),
+			}),
+		]));
+	}
+
+	/**
+	 * Layer > Smart Objects > Rasterize: drop the original pixels
+	 */
+	rasterize_smart_object() {
+		var layer = config.layer;
+		if (!layer || !layer.ps_smart) return;
+		app.State.do_action(new app.Actions.Bundle_action('rasterize', 'Rasterize Smart Object', [
+			new app.Actions.Update_layer_action(layer.id, { ps_smart: null }),
+		])).then(() => app.GUI.GUI_layers.render_layers());
+	}
+
+	/**
+	 * Export Contents: the original pixels as PNG
+	 */
+	export_smart_contents() {
+		var layer = config.layer;
+		if (!layer || !layer.ps_smart) return;
+		var a = document.createElement('a');
+		a.download = layer.name + '.png';
+		a.href = layer.ps_smart.source.toDataURL('image/png');
+		a.click();
+	}
+
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
 	toggle_pixel_grid() {

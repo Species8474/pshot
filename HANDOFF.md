@@ -114,6 +114,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Layer Mask > From Transparency; New > Background from Layer; Arrange > Reverse; Matting (Defringe, Remove Black/White Matte); Scripts > Delete All Empty Layers.
   - Duplicate layers are named "X copy"; Layer via Copy/Cut.
   - Multiple layer selection (`ps/multi-select.js`): Ctrl+click and Shift+click in the Layers panel. Move, Group (Ctrl+G), Delete, Merge Layers (Ctrl+E), Align and Distribute act on all selected layers. The set is valid only while it contains `config.layer`.
+  - Smart Objects (`ps_smart`: original pixels + box/quad): Convert to Smart Object, New Smart Object via Copy, Export Contents, Rasterize; Free Transform (incl. distort/perspective) resamples from the original each time; painting asks to rasterize; thumbnail badge.
   - Link Layers (chain button / Layer menu, label toggles to Unlink): linked layers move together; Select Linked Layers. (`ps_link` token; not saved to PSD.)
   - As in CS6, selecting a layer and toggling visibility are not History states (`base-state.js`).
 - **Image**
@@ -132,7 +133,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 ## Known gaps / next
 - Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
-- Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
+- Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects: Edit/Replace Contents, smart filters, and PSD placed layers (smart objects save as pixels).
 - Brush panel sections other than Tip Shape / Shape Dynamics (size jitter) / Scattering / Transfer; Brush Presets.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 

@@ -215,7 +215,36 @@ class Ps_transform_class {
 		sel.draw_overlay();
 	}
 
+	/**
+	 * Smart Objects: transform from the original pixels (non-destructive)
+	 */
+	start_smart(layer) {
+		var smart = layer.ps_smart;
+		var dx = layer.x - smart.lx, dy = layer.y - smart.ly;
+		var box = Object.assign({}, smart.box);
+		box.cx += dx;
+		box.cy += dy;
+		this.job = {
+			kind: 'pixels',
+			smart: true,
+			layer: layer,
+			piece: smart.source,
+			hole: doc_canvas(),
+			mask_piece: null,
+			geometry: { x: layer.x, y: layer.y, width: layer.width, height: layer.height, width_original: layer.width_original, height_original: layer.height_original },
+			box: box,
+			quad: smart.quad ? smart.quad.map(c => ({ x: c.x + dx, y: c.y + dy })) : null,
+			w0: smart.source.width,
+			h0: smart.source.height,
+		};
+		Object.assign(layer, { x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT, width_original: config.WIDTH, height_original: config.HEIGHT });
+		this.preview();
+	}
+
 	start_pixels(layer, sel) {
+		if (layer.ps_smart && !sel) {
+			return this.start_smart(layer);
+		}
 		//everything in document space
 		var full = doc_canvas();
 		var fctx = full.getContext('2d');
@@ -758,6 +787,11 @@ class Ps_transform_class {
 				x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT, width_original: config.WIDTH, height_original: config.HEIGHT,
 			}));
 			actions.push(new app.Actions.Update_layer_image_action(result, job.layer.id));
+			if (job.smart) {
+				actions.push(new app.Actions.Update_layer_action(job.layer.id, { ps_smart: {
+					source: job.piece, box: Object.assign({}, job.box), quad: job.quad ? job.quad.map(c => ({ x: c.x, y: c.y })) : null, lx: 0, ly: 0,
+				} }));
+			}
 			if (job.mask_piece) {
 				var mask = doc_canvas();
 				this.draw_piece(mask.getContext('2d'), job.mask_piece, true);
