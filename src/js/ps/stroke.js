@@ -57,6 +57,23 @@ async function commit_stroke(tool, pending, label) {
 	var stroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);
 	//CS6: painting is limited to the active selection
 	app.GUI.Ps_workspace.Selection.clip_document_canvas(stroke);
+
+	//painting on a layer mask: the stroke edits the mask, not the pixels
+	var Mask = app.GUI.Ps_workspace.Mask;
+	if (Mask.is_editing(target)) {
+		var opacity = (temp.opacity == null ? 100 : temp.opacity) / 100;
+		var mask = Mask.painted_mask(target, stroke, tool.name == 'gradient' ? null : config.COLOR, opacity);
+		await app.State.do_action(
+			new app.Actions.Bundle_action(tool.name + '_tool', label, [
+				new app.Actions.Delete_layer_action(temp.id, true),
+				new app.Actions.Select_layer_action(target.id, true),
+				new app.Actions.Update_layer_action(target.id, { ps_mask: mask }),
+			]),
+			{ merge_with_history: ['new_' + tool.name + '_layer'] }
+		);
+		rename_last(label);
+		return;
+	}
 	var canvas = document.createElement('canvas');
 	canvas.width = target.width_original;
 	canvas.height = target.height_original;

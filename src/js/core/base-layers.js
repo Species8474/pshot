@@ -161,6 +161,14 @@ class Base_layers_class {
 			this.init_zoom_lib();
 		}
 
+		//pshot: the view scale must match the document zoom. zoomView can be left
+		//clamped to a larger scale after the canvas shrinks (new/open/switch document)
+		if (this.last_zoom == config.ZOOM && Math.abs(zoomView.getScale() - config.ZOOM) > 0.0001) {
+			var view_pos = zoomView.getPosition();
+			zoomView.setView(config.ZOOM, view_pos.x, view_pos.y);
+			config.need_render = true;
+		}
+
 		if (config.need_render == true) {
 			this.render_success = null;
 
@@ -392,6 +400,29 @@ class Base_layers_class {
 	 */
 	render_object(ctx, object, is_preview) {
 		if (object.visible == false || object.type == null) return;
+
+		//pshot: layer mask - render the layer offscreen, then keep only the revealed pixels
+		if (object.ps_mask && !object.ps_mask_disabled && !object._ps_masking) {
+			var transform = ctx.getTransform();
+			var temp = document.createElement("canvas");
+			temp.width = ctx.canvas.width;
+			temp.height = ctx.canvas.height;
+			var tctx = temp.getContext("2d");
+			tctx.setTransform(transform);
+			object._ps_masking = true;
+			try {
+				this.render_object(tctx, object, is_preview);
+			} finally {
+				object._ps_masking = false;
+			}
+			tctx.globalCompositeOperation = "destination-in";
+			tctx.drawImage(object.ps_mask, object.x - object.ps_mask_x, object.y - object.ps_mask_y);
+			ctx.save();
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.drawImage(temp, 0, 0);
+			ctx.restore();
+			return;
+		}
 
 		this.pre_render_object(ctx, object);
 

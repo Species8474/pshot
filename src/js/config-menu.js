@@ -149,7 +149,7 @@ const M = [
 		['New Adjustment Layer', ['Brightness/Contrast...', 'Levels...', 'Curves...', 'Exposure...', '-', 'Vibrance...', 'Hue/Saturation...', 'Color Balance...', 'Black & White...', 'Photo Filter...', 'Channel Mixer...', 'Color Lookup...', '-', 'Invert', 'Posterize...', 'Threshold...', 'Gradient Map...', 'Selective Color...']],
 		'Layer Content Options...',
 		'-',
-		['Layer Mask', ['Reveal All', 'Hide All', 'Reveal Selection', 'Hide Selection', 'From Transparency', '-', 'Delete', 'Apply', '-', 'Disable', 'Unlink']],
+		['Layer Mask', ['Reveal All|ps/commands.mask_reveal_all', 'Hide All|ps/commands.mask_hide_all', 'Reveal Selection|ps/commands.mask_reveal_selection', 'Hide Selection|ps/commands.mask_hide_selection', 'From Transparency', '-', 'Delete|ps/commands.mask_delete', 'Apply|ps/commands.mask_apply', '-', 'Disable|ps/commands.mask_toggle', 'Unlink']],
 		['Vector Mask', ['Reveal All', 'Hide All', 'Current Path', '-', 'Delete', '-', 'Disable', 'Unlink']],
 		'Create Clipping Mask|Alt+Ctrl+G|ps/commands.toggle_clipping_mask',
 		'-',

@@ -22,6 +22,48 @@ for (const key in TO_PSD_BLEND) {
 	FROM_PSD_BLEND[TO_PSD_BLEND[key]] = key;
 }
 
+/**
+ * PSD grayscale mask -> pshot alpha mask (document sized)
+ */
+function psd_mask_to_alpha(mask, width, height) {
+	var out = document.createElement('canvas');
+	out.width = width;
+	out.height = height;
+	var ctx = out.getContext('2d');
+	var base = mask.defaultColor || 0;
+	ctx.fillStyle = 'rgb(' + base + ',' + base + ',' + base + ')';
+	ctx.fillRect(0, 0, width, height);
+	if (mask.canvas) {
+		ctx.clearRect(mask.left || 0, mask.top || 0, mask.canvas.width, mask.canvas.height);
+		ctx.drawImage(mask.canvas, mask.left || 0, mask.top || 0);
+	}
+	var img = ctx.getImageData(0, 0, width, height);
+	var d = img.data;
+	for (var i = 0; i < d.length; i += 4) {
+		d[i + 3] = d[i];
+		d[i] = d[i + 1] = d[i + 2] = 255;
+	}
+	ctx.putImageData(img, 0, 0);
+	return out;
+}
+
+/**
+ * pshot alpha mask -> PSD grayscale mask covering the document
+ */
+function alpha_to_psd_mask(layer) {
+	var gray = document.createElement('canvas');
+	gray.width = config.WIDTH;
+	gray.height = config.HEIGHT;
+	var ctx = gray.getContext('2d');
+	ctx.fillStyle = '#000';
+	ctx.fillRect(0, 0, gray.width, gray.height);
+	ctx.drawImage(layer.ps_mask, layer.x - layer.ps_mask_x, layer.y - layer.ps_mask_y);
+	return {
+		left: 0, top: 0, right: gray.width, bottom: gray.height,
+		canvas: gray, defaultColor: 0, disabled: !!layer.ps_mask_disabled,
+	};
+}
+
 function read_file(file, as) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -76,6 +118,7 @@ async function file_to_layers(file) {
 					visible: !(child.hidden || hidden_parent),
 					composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
 					data: child.canvas.toDataURL('image/png'),
+					_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
 				});
 			}
 		};
@@ -87,6 +130,12 @@ async function file_to_layers(file) {
 				width: psd.width, height: psd.height, width_original: psd.width, height_original: psd.height,
 				data: psd.canvas.toDataURL('image/png'),
 			});
+		}
+		//layer masks: attach after the layers exist (Insert_layer_action ignores unknown keys starting with _)
+		for (const settings of layers) {
+			if (settings._ps_mask) {
+				settings._ps_mask_canvas = psd_mask_to_alpha(settings._ps_mask, psd.width, psd.height);
+			}
 		}
 		return { width: psd.width, height: psd.height, layers };
 	}
@@ -159,6 +208,17 @@ async function open_document(files) {
 	}
 	actions.push(new app.Actions.Prepare_canvas_action('do'));
 	await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', actions));
+	for (const settings of doc.layers) {
+		if (settings._ps_mask_canvas) {
+			const layer = config.layers.find(l => l.name == settings.name && l.order == settings.order) || config.layers.find(l => l.name == settings.name);
+			if (layer) {
+				layer.ps_mask = settings._ps_mask_canvas;
+				layer.ps_mask_x = layer.x;
+				layer.ps_mask_y = layer.y;
+				layer.ps_mask_disabled = !!settings._ps_mask.disabled;
+			}
+		}
+	}
 	app.GUI.modules['ps/commands'].purge_histories();
 	app.GUI.GUI_preview.zoom_auto(true);
 	app.GUI.GUI_layers.render_layers();
@@ -218,11 +278,14 @@ function build_psd() {
 			//vector, text and filtered layers are rasterized at document size
 			const visible = layer.visible;
 			const opacity = layer.opacity;
+			const mask_disabled = layer.ps_mask_disabled;
 			layer.visible = true;
 			layer.opacity = 100;
+			layer.ps_mask_disabled = true;
 			canvas = app.Layers.convert_layer_to_canvas(layer.id, false, false);
 			layer.visible = visible;
 			layer.opacity = opacity;
+			layer.ps_mask_disabled = mask_disabled;
 			left = 0;
 			top = 0;
 		}
@@ -235,6 +298,7 @@ function build_psd() {
 			hidden: layer.visible == false,
 			blendMode: TO_PSD_BLEND[layer.composition] || 'normal',
 			clipping: layer.composition == 'source-atop',
+			mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
 		});
 	}
 	const composite = document.createElement('canvas');

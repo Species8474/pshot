@@ -60,6 +60,17 @@ Phase 1 (CS6 workspace) is built:
   - Fill, Clear/Delete, Copy, Copy Merged, Cut, Layer via Copy/Cut and Crop respect the mask, and so do brush, pencil and gradient strokes.
   - Select menu: All, Deselect, Reselect, Inverse; Modify > Border, Expand, Contract, Feather.
 
+- **Layer masks** (`ps/mask.js`): the Add Mask button (Alt hides), the Layer > Layer Mask menu, the mask thumbnail and editing target, Shift+click to disable, and Apply all work.
+  - Brush, pencil, gradient and fill paint the mask in grayscale.
+  - Masks are rendered in `render_object` and survive PSD open and save.
+- **More CS6 behaviour**:
+  - Levels, Curves, Hue/Saturation and Brightness/Contrast dialogs (`ps/adjust.js`) preview live, respect the selection and create one History state each.
+  - With a selection, the Move tool moves the selected pixels; Alt+drag moves a copy.
+  - Pixel tools only change pixels inside the selection.
+  - The eraser on the Background layer paints the background colour.
+  - Brush, pencil and gradient have working Opacity and Mode.
+- **Robustness**: the render loop survives exceptions, and the zoomView scale is resynced to `config.ZOOM` (it used to stay clamped after the canvas shrank).
+
 ### Known gaps (next)
 - Quick Selection and Magnetic Lasso. The bucket, eraser, blur and clone tools don't respect the selection yet.
 - Layer groups, masks, adjustment layers, layer styles beyond Drop Shadow.

@@ -69,7 +69,7 @@ var template = `
 	<div class="ps_layers_footer">
 		<button type="button" class="disabled" title="Link layers">${ICON.link}</button>
 		<button type="button" id="ps_layer_fx" title="Add a layer style">${ICON.fx}</button>
-		<button type="button" class="disabled" title="Add layer mask">${ICON.mask}</button>
+		<button type="button" id="ps_layer_mask" title="Add layer mask">${ICON.mask}</button>
 		<button type="button" id="ps_layer_adjust" title="Create new fill or adjustment layer">${ICON.adjust}</button>
 		<button type="button" class="disabled" title="Create a new group">${ICON.group}</button>
 		<button type="button" id="insert_layer" title="Create a new layer">${ICON.new}</button>
@@ -128,6 +128,26 @@ class GUI_layers_class {
 			}
 			else if (target.id == 'ps_layer_fx') {
 				show_popup_menu(target, layer_style_items(), {placement: 'below'});
+			}
+			else if (target.id == 'ps_layer_mask') {
+				app.GUI.Ps_workspace.Mask.add(event.altKey);
+			}
+			else if (action == 'mask_thumb' || action == 'layer_thumb') {
+				var layer = _this.Base_layers.get_layer(target.dataset.id);
+				var Mask = app.GUI.Ps_workspace.Mask;
+				if (action == 'mask_thumb' && event.shiftKey) {
+					if (layer.id != config.layer.id) {
+						app.State.do_action(new app.Actions.Select_layer_action(layer.id)).then(() => Mask.toggle_disabled());
+					}
+					else {
+						Mask.toggle_disabled();
+					}
+					return;
+				}
+				var select = layer.id != config.layer.id
+					? app.State.do_action(new app.Actions.Select_layer_action(layer.id))
+					: Promise.resolve();
+				select.then(() => Mask.set_editing(layer, action == 'mask_thumb'));
 			}
 			else if (target.id == 'ps_layer_adjust') {
 				show_popup_menu(target, adjustment_items(true), {placement: 'below'});
@@ -392,7 +412,13 @@ class GUI_layers_class {
 				if (clipped) {
 					html += '<span class="ps_clip_arrow">' + ICON.clip + '</span>';
 				}
-				html += '<canvas class="ps_thumb" width="32" height="32" data-id="' + value.id + '"></canvas>';
+				var editing_mask = !!(value.ps_mask && value.ps_mask_editing);
+				html += '<canvas class="ps_thumb' + (value.ps_mask && !editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="layer_thumb"></canvas>';
+				if (value.ps_mask) {
+					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
+					html += '<span class="ps_mask_wrap' + (value.ps_mask_disabled ? ' disabled' : '') + '">'
+						+ '<canvas class="ps_mask_thumb' + (editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="mask_thumb" title="Layer mask (Shift+click to disable)"></canvas></span>';
+				}
 				var is_background = value.name == 'Background' && value === layers[layers.length - 1];
 				html += '<span class="ps_layer_name' + (is_background ? ' background' : '') + '" data-id="' + value.id + '">' + this.Helper.escapeHtml(value.name) + '</span>';
 				if (is_background) {
@@ -423,6 +449,12 @@ class GUI_layers_class {
 			var layer = this.Base_layers.get_layer(canvas.dataset.id);
 			if (layer) {
 				this.draw_thumbnail(canvas, layer);
+			}
+		});
+		target.querySelectorAll('canvas.ps_mask_thumb').forEach((canvas) => {
+			var layer = this.Base_layers.get_layer(canvas.dataset.id);
+			if (layer && layer.ps_mask) {
+				app.GUI.Ps_workspace.Mask.thumbnail(canvas, layer);
 			}
 		});
 		this.render_controls();

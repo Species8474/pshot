@@ -35,6 +35,15 @@ class Ps_commands_class {
 	}
 
 	levels() { this.Adjust.levels(); }
+
+	mask_add(hide) { app.GUI.Ps_workspace.Mask.add(hide); }
+	mask_reveal_all() { app.GUI.Ps_workspace.Mask.reveal_all(); }
+	mask_hide_all() { app.GUI.Ps_workspace.Mask.hide_all(); }
+	mask_reveal_selection() { app.GUI.Ps_workspace.Mask.reveal_selection(); }
+	mask_hide_selection() { app.GUI.Ps_workspace.Mask.hide_selection(); }
+	mask_delete() { app.GUI.Ps_workspace.Mask.remove(); }
+	mask_apply() { app.GUI.Ps_workspace.Mask.apply(); }
+	mask_toggle() { app.GUI.Ps_workspace.Mask.toggle_disabled(); }
 	curves() { this.Adjust.curves(); }
 	hue_saturation() { this.Adjust.hue_saturation(); }
 	brightness_contrast() { this.Adjust.brightness_contrast(); }
@@ -154,6 +163,18 @@ class Ps_commands_class {
 	}
 
 	fill_with(color, alpha, description) {
+		var Mask = app.GUI.Ps_workspace.Mask;
+		if (Mask.is_editing(config.layer)) {
+			//filling while the layer mask is targeted fills the mask (CS6)
+			var area = document.createElement('canvas');
+			area.width = config.WIDTH;
+			area.height = config.HEIGHT;
+			var actx = area.getContext('2d');
+			actx.fillStyle = '#000';
+			actx.fillRect(0, 0, area.width, area.height);
+			this.selection().clip_document_canvas(area);
+			return Mask.paint(config.layer, area, color, alpha, description);
+		}
 		if (!this.require_image_layer()) {
 			return;
 		}

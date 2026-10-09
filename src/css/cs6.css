@@ -1274,3 +1274,15 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 .ps_adj_hint { color: #aaa; font-size: 11px; max-width: 260px; }
 .ps_adj_check, .ps_adj_preview { display: flex; align-items: center; gap: 6px; }
 .ps_adj_preview { margin-top: 6px; }
+
+/* layer masks */
+.ps_mask_link { width: 12px; color: #cfcfcf; display: flex; justify-content: center; margin-left: -4px; margin-right: -2px; }
+.ps_mask_link svg { width: 11px; height: 11px; }
+.ps_mask_wrap { position: relative; line-height: 0; margin-right: 6px; }
+.ps_mask_thumb { width: 32px; height: 32px; border: 1px solid #1f1f1f; }
+.ps_mask_wrap.disabled::after {
+	content: ""; position: absolute; inset: 0;
+	background: linear-gradient(to top right, transparent 45%, #e02020 45%, #e02020 55%, transparent 55%),
+		linear-gradient(to top left, transparent 45%, #e02020 45%, #e02020 55%, transparent 55%);
+}
+.ps_thumb.targeted, .ps_mask_thumb.targeted { outline: 2px solid #e8e8e8; outline-offset: 1px; }
