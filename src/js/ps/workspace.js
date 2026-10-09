@@ -931,7 +931,33 @@ class Ps_workspace_class {
 		appEl.classList.remove('screen_menu', 'screen_full');
 		if (mode == 'menu') appEl.classList.add('screen_menu');
 		if (mode == 'full') appEl.classList.add('screen_full');
+		this.browser_fullscreen(mode != 'standard');
 		this.relayout();
+	}
+
+	/**
+	 * the full screen modes also take the browser full screen; there the Keyboard
+	 * Lock API lets Ctrl+N / Ctrl+T / Ctrl+W reach pshot instead of the browser
+	 */
+	browser_fullscreen(on) {
+		try {
+			if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+				document.documentElement.requestFullscreen().then(() => {
+					if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['KeyN', 'KeyT', 'KeyW']).catch(() => {});
+				}).catch(() => {});
+			}
+			else if (!on && document.fullscreenElement && document.exitFullscreen) {
+				if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+				document.exitFullscreen().catch(() => {});
+			}
+		} catch (e) { /* not available */ }
+		if (!this.fullscreen_hooked) {
+			this.fullscreen_hooked = true;
+			document.addEventListener('fullscreenchange', () => {
+				//leaving browser full screen (Esc held) returns to Standard Screen Mode
+				if (!document.fullscreenElement && this.screen_mode != 'standard') this.set_screen_mode('standard');
+			});
+		}
 	}
 
 	cycle_screen_mode(reverse) {
