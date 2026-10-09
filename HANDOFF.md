@@ -75,7 +75,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Tabs.
   - File > New (CS6 dialog).
   - Open and Place for PSD and images. PSD keeps layers, groups, masks, effects, adjustment layers, blend modes, opacity and fill. Type layers are written and read as real PSD text (font, size, faux bold/italic, underline, strikethrough, tracking, color, alignment, orientation; style runs per span), so they stay editable in both pshot and Photoshop (`invalidateTextLayers` makes Photoshop re-render them).
-  - Save, Save As and Save for Web (CS6 dialog, `ps/save-for-web.js`: Original/Optimized/2-Up with encoded size, presets, JPEG quality, matte, PNG-24 transparency, image size; GIF/PNG-8 greyed).
+  - Save, Save As (CS6 format list; JPEG Options with 0-12 quality and size estimate; PNG Options) and Save for Web (CS6 dialog, `ps/save-for-web.js`: Original/Optimized/2-Up with encoded size, presets, JPEG quality, matte, PNG-24 transparency, image size; GIF/PNG-8 greyed).
 - **Painting**
   - Brush, pencil and gradient paint into the active layer, with Opacity and Mode. Brush panel (F5, `ps/brush-panel.js`): Size, Angle, Roundness, Hardness, Spacing, Size Jitter, Scatter, Opacity Jitter, Flow; non-default tips switch the brush to a dab engine (`brush.js render_dabs`).
   - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen, sponge, dodge, burn and smudge.

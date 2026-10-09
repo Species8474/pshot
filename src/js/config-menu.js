@@ -24,7 +24,7 @@ const M = [
 		'Close All|Alt+Ctrl+W|ps/commands.close_all',
 		'Close and Go to Bridge...|Shift+Ctrl+W',
 		'Save|Ctrl+S|ps/commands.save',
-		'Save As...|Shift+Ctrl+S|file/save.save',
+		'Save As...|Shift+Ctrl+S|ps/commands.save_as',
 		'Check In...',
 		'Save for Web...|Alt+Shift+Ctrl+S|ps/commands.save_for_web',
 		'Revert|F12|ps/commands.revert',

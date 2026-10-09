@@ -1480,6 +1480,98 @@ class Ps_commands_class {
 		])).then(() => sel.deselect());
 	}
 
+	/**
+	 * File > Save As: CS6 format list; JPEG and PNG get their CS6 options dialogs
+	 */
+	save_as() {
+		var formats = {
+			'Photoshop (*.PSD;*.PDD)': 'PSD', 'BMP (*.BMP;*.RLE;*.DIB)': 'BMP', 'CompuServe GIF (*.GIF)': 'GIF',
+			'JPEG (*.JPG;*.JPEG;*.JPE)': 'JPG', 'PNG (*.PNG;*.PNS)': 'PNG', 'TIFF (*.TIF;*.TIFF)': 'TIFF', 'WebP (*.WEBP)': 'WEBP',
+		};
+		var ws = app.GUI.Ps_workspace;
+		var current = ws.saved_as_psd ? 'Photoshop (*.PSD;*.PDD)' : (this.last_save_format || 'Photoshop (*.PSD;*.PDD)');
+		this.POP.show({
+			title: 'Save As',
+			params: [
+				{ name: 'name', title: 'File name:', value: ws.document_name().replace(/\.[^.]+$/, '') },
+				{ name: 'format', title: 'Format:', values: Object.keys(formats), value: current, type: 'select' },
+			],
+			on_finish: (params) => {
+				var type = formats[params.format] || 'PSD';
+				this.last_save_format = params.format;
+				var name = (params.name || 'Untitled').replace(/\.[^.]+$/, '');
+				if (type == 'PSD') {
+					save_psd(name);
+					ws.set_document_name(name, name + '.psd');
+					app.State.ps_saved_index = app.State.action_history_index;
+					return;
+				}
+				var save = (quality) => app.GUI.modules['file/save'].save_action({ name: name, type: type, quality: quality || 90, layers: 'All', delay: 400 });
+				if (type == 'JPG') return this.jpeg_options((q) => save(q));
+				if (type == 'PNG') return this.png_options(() => save(100));
+				save(90);
+			},
+		});
+	}
+
+	/**
+	 * CS6 JPEG Options: Quality 0-12 (Low / Medium / High / Maximum)
+	 */
+	jpeg_options(done) {
+		var names = (q) => q <= 4 ? 'Low' : (q <= 7 ? 'Medium' : (q <= 9 ? 'High' : 'Maximum'));
+		var q0 = this.jpeg_quality == null ? 10 : this.jpeg_quality;
+		var html = '<div class="ps_adj">'
+			+ '<div class="ps_adj_row"><span>Matte:</span><select disabled><option>None</option></select></div>'
+			+ '<div class="ps_adj_label">Image Options</div>'
+			+ '<div class="ps_adj_row"><span>Quality:</span><input type="number" id="jq" min="0" max="12" value="' + q0 + '" style="width:48px"><select id="jqn">' + ['Low', 'Medium', 'High', 'Maximum'].map(n => '<option' + (n == names(q0) ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></div>'
+			+ '<input type="range" id="jqr" min="0" max="12" value="' + q0 + '" style="width:220px">'
+			+ '<div class="ps_adj_hint" style="display:flex;justify-content:space-between;width:220px"><span>small file</span><span>large file</span></div>'
+			+ '<div class="ps_adj_label">Format Options</div>'
+			+ '<label class="ps_adj_check"><input type="radio" name="jfmt" checked> Baseline ("Standard")</label>'
+			+ '<label class="ps_adj_check"><input type="radio" name="jfmt"> Baseline Optimized</label>'
+			+ '<label class="ps_adj_check"><input type="radio" name="jfmt"> Progressive</label>'
+			+ '<div class="ps_adj_hint" id="jsize"></div></div>';
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'JPEG Options',
+			className: 'ps_adjust_dialog',
+			params: [{ function() { return html; } }],
+			on_finish: () => {
+				var q = parseInt(document.getElementById('jq') ? document.getElementById('jq').value : q0);
+				this.jpeg_quality = isNaN(q) ? q0 : Math.max(0, Math.min(12, q));
+				done(Math.max(1, Math.round(this.jpeg_quality / 12 * 100)));
+			},
+		});
+		var root = document.querySelector('#popups .popup .ps_adj');
+		var qn = root.querySelector('#jq'), qr = root.querySelector('#jqr'), qs = root.querySelector('#jqn');
+		var flat = document.createElement('canvas');
+		flat.width = config.WIDTH;
+		flat.height = config.HEIGHT;
+		var fctx = flat.getContext('2d');
+		fctx.fillStyle = '#fff';
+		fctx.fillRect(0, 0, flat.width, flat.height);
+		this.Base_layers.convert_layers_to_canvas(fctx, null, false);
+		var estimate = (q) => flat.toBlob((b) => { var el = root.querySelector('#jsize'); if (el && b) el.textContent = 'Size: ~' + (b.size / 1024).toFixed(1) + 'K'; }, 'image/jpeg', Math.max(0.01, q / 12));
+		var set = (q) => { q = Math.max(0, Math.min(12, Math.round(q))); qn.value = qr.value = q; qs.value = names(q); estimate(q); };
+		qn.addEventListener('change', () => set(parseFloat(qn.value) || 0));
+		qr.addEventListener('input', () => set(parseFloat(qr.value)));
+		qs.addEventListener('change', () => set({ Low: 3, Medium: 6, High: 8, Maximum: 12 }[qs.value]));
+		estimate(q0);
+	}
+
+	png_options(done) {
+		this.POP.show({
+			title: 'PNG Options',
+			params: [
+				{ title: 'Compression' },
+				{ name: 'compression', title: '', values: ['None / Fast', 'Smallest / Slow'], value: 'Smallest / Slow' },
+				{ title: 'Interlace' },
+				{ name: 'interlace', title: '', values: ['None', 'Interlaced'], value: 'None' },
+			],
+			on_finish: () => done(),
+		});
+	}
+
 	save_for_web() {
 		this.Save_for_web = this.Save_for_web || new Ps_save_for_web_class();
 		this.Save_for_web.open();
@@ -2268,7 +2360,7 @@ class Ps_commands_class {
 			app.State.ps_saved_index = app.State.action_history_index;
 			return;
 		}
-		app.GUI.modules['file/save'].save();
+		this.save_as();
 	}
 
 	close_document() {
