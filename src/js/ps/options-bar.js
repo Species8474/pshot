@@ -278,7 +278,7 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Show Sampling Ring', bind: 'show_ring' },
 	],
 	brush: BRUSH_COMMON,
-	pencil: [...BRUSH_COMMON.slice(0, 5), BRUSH_COMMON[8], { type: 'sep' }, { type: 'check', label: 'Auto Erase', value: false }],
+	pencil: [...BRUSH_COMMON.slice(0, 5), BRUSH_COMMON[8], { type: 'sep' }, { type: 'check', label: 'Auto Erase', bind: 'auto_erase' }],
 	clone_stamp: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },

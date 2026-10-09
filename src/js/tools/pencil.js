@@ -63,8 +63,20 @@ class Pencil_class extends Base_tools_class {
 
 		var params_hash = this.get_params_hash();
 		var opacity = this.getParams().opacity == null ? Math.round(config.ALPHA / 255 * 100) : this.getParams().opacity;
+		//pshot: Auto Erase - starting on a foreground colored pixel paints the background color
+		var color = config.COLOR;
+		if (this.getParams().auto_erase && config.layer.type == 'image') {
+			var probe = document.createElement('canvas');
+			probe.width = config.WIDTH;
+			probe.height = config.HEIGHT;
+			var pctx = probe.getContext('2d', { willReadFrequently: true });
+			this.Base_layers.render_object(pctx, config.layer);
+			var px = pctx.getImageData(Math.max(0, Math.min(config.WIDTH - 1, Math.floor(mouse.x))), Math.max(0, Math.min(config.HEIGHT - 1, Math.floor(mouse.y))), 1, 1).data;
+			var hex = '#' + [px[0], px[1], px[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+			if (px[3] > 0 && hex.toLowerCase() == config.COLOR.toLowerCase()) color = config.BG_COLOR;
+		}
 		
-		if (config.layer.type != this.name || params_hash != this.params_hash) {
+		if (config.layer.type != this.name || params_hash != this.params_hash || config.layer.color != color) {
 			//register new object - current layer is not ours or params changed
 			//pshot: remember the pixel layer the stroke belongs to (CS6 paints into it)
 			if (app.GUI.Ps_workspace.Selection.quick_mask) {
@@ -86,7 +98,7 @@ class Pencil_class extends Base_tools_class {
 				hide_selection_if_active: true,
 				rotate: null,
 				is_vector: true,
-				color: config.COLOR
+				color: color
 			};
 			app.State.do_action(
 				new app.Actions.Bundle_action('new_pencil_layer', 'New Pencil Layer', [
