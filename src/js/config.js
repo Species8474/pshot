@@ -175,6 +175,10 @@ config.TOOLS = [
 			mode: 'dodge',
 			range: 'Midtones',
 			exposure: 50,
+			protect_tones: true,
+			sponge_mode: 'Desaturate',
+			flow: 50,
+			vibrance: true,
 		},
 	},
 	{

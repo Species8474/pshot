@@ -153,7 +153,7 @@ const groups = [
 	{ members: [
 		{ id: 'dodge', name: 'Dodge Tool', key: 'O', tool: 'dodge_burn', preset: { mode: 'dodge' }, icon: I.dodge },
 		{ id: 'burn', name: 'Burn Tool', key: 'O', tool: 'dodge_burn', preset: { mode: 'burn' }, icon: I.burn },
-		{ id: 'sponge', name: 'Sponge Tool', key: 'O', tool: 'desaturate', icon: I.sponge },
+		{ id: 'sponge', name: 'Sponge Tool', key: 'O', tool: 'dodge_burn', preset: { mode: 'sponge' }, icon: I.sponge },
 	]},
 	{ separator: true, members: [
 		{ id: 'pen', name: 'Pen Tool', key: 'P', tool: 'ps_pen', preset: { mode: 'pen' }, icon: I.pen },
