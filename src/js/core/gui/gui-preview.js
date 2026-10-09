@@ -4,6 +4,7 @@
  */
 
 import config from './../../config.js';
+import zoomView from './../../libs/zoomView.js';
 import Base_layers_class from './../base-layers.js';
 
 var instance = null;
@@ -107,15 +108,22 @@ class GUI_preview_class {
 			_this.zoom_auto();
 		}, false);
 		document.getElementById('main_wrapper').addEventListener('wheel', function (e) {
-			//zoom with mouse scroll
+			//CS6: wheel scrolls (Shift = horizontal), Alt+wheel or Ctrl+wheel zooms
 			e.preventDefault();
-			_this.zoom_data.x = e.offsetX;
-			_this.zoom_data.y = e.offsetY;
-			var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail || -e.deltaY)));
-			if (delta > 0)
-				_this.zoom(+1, e);
-			else
-				_this.zoom(-1, e);
+			if (e.altKey || e.ctrlKey) {
+				var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+				_this.zoom_data.x = e.clientX - rect.left;
+				_this.zoom_data.y = e.clientY - rect.top;
+				var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail || -e.deltaY)));
+				if (delta > 0)
+					_this.zoom(+1, e);
+				else
+					_this.zoom(-1, e);
+				return;
+			}
+			var dx = e.shiftKey ? -(e.deltaY || e.deltaX) : -e.deltaX;
+			var dy = e.shiftKey ? 0 : -e.deltaY;
+			_this.pan(dx, dy);
 		}, false);
 		window.addEventListener('resize', function (e) {
 			//resize
@@ -213,61 +221,26 @@ class GUI_preview_class {
 		if (recalc != undefined) {
 			//zoom-in or zoom-out
 			if (recalc == 1 || recalc == -1) {
-				//fix
-				if (config.ZOOM > 1 && config.ZOOM < 1.5) {
-					config.ZOOM = 1;
-				}
-				if (config.ZOOM > 0.9 && config.ZOOM < 1) {
-					config.ZOOM = 1;
-				}
-
-				//calc step
-				if (recalc < 0) {
-					//down
-					if (config.ZOOM > 3) {
-						//infinity -> 300%
-						config.ZOOM -= 1;
-					}
-					else if (config.ZOOM > 1) {
-						//300% -> 100%
-						config.ZOOM -= 0.5;
-					}
-					else if (config.ZOOM > 0.1) {
-						//100% -> 10%
-						config.ZOOM -= 0.1;
-					}
-					else {
-						//10% -> 1%
-						config.ZOOM -= 0.01;
-					}
+				//Photoshop CS6 zoom steps
+				var steps = [0.01, 0.02, 0.03, 0.04, 0.05, 0.0625, 0.0833, 0.125, 0.1667, 0.25, 0.3333, 0.5, 0.6667,
+					1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 32];
+				var current = config.ZOOM;
+				if (recalc > 0) {
+					var next = steps.find(z => z > current + 0.0001);
+					config.ZOOM = next !== undefined ? next : steps[steps.length - 1];
 				}
 				else {
-					//up
-					if (config.ZOOM < 0.1) {
-						//1% -> 10%
-						config.ZOOM += 0.01;
-					}
-					else if (config.ZOOM < 1) {
-						//10% -> 100%
-						config.ZOOM += 0.1;
-					}
-					else if (config.ZOOM < 3) {
-						//100% -> 300%
-						config.ZOOM += 0.5;
-					}
-					else {
-						//300% -> more
-						config.ZOOM += 1;
-					}
+					var lower = steps.filter(z => z < current - 0.0001);
+					config.ZOOM = lower.length ? lower[lower.length - 1] : steps[0];
 				}
 			}
 			else {
 				//zoom using exact value
 				config.ZOOM = recalc / 100;
 			}
-			config.ZOOM = Math.round(config.ZOOM * 100) / 100;
+			config.ZOOM = Math.round(config.ZOOM * 10000) / 10000;
 			config.ZOOM = Math.max(config.ZOOM, 0.01);
-			config.ZOOM = Math.min(config.ZOOM, 500);
+			config.ZOOM = Math.min(config.ZOOM, 32);
 		}
 
 		document.getElementById("zoom_100").innerHTML = Math.round(config.ZOOM * 100) + '%';
@@ -298,6 +271,14 @@ class GUI_preview_class {
 		}
 
 		this.zoom(Math.min(best_width, best_height) * 100);
+	}
+
+	/**
+	 * scroll the document view by screen pixels
+	 */
+	pan(dx, dy) {
+		zoomView.move(dx, dy);
+		config.need_render = true;
 	}
 
 	set_center_zoom() {

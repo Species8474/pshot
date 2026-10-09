@@ -3,6 +3,7 @@
  * author: Vilius L.
  */
 
+import app from './../../app.js';
 import config from './../../config.js';
 import menuDefinition from './../../config-menu.js';
 import Tools_translate_class from './../../modules/tools/translate.js';
@@ -19,6 +20,8 @@ class GUI_menu_class {
 		this.menuBarNode = null;
 		this.lastFocusedMenuBarLink = 0;
 		this.dropdownStack = [];
+		this.hover_target = null;
+		this.hover_timer = null;
 
 		this.Tools_translate = new Tools_translate_class();
 	}
@@ -38,6 +41,7 @@ class GUI_menu_class {
 
 		this.menuContainer.addEventListener('click', (event) => { return this.on_click_menu(event); }, true);
 		this.menuContainer.addEventListener('keydown', (event) => { return this.on_key_down_menu(event); }, true);
+		this.menuContainer.addEventListener('mouseover', (event) => { return this.on_mouse_over_menu(event); });
 		this.menuBarNode.addEventListener('focus', (event) => { return this.on_focus_menu_bar(event); });
 		this.menuBarNode.addEventListener('blur', (event) => { return this.on_blur_menu_bar(event); });
 		this.menuBarNode.querySelectorAll('a').forEach((link) => {
@@ -88,20 +92,100 @@ class GUI_menu_class {
 				</li>
 			`.trim();
 		} else {
+			const has_children = !!definition.children;
+			const disabled = this.is_disabled(definition);
+			const checked = this.is_checked(definition);
+			let name = definition.name;
+			if (definition.dynamic_name) {
+				name = this.Ps_commands()[definition.dynamic_name]();
+			}
 			return `
 				<li>
-					<a id="main_menu_${ level }_${ index }" role="menuitem" tabindex="-1" aria-haspopup="${ (!!definition.children) + '' }"
+					<a id="main_menu_${ level }_${ index }" role="menuitem" tabindex="-1" aria-haspopup="${ has_children + '' }"
+						${ disabled ? 'aria-disabled="true" class="disabled"' : '' }
 						href="${ definition.href ? definition.href : 'javascript:void(0)' }"
 						target="${ definition.href ? '_blank' : '_self' }"
 						data-level="${ level }" data-index="${ index }">
-						<span class="name"><span class="trn">${ definition.name }</span>${ definition.ellipsis ? ' ...' : '' }</span>
+						<span class="check">${ checked ? '&#10003;' : '' }</span>
+						<span class="name">${ name }</span>
 						${ !!definition.shortcut ? `
-							<span class="shortcut"><span class="sr_only">Shortcut Key:</span> ${ definition.shortcut }</span>
+							<span class="shortcut"><span class="sr_only">Shortcut Key:</span>${ definition.shortcut }</span>
 						` : `` }
 					</a>
 				</li>
 			`.trim();
 		}
+	}
+
+	Ps_commands() {
+		return app.GUI.modules['ps/commands'];
+	}
+
+	/**
+	 * CS6 items pshot doesn't implement yet have no target: shown, but greyed out.
+	 */
+	is_disabled(definition) {
+		if (definition.children) {
+			return definition.children.length == 0;
+		}
+		return !definition.target && !definition.href;
+	}
+
+	is_checked(definition) {
+		if (definition.checked === true) {
+			return true;
+		}
+		if (typeof definition.checked === 'string' && app.GUI.Ps_workspace) {
+			return app.GUI.Ps_workspace.is_checked(definition.checked);
+		}
+		return false;
+	}
+
+	/**
+	 * CS6: once a menu is open, hovering another menu title switches to it, and
+	 * hovering an item opens its submenu (or closes deeper ones).
+	 */
+	on_mouse_over_menu(event) {
+		const target = event.target.closest('a');
+		if (!target || target === this.hover_target) {
+			return;
+		}
+		this.hover_target = target;
+		const level = parseInt(target.getAttribute('data-level'), 10) || 0;
+		if (level === 0) {
+			if (this.dropdownStack.length > 0 && target.getAttribute('aria-expanded') !== 'true') {
+				this.close_child_dropdowns(0);
+				this.toggle_dropdown(target, true);
+			}
+			return;
+		}
+		clearTimeout(this.hover_timer);
+		this.hover_timer = setTimeout(() => {
+			if (target.getAttribute('aria-haspopup') === 'true' && !target.classList.contains('disabled')) {
+				if (target.getAttribute('aria-expanded') !== 'true') {
+					this.toggle_dropdown(target, true);
+				}
+			} else if (this.dropdownStack.length > level) {
+				this.close_child_dropdowns(level);
+			}
+		}, 120);
+	}
+
+	/**
+	 * next focusable (enabled, non-divider) link in a dropdown, wrapping around
+	 */
+	find_sibling_link(menuParent, linkIndex, step) {
+		const links = Array.from(menuParent.querySelectorAll('a[data-index]:not(.disabled)'));
+		if (links.length === 0) {
+			return null;
+		}
+		const indexes = links.map(l => parseInt(l.getAttribute('data-index'), 10));
+		let pos = indexes.indexOf(linkIndex);
+		if (pos === -1) {
+			pos = step > 0 ? -1 : 0;
+		}
+		pos = (pos + step + links.length) % links.length;
+		return links[pos];
 	}
 
 	on_mouse_down_body(event) {
@@ -173,25 +257,17 @@ class GUI_menu_class {
 			} else {
 				if (['Up', 'ArrowUp'].includes(event.key)) {
 					event.preventDefault();
-					let previousLink = menuParent.querySelector(`[data-index="${ linkIndex - 1 }"]`);
-					if (!previousLink) {
-						previousLink = menuParent.querySelector(`[data-index="${ linkIndex - 2 }"]`); // Skip dividers
+					const previousLink = this.find_sibling_link(menuParent, linkIndex, -1);
+					if (previousLink) {
+						previousLink.focus();
 					}
-					if (!previousLink) {
-						previousLink = menuParent.querySelector(`[data-index="${ this.dropdownStack[linkLevel - 1].children.length - 1 }"]`);
-					}
-					previousLink.focus();
 				}
 				else if (['Down', 'ArrowDown'].includes(event.key)) {
 					event.preventDefault();
-					let nextLink = menuParent.querySelector(`[data-index="${ linkIndex + 1 }"]`);
-					if (!nextLink) {
-						nextLink = menuParent.querySelector(`[data-index="${ linkIndex + 2 }"]`); // Skip dividers
+					const nextLink = this.find_sibling_link(menuParent, linkIndex, 1);
+					if (nextLink) {
+						nextLink.focus();
 					}
-					if (!nextLink) {
-						nextLink = menuParent.querySelector(`[data-index="0"]`);
-					}
-					nextLink.focus();
 				}
 				else if (['Right', 'ArrowRight'].includes(event.key)) {
 					if (activeElement.getAttribute('aria-haspopup') === 'true') {
@@ -252,6 +328,10 @@ class GUI_menu_class {
 
 		// Any link in the menu is clicked.
 		if (target && target.tagName === 'A') {
+			if (target.classList.contains('disabled')) {
+				event.preventDefault();
+				return;
+			}
 			const hasPopup = target.getAttribute('aria-haspopup') === 'true';			
 			if (hasPopup) {
 				this.toggle_dropdown(target, event.isTrusted);
@@ -347,7 +427,10 @@ class GUI_menu_class {
 		}
 
 		if (focusAfterCreation) {
-			dropdownElement.querySelector('a').focus();
+			const firstLink = dropdownElement.querySelector('a:not(.disabled)');
+			if (firstLink) {
+				firstLink.focus();
+			}
 		}
 
 		this.dropdownStack.push({

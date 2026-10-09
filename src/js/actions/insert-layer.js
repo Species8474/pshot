@@ -22,8 +22,58 @@ export class Insert_layer_action extends Base_action {
 		this.autoresize_canvas_action = null;
 	}
 
+	/**
+	 * CS6 names: the first layer of a document is "Background", then "Layer 1", "Layer 2"...
+	 * shape layers are named after the shape ("Rectangle 1").
+	 */
+	default_name() {
+		if (config.layers.length == 0) {
+			return 'Background';
+		}
+		const shapes = {rectangle: 'Rectangle', ellipse: 'Ellipse', line: 'Line', pentagon: 'Polygon', bezier_curve: 'Shape', text: 'Layer'};
+		const prefix = shapes[config.TOOL.name] || 'Layer';
+		//next free number for this prefix
+		let number = 0;
+		const pattern = new RegExp('^' + prefix + ' (\\d+)$');
+		for (const existing of config.layers) {
+			const match = pattern.exec(existing.name);
+			if (match) {
+				number = Math.max(number, parseInt(match[1]));
+			}
+		}
+		return prefix + ' ' + (number + 1);
+	}
+
+	/**
+	 * CS6 "Background Contents: White": the Background layer is a white pixel layer
+	 */
+	background_settings() {
+		const canvas = document.createElement('canvas');
+		canvas.width = config.WIDTH;
+		canvas.height = config.HEIGHT;
+		const ctx = canvas.getContext('2d');
+		ctx.fillStyle = config.BG_COLOR || '#ffffff';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		return {
+			name: 'Background',
+			type: 'image',
+			x: 0,
+			y: 0,
+			width: canvas.width,
+			height: canvas.height,
+			width_original: canvas.width,
+			height_original: canvas.height,
+			data: canvas.toDataURL('image/png'),
+		};
+	}
+
 	async do() {
 		super.do();
+
+		if (config.layers.length == 0 && config.TRANSPARENCY == false && config.WIDTH
+			&& (this.settings == null || Object.keys(this.settings).length == 0)) {
+			this.settings = this.background_settings();
+		}
 
 		this.previous_auto_increment = app.Layers.auto_increment;
 		this.previous_selected_layer = config.layer;
@@ -33,7 +83,7 @@ export class Insert_layer_action extends Base_action {
 		const layer = {
 			id: app.Layers.auto_increment,
 			parent_id: 0,
-			name: config.TOOL.name.charAt(0).toUpperCase() + config.TOOL.name.slice(1) + ' #' + app.Layers.auto_increment,
+			name: this.default_name(),
 			type: null,
 			link: null,
 			x: 0,
@@ -136,6 +186,8 @@ export class Insert_layer_action extends Base_action {
 			&& (config.layer.width == 0 || config.layer.width === null) && (config.layer.height == 0 || config.layer.height === null)
 			&& config.layer.data == null && layer.type != 'image' && this.can_automate !== false) {
 			// Update existing layer, because it's empty
+			// pshot: the empty layer keeps its name (CS6: painting on "Layer 1" stays "Layer 1")
+			layer.name = config.layer.name;
 			this.update_layer_action = new app.Actions.Update_layer_action(config.layer.id, layer);
 			await this.update_layer_action.do();
 		}

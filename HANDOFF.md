@@ -24,3 +24,20 @@ pshot is a Photopea-style image editor. It's a fork of [miniPaint](https://githu
 ## State / next
 - 2026-10-09: a stock miniPaint 4.14.3 build is live and the smoke test passed (no console errors).
 - Next: reskin miniPaint to be identical to Photoshop CS6: menus, toolbox, options bar, panel dock and shortcuts. The page title still reads "miniPaint".
+
+## Progress log (autonomous run, 2026-10-09)
+Phase 1 (CS6 workspace) is built:
+- `index.html` is the CS6 frame: menu bar, options bar, Tools panel, document tab, status bar, icon strip, panel dock, Mini Bridge/Timeline tabs.
+- `src/css/cs6.css` is the theme. Menu dropdowns are light Windows-native style, as CS6 draws them on Windows.
+- `src/js/config-menu.js` holds the full CS6 menu tree in a compact notation. Items with no target render greyed out.
+- `src/js/ps/`:
+  - `tools-def.js`: CS6 toolbox groups and the custom SVG icons
+  - `workspace.js`: the dock, popouts, History, Color, Swatches, Adjustments and Channels panels, the status bar and screen modes
+  - `keymap.js`: the CS6 shortcuts, plus a capture listener that blocks miniPaint's old single-letter keys
+  - `popup-menu.js`
+  - `adjustments-def.js`
+  - `stroke.js`: brush and pencil strokes are rasterized into the active pixel layer, as in CS6
+- `src/js/modules/ps/commands.js` implements the CS6 commands miniPaint lacked.
+- `src/js/core/gui/gui-layers.js` was rewritten as the CS6 Layers panel.
+- New tools: `tools/hand.js` and `tools/zoom.js`.
+- New documents get a white "Background" layer; new layers are named "Layer N".

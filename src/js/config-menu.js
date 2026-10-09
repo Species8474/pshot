@@ -1,768 +1,427 @@
-const menuDefinition = [
-	{
-		name: 'File',
-		children: [
-			{
-				name: 'New',
-				target: 'file/new.new'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Open',
-				children: [
-					{
-						name: 'Open File',
-						shortcut: 'O',
-						ellipsis: true,
-						target: 'file/open.open_file'
-					},
-					{
-						name: 'Open Directory',
-						ellipsis: true,
-						target: 'file/open.open_dir'
-					},
-					{
-						name: 'Open from Webcam',
-						target: 'file/open.open_webcam'
-					},
-					{
-						name: 'Open URL',
-						ellipsis: true,
-						target: 'file/open.open_url'
-					},
-					{
-						name: 'Open Data URL',
-						ellipsis: true,
-						target: 'file/open.open_data_url'
-					},
-					{
-						name: 'Open Test Template',
-						target: 'file/open.open_template_test'
-					}
-				]
-			},
-			{
-				name: 'Search Images',
-				ellipsis: true,
-				target: 'file/open.search'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Export',
-				ellipsis: true,
-				shortcut: 'S',
-				target: 'file/save.export'
-			},
-			{
-				name: 'Save As',
-				ellipsis: true,
-				shortcut: 'Shift + S',
-				target: 'file/save.save'
-			},
-			{
-				name: 'Save As Data URL',
-				ellipsis: true,
-				target: 'file/save.save_data_url'
-			},
-			{
-				name: 'Print',
-				ellipsis: true,
-				shortcut: 'Ctrl+P',
-				target: 'file/print.print'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Quick Save',
-				shortcut: 'F9',
-				target: 'file/quicksave.quicksave'
-			},
-			{
-				name: 'Quick Load',
-				shortcut: 'F10',
-				target: 'file/quickload.quickload'
-			}
-		]
-	},
-	{
-		name: 'Edit',
-		children: [
-			{
-				name: 'Undo',
-				shortcut: 'Ctrl+Z',
-				target: 'edit/undo.undo'
-			},
-			{
-				name: 'Redo',
-				shortcut: 'Ctrl+Y',
-				target: 'edit/redo.redo'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Delete Selection',
-				shortcut: 'Del',
-				target: 'edit/selection.delete'
-			},
-			{
-				name: 'Copy Selection',
-				target: 'layer/new.new_selection'
-			},
-			{
-				name: 'Copy to Clipboard',
-				shortcut: 'Ctrl+C',
-				target: 'edit/copy.copy_to_clipboard'
-			},
-			{
-				name: 'Paste',
-				shortcut: 'Ctrl+V',
-				target: 'edit/paste.paste'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Select All',
-				shortcut: 'Ctrl+A',
-				target: 'edit/selection.select_all'
-			}
-		]
-	},
-	{
-		name: 'View',
-		children: [
-			{
-				name: 'Zoom',
-				children: [
-					{
-						name: 'Zoom In',
-						target: 'view/zoom.in'
-					},
-					{
-						name: 'Zoom Out',
-						target: 'view/zoom.out'
-					},
-					{
-						divider: true
-					},
-					{
-						name: 'Original Size',
-						target: 'view/zoom.original'
-					},
-					{
-						name: 'Fit Window',
-						target: 'view/zoom.auto'
-					}
-				]
-			},
-			{
-				name: 'Grid',
-				shortcut: 'G',
-				target: 'view/grid.grid'
-			},
-			{
-				name: 'Guides',
-				children: [
-					{
-						name: 'Insert',
-						ellipsis: true,
-						target: 'view/guides.insert'
-					},
-					{
-						name: 'Update',
-						target: 'view/guides.update'
-					},
-					{
-						name: 'Remove all',
-						target: 'view/guides.remove'
-					}
-				]
-			},
-			{
-				name: 'Ruler',
-				target: 'view/ruler.ruler'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Full Screen',
-				target: 'view/full_screen.fs'
-			}
-		]
-	},
-	{
-		name: 'Image',
-		children: [
-			{
-				name: 'Information',
-				shortcut: 'I',
-				ellipsis: true,
-				target: 'image/information.information'
-			},
-			{
-				name: 'Canvas Size',
-				ellipsis: true,
-				target: 'image/size.size'
-			},
-			{
-				name: 'Trim',
-				ellipsis: true,
-				shortcut: 'T',
-				target: 'image/trim.trim'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Resize',
-				ellipsis: true,
-				shortcut: 'R',
-				target: 'image/resize.resize'
-			},
-			{
-				name: 'Rotate',
-				ellipsis: true,
-				target: 'image/rotate.rotate'
-			},
-			{
-				name: 'Flip',
-				children: [
-					{
-						name: 'Vertical',
-						target: 'image/flip.vertical'
-					},
-					{
-						name: 'Horizontal',
-						target: 'image/flip.horizontal'
-					}
-				]
-			},
-			{
-				name: 'Translate',
-				ellipsis: true,
-				target: 'image/translate.translate'
-			},
-			{
-				name: 'Opacity',
-				ellipsis: true,
-				target: 'image/opacity.opacity'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Color Corrections',
-				ellipsis: true,
-				target: 'image/color_corrections.color_corrections'
-			},
-			{
-				name: 'Auto Adjust Colors',
-				shortcut: 'F',
-				target: 'image/auto_adjust.auto_adjust'
-			},
-			{
-				name: 'Decrease Color Depth',
-				target: 'image/decrease_colors.decrease_colors'
-			},
-			{
-				name: 'Color Palette',
-				ellipsis: true,
-				target: 'image/palette.palette'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Histogram',
-				ellipsis: true,
-				target: 'image/histogram.histogram'
-			}
-		]
-	},
-	{
-		name: 'Layer',
-		children: [
-			{
-				name: 'New',
-				shortcut: 'N',
-				target: 'layer/new.new'
-			},
-			{
-				name: 'New from Selection',
-				target: 'layer/new.new_selection'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Duplicate',
-				shortcut: 'D',
-				target: 'layer/duplicate.duplicate'
-			},
-			{
-				name: 'Show / Hide',
-				target: 'layer/visibility.toggle'
-			},
-			{
-				name: 'Delete',
-				target: 'layer/delete.delete'
-			},
-			{
-				name: 'Convert to Raster',
-				target: 'layer/raster.raster'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Move',
-				children: [
-					{
-						name: 'Up',
-						target: 'layer/move.up'
-					},
-					{
-						name: 'Down',
-						target: 'layer/move.down'
-					}
-				]
-			},
-			{
-				name: 'Composition',
-				ellipsis: true,
-				target: 'layer/composition.composition'
-			},
-			{
-				name: 'Rename',
-				ellipsis: true,
-				target: 'layer/rename.rename'
-			},
-			{
-				name: 'Clear',
-				target: 'layer/clear.clear'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Differences Down',
-				target: 'layer/differences.differences'
-			},
-			{
-				name: 'Merge Down',
-				target: 'layer/merge.merge'
-			},
-			{
-				name: 'Flatten Image',
-				target: 'layer/flatten.flatten'
-			}
-		]
-	},
-	{
-		name: 'Effects',
-		children: [
-			{
-				name: 'Effect browser',
-				ellipsis: true,
-				target: 'effects/browser.browser'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Common Filters',
-				children: [
-					{
-						name: 'Gaussian Blur',
-						ellipsis: true,
-						target: 'effects/common/blur.blur'
-					},
-					{
-						name: 'Brightness',
-						ellipsis: true,
-						target: 'effects/common/brightness.brightness'
-					},
-					{
-						name: 'Contrast',
-						ellipsis: true,
-						target: 'effects/common/contrast.contrast'
-					},
-					{
-						name: 'Grayscale',
-						ellipsis: true,
-						target: 'effects/common/grayscale.grayscale'
-					},
-					{
-						name: 'Hue Rotate',
-						ellipsis: true,
-						target: 'effects/common/hue-rotate.hue_rotate'
-					},
-					{
-						name: 'Negative',
-						ellipsis: true,
-						target: 'effects/common/invert.invert'
-					},
-					{
-						name: 'Saturate',
-						ellipsis: true,
-						target: 'effects/common/saturate.saturate'
-					},
-					{
-						name: 'Sepia',
-						ellipsis: true,
-						target: 'effects/common/sepia.sepia'
-					},
-					{
-						name: 'Shadow',
-						ellipsis: true,
-						target: 'effects/common/shadow.shadow'
-					},
-				]
-			},
-			{
-				name: 'Instagram Filters',
-				children: [
-					{
-						name: '1977',
-						target: 'effects/instagram/1977.1977'
-					},
-					{
-						name: 'Aden',
-						target: 'effects/instagram/aden.aden'
-					},
-					{
-						name: 'Clarendon',
-						target: 'effects/instagram/clarendon.clarendon'
-					},
-					{
-						name: 'Gingham',
-						target: 'effects/instagram/gingham.gingham'
-					},
-					{
-						name: 'Inkwell',
-						target: 'effects/instagram/inkwell.inkwell'
-					},
-					{
-						name: 'Lo-fi',
-						target: 'effects/instagram/lofi.lofi'
-					},
-					{
-						name: 'Toaster',
-						target: 'effects/instagram/toaster.toaster'
-					},
-					{
-						name: 'Valencia',
-						target: 'effects/instagram/valencia.valencia'
-					},
-					{
-						name: 'X-Pro II',
-						target: 'effects/instagram/xpro2.xpro2'
-					}
-				]
-			},
-			{
-				name: 'Black and White',
-				ellipsis: true,
-				target: 'effects/black_and_white.black_and_white'
-			},
-			{
-				name: 'Borders',
-				ellipsis: true,
-				target: 'effects/borders.borders'
-			},
-			{
-				name: 'Blueprint',
-				target: 'effects/blueprint.blueprint'
-			},
-			{
-				name: 'Box Blur',
-				ellipsis: true,
-				target: 'effects/box_blur.box_blur'
-			},
-			{
-				name: 'Denoise',
-				ellipsis: true,
-				target: 'effects/denoise.denoise'
-			},
-			{
-				name: 'Dither',
-				ellipsis: true,
-				target: 'effects/dither.dither'
-			},
-			{
-				name: 'Dot Screen',
-				ellipsis: true,
-				target: 'effects/dot_screen.dot_screen'
-			},
-			{
-				name: 'Edge',
-				target: 'effects/edge.edge'
-			},
-			{
-				name: 'Emboss',
-				target: 'effects/emboss.emboss'
-			},
-			{
-				name: 'Enrich',
-				ellipsis: true,
-				target: 'effects/enrich.enrich'
-			},
-			{
-				name: 'Grains',
-				ellipsis: true,
-				target: 'effects/grains.grains'
-			},
-			{
-				name: 'Heatmap',
-				target: 'effects/heatmap.heatmap'
-			},
-			{
-				name: 'Mosaic',
-				ellipsis: true,
-				target: 'effects/mosaic.mosaic'
-			},
-			{
-				name: 'Night Vision',
-				target: 'effects/night_vision.night_vision'
-			},
-			{
-				name: 'Oil',
-				ellipsis: true,
-				target: 'effects/oil.oil'
-			},
-			{
-				name: 'Pencil',
-				target: 'effects/pencil.pencil'
-			},
-			{
-				name: 'Sharpen',
-				ellipsis: true,
-				target: 'effects/sharpen.sharpen'
-			},
-			{
-				name: 'Solarize',
-				target: 'effects/solarize.solarize'
-			},
-			{
-				name: 'Tilt Shift',
-				ellipsis: true,
-				target: 'effects/tilt_shift.tilt_shift'
-			},
-			{
-				name: 'Vignette',
-				ellipsis: true,
-				target: 'effects/vignette.vignette'
-			},
-			{
-				name: 'Vibrance',
-				ellipsis: true,
-				target: 'effects/vibrance.vibrance'
-			},
-			{
-				name: 'Vintage',
-				ellipsis: true,
-				target: 'effects/vintage.vintage'
-			},
-			{
-				name: 'Zoom Blur',
-				ellipsis: true,
-				target: 'effects/zoom_blur.zoom_blur'
-			}
-		]
-	},
-	{
-		name: 'Tools',
-		children: [
-			{
-				name: 'Sprites',
-				target: 'tools/sprites.sprites'
-			},
-			{
-				name: 'Key-Points',
-				target: 'tools/keypoints.keypoints'
-			},
-			{
-				name: 'Content Fill',
-				ellipsis: true,
-				target: 'tools/content_fill.content_fill'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Color Zoom',
-				ellipsis: true,
-				target: 'tools/color_zoom.color_zoom'
-			},
-			{
-				name: 'Replace Color',
-				ellipsis: true,
-				target: 'tools/replace_color.replace_color'
-			},
-			{
-				name: 'Restore Alpha',
-				ellipsis: true,
-				target: 'tools/restore_alpha.restore_alpha'
-			},
-			{
-				name: 'External',
-				children: [
-					{
-						name: 'TINYPNG - Compress PNG and JPEG',
-						href: 'https://tinypng.com'
-					},
-					{
-						name: 'REMOVE.BG - Remove Image Background',
-						href: 'https://www.remove.bg'
-					},
-					{
-						name: 'PNGTOSVG - Convert Image to SVG',
-						href: 'https://www.pngtosvg.com'
-					},
-					{
-						name: 'SQUOOSH - Compress and Compare Images',
-						href: 'https://squoosh.app'
-					}
-				]
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'Language',
-				children: [
-					{
-						name: 'English',
-						target: 'tools/translate.translate',
-						parameter: 'en',
-					},
-					{
-						divider: true
-					},
-					{
-						//Arabic
-						name: 'عربي',
-						target: 'tools/translate.translate',
-						parameter: 'ar',
-					},
-					{
-						//Chinese simplified
-						name: '简体中文',
-						target: 'tools/translate.translate',
-						parameter: 'zh',
-					},
-					{
-						name: 'Deutsch',
-						target: 'tools/translate.translate',
-						parameter: 'de',
-					},
-					{
-						name: 'Dutch',
-						target: 'tools/translate.translate',
-						parameter: 'nl',
-					},
-					{
-						name: 'English (UK)',
-						target: 'tools/translate.translate',
-						parameter: 'uk',
-					},
-					{
-						name: 'Español',
-						target: 'tools/translate.translate',
-						parameter: 'es',
-					},
-					{
-						name: 'Français',
-						target: 'tools/translate.translate',
-						parameter: 'fr',
-					},
-					{
-						name: 'Greek',
-						target: 'tools/translate.translate',
-						parameter: 'el',
-					},
-					{
-						name: 'Italiano',
-						target: 'tools/translate.translate',
-						parameter: 'it',
-					},
-					{
-						//Japanese
-						name: '日本語',
-						target: 'tools/translate.translate',
-						parameter: 'ja',
-					},
-					{
-						//Korean
-						name: '한국어',
-						target: 'tools/translate.translate',
-						parameter: 'ko',
-					},
-					{
-						name: 'Lietuvių',
-						target: 'tools/translate.translate',
-						parameter: 'lt',
-					},
-					{
-						name: 'Português',
-						target: 'tools/translate.translate',
-						parameter: 'pt',
-					},
-					{
-						name: 'русский язык',
-						target: 'tools/translate.translate',
-						parameter: 'ru',
-					},
-					{
-						name: 'Türkçe',
-						target: 'tools/translate.translate',
-						parameter: 'tr',
-					}
-				]
-			},
-			{
-				name: 'Search',
-				shortcut: 'F3',
-				ellipsis: true,
-				target: 'tools/search.search'
-			},
-			{
-				name: 'Settings',
-				ellipsis: true,
-				target: 'tools/settings.settings'
-			}
-		]
-	},
-	{
-		name: 'Help',
-		children: [
-			{
-				name: 'Keyboard Shortcuts',
-				ellipsis: true,
-				target: 'help/shortcuts.shortcuts'
-			},
-			{
-				name: 'Report Issues',
-				href: 'https://github.com/viliusle/miniPaint/issues'
-			},
-			{
-				divider: true
-			},
-			{
-				name: 'About',
-				ellipsis: true,
-				target: 'help/about.about'
-			}
-		]
-	}
+/*
+ * pshot - Photoshop CS6 menu bar (see docs/cs6-spec.md §4).
+ *
+ * Compact notation, parsed below into the menu schema used by gui-menu.js:
+ *   '-'                                  separator
+ *   'Name|Shortcut|module/file.function' item (shortcut and target optional)
+ *   ['Name', [...children]]              submenu
+ *   { ...object }                        passed through as-is (e.g. checked)
+ * An item without a target is a CS6 feature pshot doesn't have yet: it is
+ * rendered in place but disabled.
+ */
+
+const M = [
+	['File', [
+		'New...|Ctrl+N|file/new.new',
+		'Open...|Ctrl+O|file/open.open_file',
+		'Browse in Bridge...|Alt+Ctrl+O',
+		'Browse in Mini Bridge...',
+		'Open As...|Alt+Shift+Ctrl+O|file/open.open_file',
+		'Open as Smart Object...',
+		['Open Recent', []],
+		'-',
+		'Close|Ctrl+W|ps/commands.close_document',
+		'Close All|Alt+Ctrl+W|ps/commands.close_document',
+		'Close and Go to Bridge...|Shift+Ctrl+W',
+		'Save|Ctrl+S|file/save.save',
+		'Save As...|Shift+Ctrl+S|file/save.save',
+		'Check In...',
+		'Save for Web...|Alt+Shift+Ctrl+S|file/save.export',
+		'Revert|F12',
+		'-',
+		'Place...|ps/commands.place',
+		'-',
+		['Import', ['Variable Data Sets...', 'Video Frames to Layers...', 'Notes...', 'WIA Support...']],
+		['Export', ['Data Sets as Files...', 'Paths to Illustrator...', 'Render Video...', 'Zoomify...']],
+		'-',
+		['Automate', ['Batch...', 'PDF Presentation...', 'Create Droplet...', '-', 'Crop and Straighten Photos', '-', 'Contact Sheet II...', '-', 'Conditional Mode Change...', 'Fit Image...', 'Lens Correction...', 'Merge to HDR Pro...', 'Photomerge...']],
+		['Scripts', ['Image Processor...', '-', 'Delete All Empty Layers', 'Flatten All Layer Effects', 'Flatten All Masks', '-', 'Layer Comps to Files...', 'Layer Comps to PDF...', 'Layer Comps to WPG...', 'Export Layers to Files...', '-', 'Script Events Manager...', '-', 'Load Files into Stack...', 'Load Multiple DICOM Files...', 'Statistics...', '-', 'Browse...']],
+		'-',
+		'File Info...|Alt+Shift+Ctrl+I|image/information.information',
+		'-',
+		'Print...|Ctrl+P|file/print.print',
+		'Print One Copy|Alt+Shift+Ctrl+P|file/print.print',
+		'-',
+		'Exit|Ctrl+Q',
+	]],
+	['Edit', [
+		{ name: 'Undo', shortcut: 'Ctrl+Z', target: 'ps/commands.toggle_undo', dynamic_name: 'undo_label' },
+		'Step Forward|Shift+Ctrl+Z|edit/redo.redo',
+		'Step Backward|Alt+Ctrl+Z|edit/undo.undo',
+		'-',
+		'Fade...|Shift+Ctrl+F',
+		'-',
+		'Cut|Ctrl+X|ps/commands.cut',
+		'Copy|Ctrl+C|edit/copy.copy_to_clipboard',
+		'Copy Merged|Shift+Ctrl+C',
+		'Paste|Ctrl+V|edit/paste.paste',
+		['Paste Special', ['Paste in Place|Shift+Ctrl+V|edit/paste.paste', 'Paste Into|Alt+Shift+Ctrl+V', 'Paste Outside']],
+		'Clear|ps/commands.clear',
+		'-',
+		'Check Spelling...',
+		'Find and Replace Text...',
+		'-',
+		'Fill...|Shift+F5|ps/commands.fill',
+		'Stroke...',
+		'-',
+		'Content-Aware Scale|Alt+Shift+Ctrl+C',
+		'Puppet Warp',
+		'Free Transform|Ctrl+T|ps/commands.free_transform',
+		['Transform', [
+			'Again|Shift+Ctrl+T', '-',
+			'Scale|ps/commands.free_transform', 'Rotate|image/rotate.rotate', 'Skew', 'Distort', 'Perspective', 'Warp', '-',
+			'Rotate 180°|ps/commands.rotate_layer_180', 'Rotate 90° CW|image/rotate.right', 'Rotate 90° CCW|image/rotate.left', '-',
+			'Flip Horizontal|image/flip.horizontal', 'Flip Vertical|image/flip.vertical',
+		]],
+		'Auto-Align Layers...',
+		'Auto-Blend Layers...',
+		'-',
+		'Define Brush Preset...',
+		'Define Pattern...',
+		'Define Custom Shape...',
+		'-',
+		['Purge', ['Undo', 'Clipboard', 'Histories|ps/commands.purge_histories', 'Video Cache', 'All|ps/commands.purge_histories']],
+		'-',
+		'Adobe PDF Presets...',
+		['Presets', ['Preset Manager...', 'Migrate Presets', 'Export/Import Presets...']],
+		'Remote Connections...',
+		'-',
+		'Color Settings...|Shift+Ctrl+K',
+		'Assign Profile...',
+		'Convert to Profile...',
+		'-',
+		'Keyboard Shortcuts...|Alt+Shift+Ctrl+K|help/shortcuts.shortcuts',
+		'Menus...|Alt+Shift+Ctrl+M',
+		['Preferences', [
+			'General...|Ctrl+K|tools/settings.settings', 'Interface...|tools/settings.settings', 'File Handling...', 'Performance...', 'Cursors...', 'Transparency & Gamut...|tools/settings.settings', 'Units & Rulers...', 'Guides, Grid & Slices...', 'Plug-Ins...', 'Type...', '3D...', '-', 'Camera Raw...',
+		]],
+	]],
+	['Image', [
+		['Mode', [
+			'Bitmap...', 'Grayscale', 'Duotone...', 'Indexed Color...|image/decrease_colors.decrease_colors', { name: 'RGB Color', checked: true, target: 'ps/commands.noop' }, 'CMYK Color', 'Lab Color', 'Multichannel', '-',
+			{ name: '8 Bits/Channel', checked: true, target: 'ps/commands.noop' }, '16 Bits/Channel', '32 Bits/Channel', '-', 'Color Table...|image/palette.palette',
+		]],
+		'-',
+		['Adjustments', [
+			'Brightness/Contrast...|image/color_corrections.color_corrections', 'Levels...|Ctrl+L', 'Curves...|Ctrl+M', 'Exposure...', '-',
+			'Vibrance...|effects/vibrance.vibrance', 'Hue/Saturation...|Ctrl+U|image/color_corrections.color_corrections', 'Color Balance...|Ctrl+B|image/color_corrections.color_corrections', 'Black & White...|Alt+Shift+Ctrl+B|effects/black_and_white.black_and_white', 'Photo Filter...|effects/common/sepia.sepia', 'Channel Mixer...', 'Color Lookup...', '-',
+			'Invert|Ctrl+I|effects/common/invert.invert', 'Posterize...|image/decrease_colors.decrease_colors', 'Threshold...|effects/black_and_white.black_and_white', 'Gradient Map...', 'Selective Color...', '-',
+			'Shadows/Highlights...', 'HDR Toning...', 'Variations...', '-',
+			'Desaturate|Shift+Ctrl+U|effects/common/grayscale.grayscale', 'Match Color...', 'Replace Color...|tools/replace_color.replace_color', 'Equalize',
+		]],
+		'-',
+		'Auto Tone|Shift+Ctrl+L|image/auto_adjust.auto_adjust',
+		'Auto Contrast|Alt+Shift+Ctrl+L|image/auto_adjust.auto_adjust',
+		'Auto Color|Shift+Ctrl+B|image/auto_adjust.auto_adjust',
+		'-',
+		'Image Size...|Alt+Ctrl+I|image/resize.resize',
+		'Canvas Size...|Alt+Ctrl+C|image/size.size',
+		['Image Rotation', ['180°|ps/commands.rotate_canvas_180', '90° CW|ps/commands.rotate_canvas_cw', '90° CCW|ps/commands.rotate_canvas_ccw', 'Arbitrary...|image/rotate.rotate', '-', 'Flip Canvas Horizontal|ps/commands.flip_canvas_h', 'Flip Canvas Vertical|ps/commands.flip_canvas_v']],
+		'Crop|ps/commands.crop_to_selection',
+		'Trim...|image/trim.trim',
+		'Reveal All',
+		'-',
+		'Duplicate...',
+		'Apply Image...',
+		'Calculations...',
+		'-',
+		['Variables', ['Define...', 'Data Sets...']],
+		'Apply Data Set...',
+		'-',
+		'Trap...',
+		'-',
+		['Analysis', [['Set Measurement Scale', ['Default', 'Custom...']], ['Select Data Points', ['Default', 'Custom...']], 'Record Measurements|Shift+Ctrl+M', '-', 'Ruler Tool', 'Count Tool', '-', 'Place Scale Marker...']],
+	]],
+	['Layer', [
+		['New', ['Layer...|Shift+Ctrl+N|layer/new.new', 'Background from Layer', 'Group...', 'Group from Layers...', '-', 'Layer via Copy|Ctrl+J|ps/commands.layer_via_copy', 'Layer via Cut|Shift+Ctrl+J|ps/commands.layer_via_cut']],
+		'Duplicate Layer...|layer/duplicate.duplicate',
+		['Delete', ['Layer|layer/delete.delete', 'Hidden Layers|ps/commands.delete_hidden_layers']],
+		'-',
+		['Layer Style', [
+			'Blending Options...|layer/composition.composition', '-',
+			'Bevel & Emboss...', 'Stroke...', 'Inner Shadow...', 'Inner Glow...', 'Satin...', 'Color Overlay...', 'Gradient Overlay...', 'Pattern Overlay...', 'Outer Glow...', 'Drop Shadow...|effects/common/shadow.shadow', '-',
+			'Copy Layer Style', 'Paste Layer Style', 'Clear Layer Style|ps/commands.clear_layer_style', '-',
+			'Global Light...', 'Create Layer', 'Hide All Effects', 'Scale Effects...',
+		]],
+		['Smart Filter', ['Disable Smart Filters', 'Delete Filter Mask', 'Disable Filter Mask', 'Clear Smart Filters']],
+		'-',
+		['New Fill Layer', ['Solid Color...|ps/commands.new_fill_layer', 'Gradient...', 'Pattern...']],
+		['New Adjustment Layer', ['Brightness/Contrast...', 'Levels...', 'Curves...', 'Exposure...', '-', 'Vibrance...', 'Hue/Saturation...', 'Color Balance...', 'Black & White...', 'Photo Filter...', 'Channel Mixer...', 'Color Lookup...', '-', 'Invert', 'Posterize...', 'Threshold...', 'Gradient Map...', 'Selective Color...']],
+		'Layer Content Options...',
+		'-',
+		['Layer Mask', ['Reveal All', 'Hide All', 'Reveal Selection', 'Hide Selection', 'From Transparency', '-', 'Delete', 'Apply', '-', 'Disable', 'Unlink']],
+		['Vector Mask', ['Reveal All', 'Hide All', 'Current Path', '-', 'Delete', '-', 'Disable', 'Unlink']],
+		'Create Clipping Mask|Alt+Ctrl+G|ps/commands.toggle_clipping_mask',
+		'-',
+		['Smart Objects', ['Convert to Smart Object', 'New Smart Object via Copy', 'Edit Contents', 'Export Contents...', 'Replace Contents...', ['Stack Mode', ['None']], 'Rasterize']],
+		['Video Layers', ['New Video Layer from File...', 'New Blank Video Layer', '-', 'Insert Blank Frame', 'Duplicate Frame', 'Delete Frame', 'Replace Footage...', '-', 'Interpret Footage...', '-', 'Restore Frame', 'Restore All Frames', '-', 'Reload Frame', 'Rasterize']],
+		['Rasterize', ['Type|layer/raster.raster', 'Shape|layer/raster.raster', 'Fill Content', 'Vector Mask', 'Smart Object', 'Video', '3D', '-', 'Layer|layer/raster.raster', 'All Layers|ps/commands.rasterize_all']],
+		'-',
+		'New Layer Based Slice',
+		'-',
+		'Group Layers|Ctrl+G',
+		'Ungroup Layers|Shift+Ctrl+G',
+		'Hide Layers|Ctrl+,|layer/visibility.toggle',
+		'-',
+		['Arrange', ['Bring to Front|Shift+Ctrl+]|ps/commands.bring_to_front', 'Bring Forward|Ctrl+]|layer/move.up', 'Send Backward|Ctrl+[|layer/move.down', 'Send to Back|Shift+Ctrl+[|ps/commands.send_to_back', '-', 'Reverse']],
+		['Combine Shapes', ['Unite Shapes', 'Subtract Front Shape', 'Unite Shapes at Overlap', 'Subtract Shapes at Overlap']],
+		'-',
+		['Align', ['Top Edges|ps/commands.align_top', 'Vertical Centers|ps/commands.align_vcenter', 'Bottom Edges|ps/commands.align_bottom', '-', 'Left Edges|ps/commands.align_left', 'Horizontal Centers|ps/commands.align_hcenter', 'Right Edges|ps/commands.align_right']],
+		['Distribute', ['Top Edges', 'Vertical Centers', 'Bottom Edges', '-', 'Left Edges', 'Horizontal Centers', 'Right Edges']],
+		'-',
+		'Lock Layers...|Ctrl+/',
+		'-',
+		'Link Layers',
+		'Select Linked Layers',
+		'-',
+		'Merge Down|Ctrl+E|layer/merge.merge',
+		'Merge Visible|Shift+Ctrl+E|ps/commands.merge_visible',
+		'Flatten Image|layer/flatten.flatten',
+		'-',
+		['Matting', ['Defringe...', 'Remove Black Matte', 'Remove White Matte']],
+	]],
+	['Type', [
+		['Panels', ['Character Panel', 'Paragraph Panel', 'Character Styles Panel', 'Paragraph Styles Panel']],
+		['Anti-Alias', ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth']],
+		['Orientation', ['Horizontal', 'Vertical']],
+		['OpenType', ['Contextual Alternates', 'Standard Ligatures', 'Discretionary Ligatures', 'Swash', 'Oldstyle', 'Ordinals', 'Fractions']],
+		'-',
+		'Extrude to 3D',
+		'-',
+		'Create Work Path',
+		'Convert to Shape',
+		'-',
+		'Rasterize Type Layer|layer/raster.raster',
+		'Convert to Paragraph Text',
+		'Warp Text...',
+		'-',
+		['Font Preview Size', ['None', 'Small', 'Medium', 'Large', 'Extra Large', 'Huge']],
+		['Language Options', ['Latin and CJK Features', 'Middle Eastern Features']],
+		'-',
+		'Update All Text Layers',
+		'Replace All Missing Fonts',
+		'-',
+		'Paste Lorem Ipsum',
+		'-',
+		'Load Default Type Styles',
+		'Save Default Type Styles',
+	]],
+	['Select', [
+		'All|Ctrl+A|edit/selection.select_all',
+		'Deselect|Ctrl+D|ps/commands.deselect',
+		'Reselect|Shift+Ctrl+D|ps/commands.reselect',
+		'Inverse|Shift+Ctrl+I',
+		'-',
+		'All Layers|Alt+Ctrl+A',
+		'Deselect Layers',
+		'Similar Layers',
+		'-',
+		'Color Range...',
+		'-',
+		'Refine Edge...|Alt+Ctrl+R',
+		['Modify', ['Border...', 'Smooth...', 'Expand...', 'Contract...', 'Feather...|Shift+F6']],
+		'-',
+		'Grow',
+		'Similar',
+		'-',
+		'Transform Selection',
+		'-',
+		'Edit in Quick Mask Mode',
+		'-',
+		'Load Selection...',
+		'Save Selection...',
+		'-',
+		'New 3D Extrusion',
+	]],
+	['Filter', [
+		'Last Filter|Ctrl+F|ps/commands.last_filter',
+		'-',
+		'Convert for Smart Filters',
+		'-',
+		'Filter Gallery...|effects/browser.browser',
+		'Adaptive Wide Angle...|Alt+Shift+Ctrl+A',
+		'Lens Correction...|Shift+Ctrl+R',
+		'Liquify...|Shift+Ctrl+X',
+		'Oil Paint...|effects/oil.oil',
+		'Vanishing Point...|Alt+Ctrl+V',
+		'-',
+		['Blur', ['Field Blur...', 'Iris Blur...', 'Tilt-Shift...|effects/tilt_shift.tilt_shift', '-', 'Average', 'Blur|effects/common/blur.blur', 'Blur More|effects/common/blur.blur', 'Box Blur...|effects/box_blur.box_blur', 'Gaussian Blur...|effects/common/blur.blur', 'Lens Blur...', 'Motion Blur...', 'Radial Blur...|effects/zoom_blur.zoom_blur', 'Shape Blur...', 'Smart Blur...', 'Surface Blur...']],
+		['Distort', ['Displace...', 'Pinch...', 'Polar Coordinates...', 'Ripple...', 'Shear...', 'Spherize...', 'Twirl...', 'Wave...', 'ZigZag...']],
+		['Noise', ['Add Noise...|effects/grains.grains', 'Despeckle|effects/denoise.denoise', 'Dust & Scratches...', 'Median...', 'Reduce Noise...|effects/denoise.denoise']],
+		['Pixelate', ['Color Halftone...|effects/dot_screen.dot_screen', 'Crystallize...', 'Facet', 'Fragment', 'Mezzotint...', 'Mosaic...|effects/mosaic.mosaic', 'Pointillize...']],
+		['Render', ['Clouds', 'Difference Clouds', 'Fibers...', 'Lens Flare...', 'Lighting Effects...']],
+		['Sharpen', ['Sharpen|effects/sharpen.sharpen', 'Sharpen Edges', 'Sharpen More|effects/sharpen.sharpen', 'Smart Sharpen...', 'Unsharp Mask...|effects/sharpen.sharpen']],
+		['Stylize', ['Diffuse...', 'Emboss...|effects/emboss.emboss', 'Extrude...', 'Find Edges|effects/edge.edge', 'Solarize|effects/solarize.solarize', 'Tiles...', 'Trace Contour...', 'Wind...']],
+		['Video', ['De-Interlace...', 'NTSC Colors']],
+		['Other', ['Custom...', 'High Pass...', 'Maximum...', 'Minimum...', 'Offset...']],
+		'-',
+		['Digimarc', ['Embed Watermark...', 'Read Watermark...']],
+		'-',
+		'Browse Filters Online...',
+	]],
+	['3D', [
+		'New 3D Layer from File...',
+		'Merge 3D Layers',
+		'-',
+		'Export 3D Layer...',
+		'-',
+		'New 3D Extrusion from Selected Layer',
+		'New 3D Extrusion from Selected Path',
+		'New 3D Extrusion from Current Selection',
+		'-',
+		['New Mesh from Layer', ['Postcard', ['Mesh Preset', ['Cone', 'Cube', 'Cylinder', 'Donut', 'Hat', 'Pyramid', 'Ring', 'Soda Can', 'Sphere', 'Spherical Panorama', 'Wine Bottle']], ['Depth Map to', ['Plane', 'Two-Sided Plane', 'Cylinder', 'Sphere']], 'Volume...']],
+		'-',
+		'Split Extrusion',
+		'-',
+		'Apply Cross Section to Scene',
+		'-',
+		['Paint on Target Texture', ['Diffuse', 'Environment', 'Bump', 'Specular', 'Opacity', 'Shininess', 'Self-Illumination', 'Reflectivity', 'Normal']],
+		'Paint Falloff...',
+		'Select Paintable Areas',
+		'-',
+		['Create UV Overlays', ['Wireframe', 'Shaded', 'Normal Map']],
+		'Reparameterize UVs...',
+		'-',
+		'New Tiled Painting',
+		'-',
+		'Make Work Path from 3D Layer',
+		'-',
+		'Render',
+		'Sketch With Current Brush',
+		'-',
+		'Browse 3D Content Online...',
+	]],
+	['View', [
+		['Proof Setup', ['Custom...', '-', 'Working CMYK', 'Working Cyan Plate', 'Working Magenta Plate', 'Working Yellow Plate', 'Working Black Plate', 'Working CMY Plates', '-', 'Legacy Macintosh RGB (Gamma 1.8)', 'Internet Standard RGB (sRGB)', 'Monitor RGB', '-', 'Color Blindness - Protanopia-type', 'Color Blindness - Deuteranopia-type']],
+		'Proof Colors|Ctrl+Y',
+		'Gamut Warning|Shift+Ctrl+Y',
+		['Pixel Aspect Ratio', ['Custom Pixel Aspect Ratio...', 'Delete Pixel Aspect Ratio...', 'Reset Pixel Aspect Ratios...', '-', 'Square']],
+		'Pixel Aspect Ratio Correction',
+		'32-bit Preview Options...',
+		'-',
+		'Zoom In|Ctrl++|view/zoom.in',
+		'Zoom Out|Ctrl+-|view/zoom.out',
+		'Fit on Screen|Ctrl+0|view/zoom.auto',
+		'Actual Pixels|Ctrl+1|view/zoom.original',
+		'Print Size',
+		'-',
+		['Screen Mode', [
+			{ name: 'Standard Screen Mode', target: 'ps/commands.screen_mode_standard', checked: 'screen_mode_standard' },
+			{ name: 'Full Screen Mode With Menu Bar', target: 'ps/commands.screen_mode_menu', checked: 'screen_mode_menu' },
+			{ name: 'Full Screen Mode', target: 'ps/commands.screen_mode_full', checked: 'screen_mode_full' },
+		]],
+		'-',
+		{ name: 'Extras', shortcut: 'Ctrl+H', target: 'ps/commands.toggle_extras', checked: 'extras' },
+		['Show', [
+			'Layer Edges',
+			{ name: 'Selection Edges', checked: true, target: 'ps/commands.noop' },
+			'Target Path|Shift+Ctrl+H',
+			{ name: 'Grid', shortcut: "Ctrl+'", target: 'view/grid.grid', checked: 'grid' },
+			{ name: 'Guides', shortcut: 'Ctrl+;', target: 'ps/commands.toggle_guides', checked: 'guides' },
+			'Count', 'Smart Guides', 'Slices', 'Notes', 'Pixel Grid', '3D Secondary View', '3D Ground Plane', '3D Lights', '3D Selection', 'UV Overlay', 'Mesh', 'Edit Pins', '-',
+			'All', 'None', '-', 'Show Extra Options...',
+		]],
+		'-',
+		{ name: 'Rulers', shortcut: 'Ctrl+R', target: 'view/ruler.ruler', checked: 'rulers' },
+		'-',
+		{ name: 'Snap', shortcut: 'Shift+Ctrl+;', target: 'ps/commands.toggle_snap', checked: 'snap' },
+		['Snap To', ['Guides', 'Grid', 'Layers', 'Slices', 'Document Bounds', '-', 'All', 'None']],
+		'-',
+		'Lock Guides|Alt+Ctrl+;',
+		'Clear Guides|ps/commands.clear_guides',
+		'New Guide...|view/guides.insert',
+		'-',
+		'Lock Slices',
+		'Clear Slices',
+	]],
+	['Window', [
+		['Arrange', ['Tile All Vertically', 'Tile All Horizontally', '2-up Horizontal', '2-up Vertical', '3-up Horizontal', '3-up Vertical', '3-up Stacked', '4-up', '6-up', 'Consolidate All to Tabs', '-', 'Cascade', 'Tile', 'Float in Window', 'Float All in Windows', '-', 'Match Zoom', 'Match Location', 'Match Rotation', 'Match All', '-', 'New Window for Untitled-1']],
+		['Workspace', [
+			{ name: 'Essentials (Default)', checked: true, target: 'ps/commands.reset_workspace' },
+			'3D', 'Motion', 'Painting', 'Photography', 'Typography', '-',
+			'Reset Essentials|ps/commands.reset_workspace', 'New Workspace...', 'Delete Workspace...', '-',
+			'Keyboard Shortcuts & Menus...|help/shortcuts.shortcuts',
+		]],
+		'-',
+		['Extensions', ['Adobe Exchange', 'Kuler', 'Mini Bridge']],
+		'-',
+		'3D',
+		'Actions|Alt+F9',
+		{ name: 'Adjustments', target: 'ps/commands.toggle_panel', parameter: 'adjustments', checked: 'panel:adjustments' },
+		'Brush|F5',
+		'Brush Presets',
+		{ name: 'Channels', target: 'ps/commands.toggle_panel', parameter: 'channels', checked: 'panel:channels' },
+		'Character',
+		'Character Styles',
+		'Clone Source',
+		{ name: 'Color', shortcut: 'F6', target: 'ps/commands.toggle_panel', parameter: 'color', checked: 'panel:color' },
+		'Histogram|image/histogram.histogram',
+		{ name: 'History', target: 'ps/commands.toggle_panel', parameter: 'history', checked: 'panel:history' },
+		{ name: 'Info', shortcut: 'F8', target: 'ps/commands.toggle_panel', parameter: 'info', checked: 'panel:info' },
+		'Layer Comps',
+		{ name: 'Layers', shortcut: 'F7', target: 'ps/commands.toggle_panel', parameter: 'layers', checked: 'panel:layers' },
+		'Measurement Log',
+		{ name: 'Navigator', target: 'ps/commands.toggle_panel', parameter: 'navigator', checked: 'panel:navigator' },
+		'Notes',
+		'Paragraph',
+		'Paragraph Styles',
+		{ name: 'Paths', target: 'ps/commands.toggle_panel', parameter: 'paths', checked: 'panel:paths' },
+		{ name: 'Properties', target: 'ps/commands.toggle_panel', parameter: 'properties', checked: 'panel:properties' },
+		{ name: 'Styles', target: 'ps/commands.toggle_panel', parameter: 'styles', checked: 'panel:styles' },
+		{ name: 'Swatches', target: 'ps/commands.toggle_panel', parameter: 'swatches', checked: 'panel:swatches' },
+		'Timeline',
+		'Tool Presets',
+		'-',
+		{ name: 'Options', target: 'ps/commands.toggle_options_bar', checked: 'options_bar' },
+		{ name: 'Tools', target: 'ps/commands.toggle_toolbox', checked: 'toolbox' },
+		'-',
+		{ name: '1 Untitled-1', target: 'ps/commands.noop', checked: true, dynamic_name: 'document_label' },
+	]],
+	['Help', [
+		'Photoshop Online Help...|F1|help/shortcuts.shortcuts',
+		'Photoshop Support Center...',
+		'-',
+		'About pshot...|help/about.about',
+		['About Plug-In', []],
+		'Legal Notices...|help/about.about',
+		'-',
+		'Manage Extensions...',
+		'-',
+		'System Info...',
+		'-',
+		'Product Registration...',
+		'Deactivate...',
+		'Updates...',
+		'-',
+		'Photoshop Online...',
+		'Photoshop Resources Online...',
+		'Adobe Product Improvement Program...',
+	]],
 ];
 
+function parse(entry) {
+	if (entry === '-') {
+		return { divider: true };
+	}
+	if (Array.isArray(entry)) {
+		return { name: entry[0], children: entry[1].map(parse) };
+	}
+	if (typeof entry === 'object') {
+		return entry;
+	}
+	const parts = entry.split('|');
+	const item = { name: parts[0] };
+	for (let i = 1; i < parts.length; i++) {
+		if (parts[i].indexOf('.') > 0 && parts[i].indexOf('/') > 0) {
+			item.target = parts[i];
+		}
+		else {
+			item.shortcut = parts[i];
+		}
+	}
+	return item;
+}
+
+const menuDefinition = M.map(parse);
 
 export default menuDefinition;

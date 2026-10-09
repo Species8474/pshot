@@ -103,7 +103,7 @@ class File_new_class {
 					WIDTH: parseInt(width),
 					HEIGHT: parseInt(height),
 					ALPHA: 255,
-					COLOR: '#008000',
+					COLOR: config.COLOR,
 					mouse: {},
 					visible_width: null,
 					visible_height: null,

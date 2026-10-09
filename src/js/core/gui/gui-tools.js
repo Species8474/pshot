@@ -86,35 +86,8 @@ class GUI_tools_class {
 			this.active_tool = saved_tool;
 		}
 
-		//left menu
-		for (var i in config.TOOLS) {
-			var item = config.TOOLS[i];
-			if(item.title)
-				var title = item.title;
-			else
-				var title = this.Helper.ucfirst(item.name).replace(/_/, ' ');
-
-			var itemDom = document.createElement('span');
-			itemDom.id = item.name;
-			itemDom.title = title;
-			if (item.name == this.active_tool) {
-				itemDom.className = 'item trn active ' + item.name;
-			}
-			else {
-				itemDom.className = 'item trn ' + item.name;
-			}
-			if(item.visible === false){
-				itemDom.style.display = 'none';
-			}
-
-			//event
-			itemDom.addEventListener('click', function (event) {
-				_this.activate_tool(this.id);
-			});
-
-			//register
-			document.getElementById(target_id).appendChild(itemDom);
-		}
+		//pshot: CS6 Tools panel
+		this.Base_gui.Ps_workspace.render_toolbox();
 
 		this.show_action_attributes();
 		new app.Actions.Activate_tool_action(this.active_tool, true).do();

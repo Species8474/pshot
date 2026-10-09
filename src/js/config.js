@@ -9,7 +9,8 @@ config.WIDTH = null;
 config.HEIGHT = null;
 config.visible_width = null;
 config.visible_height = null;
-config.COLOR = '#008000';
+config.COLOR = '#000000';
+config.BG_COLOR = '#ffffff';
 config.ALPHA = 255;
 config.ZOOM = 1;
 config.SNAP = true;
@@ -33,6 +34,7 @@ config.enable_autoresize_by_default = true;
 
 //requires styles in reset.css
 config.themes = [
+	'cs6',
 	'dark',
 	'light',
 	'green',
@@ -80,6 +82,18 @@ config.FONTS = [
 //no-translate END
 
 config.TOOLS = [
+	{
+		name: 'hand',
+		title: 'Hand Tool',
+		on_activate: 'on_activate',
+		attributes: {},
+	},
+	{
+		name: 'zoom',
+		title: 'Zoom Tool',
+		on_activate: 'on_activate',
+		attributes: {},
+	},
 	{
 		name: 'select',
 		title: 'Select object tool',
@@ -508,6 +522,6 @@ config.TOOLS = [
 ];
 
 //link to active tool
-config.TOOL = config.TOOLS[2];
+config.TOOL = config.TOOLS.find(t => t.name == 'brush');
 	
 export default config;

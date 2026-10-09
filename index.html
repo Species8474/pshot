@@ -2,101 +2,123 @@
 <html dir="ltr" lang="en-US">
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta http-equiv="x-ua-compatible" content="IE=edge" />
-	<title>miniPaint - image editor</title>
-	<meta name="description" content="miniPaint is free online image editor using HTML5. Edit, adjust your images, add effects online in your browser, without installing anything..." />
-	<meta name="keywords" content="photo, image, picture, transparent, layers, free, edit, html5, canvas, javascript, online, photoshop, gimp, effects, sharpen, blur, magic eraser tool, clone tool, rotate, resize, photoshop online, online tools, tilt shift, sprites, keypoints" />
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" />
+	<title>pshot</title>
+	<meta name="description" content="pshot - a Photoshop CS6 style image editor in the browser (based on miniPaint)." />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="icon" sizes="192x192" href="images/favicon.png">
-	<!-- <link rel="manifest" href="dist/manifest.json"> -->
-	<!-- Google -->
-	<meta itemprop="name" content="miniPaint" />
-	<meta itemprop="description" content="miniPaint is free online image editor using HTML5. Edit, adjust your images, add effects online in your browser, without installing anything..." />
-	<meta itemprop="image" content="https://viliusle.github.io/miniPaint/images/preview.jpg" />
-	<!-- Twitter -->
-	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="miniPaint" />
-	<meta name="twitter:description" content="miniPaint is free online image editor using HTML5. Edit, adjust your images, add effects online in your browser, without installing anything..." />
-	<meta name="twitter:image" content="https://viliusle.github.io/miniPaint/images/preview.jpg" />
-	<meta name="twitter:image:alt" content="miniPaint is free online image editor using HTML5. Edit, adjust your images, add effects online in your browser, without installing anything..." />
-	<!-- Facebook, Pinterest -->
-	<meta property="og:title" content="miniPaint" />
-	<meta property="og:type" content="article" />
-	<meta property="og:url" content="https://viliusle.github.io/miniPaint/" />
-	<meta property="og:image" content="https://viliusle.github.io/miniPaint/images/preview.jpg" />
-	<meta property="og:description" content="miniPaint is free online image editor using HTML5. Edit, adjust your images, add effects online in your browser, without installing anything..." />
-	<meta property="og:site_name" content="miniPaint" />
-	
 	<script src="dist/bundle.js"></script>
 </head>
-<body>
-	<div class="wrapper">
+<body class="theme-cs6">
+	<div class="ps_app" id="ps_app">
 
-		<nav aria-label="Main Menu" class="main_menu" id="main_menu"></nav>
-		
-		<div class="submenu">
-			<a class="logo" href="#">miniPaint</a>
-			<div class="block attributes" id="action_attributes"></div>
-			<button class="undo_button" id="undo_button" type="button">
-				<span class="sr_only">Undo</span>
-			</button>
+		<div class="ps_menubar">
+			<div class="ps_logo" title="pshot">Ps</div>
+			<nav aria-label="Main Menu" class="main_menu" id="main_menu"></nav>
 		</div>
-		
-		<div class="sidebar_left" id="tools_container"></div>
 
+		<div class="ps_options submenu" id="ps_options">
+			<div class="ps_grip"></div>
+			<button type="button" class="ps_tool_preset" id="ps_tool_preset" title="Tool Preset picker" disabled></button>
+			<div class="block attributes" id="action_attributes"></div>
+			<div class="ps_workspace_switcher">
+				<button type="button" id="ps_workspace_button">Essentials <span class="ps_caret">&#9662;</span></button>
+			</div>
+		</div>
 
-		<div class="middle_area" id="middle_area">
+		<div class="ps_body" id="ps_body">
 
-			<canvas class="ruler_left" id="ruler_left"></canvas>
-			<canvas class="ruler_top" id="ruler_top"></canvas>
+			<div class="ps_toolbox" id="ps_toolbox">
+				<div class="ps_panel_grip" id="ps_toolbox_grip" title="Toggle two-column toolbox">&raquo;</div>
+				<div id="tools_container" class="ps_tools"></div>
+				<div class="ps_colors" id="ps_colors">
+					<button type="button" class="ps_default_colors" id="ps_default_colors" title="Default Foreground and Background Colors (D)"></button>
+					<button type="button" class="ps_switch_colors" id="ps_switch_colors" title="Switch Foreground and Background Colors (X)"></button>
+					<button type="button" class="ps_bg_color" id="ps_bg_color" title="Set background color"></button>
+					<button type="button" class="ps_fg_color" id="ps_fg_color" title="Set foreground color"></button>
+				</div>
+				<button type="button" class="ps_tool ps_quickmask disabled" id="ps_quickmask" title="Edit in Quick Mask Mode (Q)"></button>
+				<button type="button" class="ps_tool ps_screenmode" id="ps_screenmode" title="Change Screen Mode (F)"></button>
+			</div>
 
-			<div class="main_wrapper" id="main_wrapper">
-				<div class="canvas_wrapper" id="canvas_wrapper">
-					<div id="mouse"></div>
-					<div class="transparent-grid" id="canvas_minipaint_background"></div>
-					<canvas id="canvas_minipaint">
-						<div class="trn error">
-							Your browser does not support canvas or JavaScript is not enabled.
+			<div class="ps_docarea" id="ps_docarea">
+				<div class="ps_doctabs" id="ps_doctabs"></div>
+				<div class="middle_area" id="middle_area">
+					<canvas class="ruler_left" id="ruler_left"></canvas>
+					<canvas class="ruler_top" id="ruler_top"></canvas>
+					<div class="main_wrapper" id="main_wrapper">
+						<div class="canvas_wrapper" id="canvas_wrapper">
+							<div id="mouse"></div>
+							<div class="transparent-grid" id="canvas_minipaint_background"></div>
+							<canvas id="canvas_minipaint">
+								<div class="trn error">Your browser does not support canvas or JavaScript is not enabled.</div>
+							</canvas>
 						</div>
-					</canvas>
+					</div>
+				</div>
+				<div class="ps_statusbar" id="ps_statusbar">
+					<input type="text" class="ps_status_zoom" id="ps_status_zoom" value="100%" aria-label="Zoom level" />
+					<div class="ps_status_info" id="ps_status_info">Doc: 0K/0K</div>
+					<span class="ps_status_arrow">&#9656;</span>
+					<div class="ps_status_message" id="ps_status_message"></div>
+				</div>
+			</div>
+
+			<div class="ps_iconstrip" id="ps_iconstrip"></div>
+
+			<div class="ps_dock" id="ps_dock">
+				<div class="ps_panelgroup" data-group="color">
+					<div class="ps_tabs">
+						<button type="button" class="ps_tab" data-panel="color">Color</button>
+						<button type="button" class="ps_tab" data-panel="swatches">Swatches</button>
+						<span class="ps_panel_menu" title="Panel menu">&#8801;</span>
+					</div>
+					<div class="ps_panel" data-panel="color"><div class="content" id="toggle_colors"></div></div>
+					<div class="ps_panel" data-panel="swatches"><div id="ps_swatches"></div></div>
+				</div>
+				<div class="ps_panelgroup" data-group="adjustments">
+					<div class="ps_tabs">
+						<button type="button" class="ps_tab" data-panel="adjustments">Adjustments</button>
+						<button type="button" class="ps_tab" data-panel="styles">Styles</button>
+						<span class="ps_panel_menu" title="Panel menu">&#8801;</span>
+					</div>
+					<div class="ps_panel" data-panel="adjustments"><div id="ps_adjustments"></div></div>
+					<div class="ps_panel" data-panel="styles"><div id="ps_styles"></div></div>
+				</div>
+				<div class="ps_panelgroup ps_grow" data-group="layers">
+					<div class="ps_tabs">
+						<button type="button" class="ps_tab" data-panel="layers">Layers</button>
+						<button type="button" class="ps_tab" data-panel="channels">Channels</button>
+						<button type="button" class="ps_tab" data-panel="paths">Paths</button>
+						<span class="ps_panel_menu" title="Panel menu">&#8801;</span>
+					</div>
+					<div class="ps_panel" data-panel="layers"><div class="content" id="layers_base"></div></div>
+					<div class="ps_panel" data-panel="channels"><div id="ps_channels"></div></div>
+					<div class="ps_panel" data-panel="paths"><div id="ps_paths"></div></div>
 				</div>
 			</div>
 		</div>
 
-		<div class="sidebar_right">
-			<div class="preview block">
-				<h2 class="trn toggle" data-target="toggle_preview">Preview</h2>
-				<div id="toggle_preview"></div>
-			</div>
-			
-			<div class="colors block">
-				<h2 class="trn toggle" data-target="toggle_colors">Colors</h2>
-				<div class="content" id="toggle_colors"></div>
-			</div>
-			
-			<div class="block" id="info_base">
-				<h2 class="trn toggle toggle-full" data-target="toggle_info">Information</h2>
-				<div class="content" id="toggle_info"></div>
-			</div>
-			
-			<div class="details block" id="details_base">
-				<h2 class="trn toggle toggle-full" data-target="toggle_details">Layer details</h2>
-				<div class="content details-content" id="toggle_details"></div>
-			</div>
-			
-			<div class="layers block">
-				<h2 class="trn">Layers</h2>
-				<div class="content" id="layers_base"></div>
-			</div>
+		<div class="ps_bottombar" id="ps_bottombar">
+			<button type="button" class="ps_bottomtab disabled">Mini Bridge</button>
+			<button type="button" class="ps_bottomtab disabled">Timeline</button>
 		</div>
-	</div>
-	<div class="mobile_menu">
-		<button class="left_mobile_menu" id="left_mobile_menu_button" type="button">
-			<span class="sr_only">Toggle Menu</span>
-		</button>
-		<button class="right_mobile_menu" id="mobile_menu_button" type="button">
-			<span class="sr_only">Toggle Menu</span>
-		</button>
+
+		<!-- panels that live in the icon strip; workspace.js moves them into popouts -->
+		<div class="ps_floating_hosts" id="ps_floating_hosts">
+			<div class="ps_panel" data-panel="history"><div id="ps_history"></div></div>
+			<div class="ps_panel" data-panel="properties"><div class="content details-content" id="toggle_details"></div></div>
+			<div class="ps_panel" data-panel="navigator"><div id="toggle_preview"></div></div>
+			<div class="ps_panel" data-panel="info"><div class="content" id="toggle_info"></div></div>
+		</div>
+
+		<!-- miniPaint mobile controls: unused on desktop, kept because base-gui.js binds them -->
+		<div class="hidden">
+			<button id="undo_button" type="button"></button>
+			<button id="left_mobile_menu_button" type="button"></button>
+			<button id="mobile_menu_button" type="button"></button>
+			<div id="info_base"></div>
+			<div id="details_base"></div>
+		</div>
 	</div>
 	<div class="hidden" id="tmp"></div>
 	<div id="popups"></div>

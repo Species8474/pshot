@@ -1,0 +1,77 @@
+/*
+ * pshot - CS6 painting model: brush/pencil strokes land on the active pixel layer.
+ *
+ * miniPaint draws every stroke into its own vector "brush"/"pencil" layer. When
+ * the stroke started on a pixel layer, rasterize the stroke into that layer,
+ * drop the temporary layer and fold everything into one history state.
+ */
+
+import app from './../app.js';
+import config from './../config.js';
+
+async function commit_stroke(tool, pending, label) {
+	await pending;
+	var target_id = tool.paint_target;
+	tool.paint_target = null;
+	if (target_id == null) {
+		return;
+	}
+	var temp = config.layer;
+	if (target_id === 'self') {
+		//stroke on an empty layer: miniPaint turned that layer into the stroke; make it a pixel layer
+		if (!temp || temp.type != tool.name) {
+			return;
+		}
+		var full = app.Layers.convert_layer_to_canvas(temp.id, false, false);
+		await app.State.do_action(
+			new app.Actions.Bundle_action(tool.name + '_tool', label, [
+				new app.Actions.Delete_layer_action(temp.id, true),
+				new app.Actions.Insert_layer_action({
+					name: temp.name, type: 'image', order: temp.order,
+					x: 0, y: 0, width: full.width, height: full.height,
+					width_original: full.width, height_original: full.height,
+					opacity: temp.opacity == null ? 100 : temp.opacity,
+					data: full.toDataURL('image/png'),
+				}, false),
+			]),
+			{ merge_with_history: ['new_' + tool.name + '_layer'] }
+		);
+		rename_last(label);
+		return;
+	}
+	var target = app.Layers.get_layer(target_id);
+	if (!target || target.type != 'image' || !target.link || !temp || temp.type != tool.name) {
+		return;
+	}
+
+	var stroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);
+	var canvas = document.createElement('canvas');
+	canvas.width = target.width_original;
+	canvas.height = target.height_original;
+	var ctx = canvas.getContext('2d');
+	ctx.drawImage(target.link, 0, 0);
+	var sx = target.width_original / target.width;
+	var sy = target.height_original / target.height;
+	ctx.setTransform(sx, 0, 0, sy, -target.x * sx, -target.y * sy);
+	ctx.globalAlpha = (temp.opacity == null ? 100 : temp.opacity) / 100;
+	ctx.drawImage(stroke, 0, 0);
+
+	await app.State.do_action(
+		new app.Actions.Bundle_action(tool.name + '_tool', label, [
+			new app.Actions.Update_layer_image_action(canvas, target.id),
+			new app.Actions.Delete_layer_action(temp.id, true),
+			new app.Actions.Select_layer_action(target.id, true),
+		]),
+		{ merge_with_history: ['new_' + tool.name + '_layer'] }
+	);
+	rename_last(label);
+}
+
+function rename_last(label) {
+	var history = app.State.action_history;
+	if (history.length) {
+		history[history.length - 1].action_description = label;
+	}
+}
+
+export { commit_stroke };

@@ -1,5 +1,6 @@
 import app from './../app.js';
 import config from './../config.js';
+import { commit_stroke } from './../ps/stroke.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 
@@ -64,6 +65,8 @@ class Pencil_class extends Base_tools_class {
 		
 		if (config.layer.type != this.name || params_hash != this.params_hash) {
 			//register new object - current layer is not ours or params changed
+			//pshot: remember the pixel layer the stroke belongs to (CS6 paints into it)
+			this.paint_target = config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
 			this.layer = {
 				type: this.name,
 				data: [],
@@ -150,7 +153,7 @@ class Pencil_class extends Base_tools_class {
 			new_size
 		]);
 
-		this.check_dimensions();
+		commit_stroke(this, this.check_dimensions(), 'Pencil Tool');
 
 		config.layer.status = null;
 		this.Base_layers.render();
@@ -287,7 +290,7 @@ class Pencil_class extends Base_tools_class {
 		}
 
 		//change layers bounds
-		app.State.do_action(
+		return app.State.do_action(
 			new app.Actions.Update_layer_action(config.layer.id, {
 				x: config.layer.x + min_x,
 				y: config.layer.y + min_y,

@@ -11,6 +11,7 @@ import './../css/layout.css';
 import './../css/menu.css';
 import './../css/print.css';
 import './../../node_modules/alertifyjs/build/css/alertify.min.css';
+import './../css/cs6.css';
 //js
 import app from './app.js';
 import config from './config.js';

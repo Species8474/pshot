@@ -15,6 +15,7 @@ import GUI_menu_class from './gui/gui-menu.js';
 import Tools_translate_class from './../modules/tools/translate.js';
 import Tools_settings_class from './../modules/tools/settings.js';
 import Helper_class from './../libs/helpers.js';
+import Ps_workspace_class from './../ps/workspace.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -66,6 +67,7 @@ class Base_gui_class {
 		this.GUI_menu = new GUI_menu_class();
 		this.Tools_translate = new Tools_translate_class();
 		this.Tools_settings = new Tools_settings_class();
+		this.Ps_workspace = new Ps_workspace_class();
 		this.modules = {};
 	}
 
@@ -149,6 +151,7 @@ class Base_gui_class {
 
 		this.set_events();
 		this.load_translations();
+		this.Ps_workspace.init();
 	}
 
 	init_service_worker() {
@@ -180,6 +183,7 @@ class Base_gui_class {
 				alertify.error('Module function not found. ' + module + '.' + function_name);
 				return;
 			}
+			this.modules['ps/commands'].remember_filter(target);
 			this.modules[module][function_name](param);
 		});
 
@@ -472,6 +476,8 @@ class Base_gui_class {
 	 * @param {string} theme_name
 	 */
 	change_theme(theme_name = null){
+		//pshot: always the Photoshop CS6 interface
+		theme_name = 'cs6';
 		if(theme_name == null){
 			//auto detect
 			var theme_cookie = this.Helper.getCookie('theme');
