@@ -128,7 +128,7 @@ const groups = [
 		{ id: 'mixer_brush', name: 'Mixer Brush Tool', key: 'B', tool: 'retouch', preset: { mode: 'mixer' }, icon: I.mixer_brush },
 	]},
 	{ members: [
-		{ id: 'clone_stamp', name: 'Clone Stamp Tool', key: 'S', tool: 'clone', icon: I.clone_stamp },
+		{ id: 'clone_stamp', name: 'Clone Stamp Tool', key: 'S', tool: 'retouch', preset: { mode: 'clone' }, icon: I.clone_stamp },
 		{ id: 'pattern_stamp', name: 'Pattern Stamp Tool', key: 'S', tool: 'retouch', preset: { mode: 'pattern_stamp' }, icon: I.pattern_stamp },
 	]},
 	{ members: [

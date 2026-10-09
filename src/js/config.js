@@ -156,6 +156,8 @@ config.TOOLS = [
 			load_each: true,
 			clean_each: true,
 			mixer_preset: 'Custom',
+			aligned: true,
+			sample: 'Current Layer',
 		},
 	},
 	{

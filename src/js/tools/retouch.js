@@ -94,6 +94,19 @@ class Retouch_class extends Base_tools_class {
 			app.GUI.Ps_workspace.Options_bar.render();
 			return;
 		}
+		if (mode == 'clone') {
+			var CS = app.GUI.Ps_workspace.Clone_source;
+			if (e.altKey) {
+				//CS6: Alt+click defines the clone source
+				CS.set_source(mouse.x, mouse.y);
+				app.GUI.Ps_workspace.status_message('Clone source set');
+				return;
+			}
+			if (!CS.has_source()) {
+				alert_box('Could not use the clone stamp because the area to clone has not been defined (Alt-click to define a source point).');
+				return;
+			}
+		}
 		if (mode == 'healing') {
 			if (e.altKey) {
 				//CS6: Alt+click defines the source point
@@ -139,6 +152,16 @@ class Retouch_class extends Base_tools_class {
 			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
 			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
 			this.history_dab(this.last);
+		}
+		if (mode == 'clone') {
+			var cparams = this.getParams();
+			var Clone = app.GUI.Ps_workspace.Clone_source;
+			Clone.begin_stroke({ x: mouse.x, y: mouse.y }, cparams.aligned !== false);
+			this.original = this.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height);
+			this.source_data = Clone.sample_canvas(cparams.sample || 'Current Layer').getContext('2d', { willReadFrequently: true }).getImageData(0, 0, config.WIDTH, config.HEIGHT).data;
+			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
+			Clone.painting = true;
+			this.clone_dab(this.last);
 		}
 		if (mode == 'mixer') {
 			var mp = this.getParams();
@@ -196,12 +219,13 @@ class Retouch_class extends Base_tools_class {
 				this.last = cp;
 			}
 		}
-		else if (mode == 'history' || mode == 'pattern_stamp') {
+		else if (mode == 'history' || mode == 'pattern_stamp' || mode == 'clone') {
 			if (dist >= step) {
 				var hp = this.last;
 				for (var tb = step; tb <= dist; tb += step) {
 					hp = { x: this.last.x + dx * tb / dist, y: this.last.y + dy * tb / dist };
-					this.history_dab(hp);
+					if (mode == 'clone') this.clone_dab(hp);
+					else this.history_dab(hp);
 				}
 				this.last = hp;
 			}
@@ -256,6 +280,9 @@ class Retouch_class extends Base_tools_class {
 		}
 		this.started = false;
 		var mode = this.getParams().mode;
+		if (mode == 'clone') {
+			app.GUI.Ps_workspace.Clone_source.painting = false;
+		}
 		if (mode == 'spot_healing') {
 			this.heal();
 		}
@@ -272,7 +299,7 @@ class Retouch_class extends Base_tools_class {
 				extra.push(new app.Actions.Update_layer_action(config.layer.id, { name: 'Layer 0' }));
 			}
 		}
-		var labels = { bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { clone: 'Clone Stamp', bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		].concat(extra)));
@@ -422,6 +449,66 @@ class Retouch_class extends Base_tools_class {
 				for (var c = 0; c < 4; c++) {
 					img.data[j + c] = O[i + c] + (S[i + c] - O[i + c]) * f;
 				}
+			}
+		}
+		ctx.putImageData(img, x0, y0);
+	}
+
+	/**
+	 * Clone Stamp dab: pixels from the sampled image at the Clone Source
+	 * position (offset, scale and rotation), bilinear when transformed
+	 */
+	clone_dab(p) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var sx = layer.width_original / layer.width, sy = layer.height_original / layer.height;
+		var r = Math.max(1, params.size / 2 * sx);
+		var opacity = (params.opacity == null ? 100 : params.opacity) / 100;
+		var w = this.canvas.width, h = this.canvas.height, W = config.WIDTH, H = config.HEIGHT;
+		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
+		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
+		if (x1 <= x0 || y1 <= y0) return;
+		var Clone = app.GUI.Ps_workspace.Clone_source;
+		var smooth = Clone.transformed();
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
+		var O = this.original.data, S = this.source_data, M = this.history_mask;
+		var px = [0, 0, 0, 0];
+		var fetch = (fx, fy) => {
+			if (!smooth) {
+				var ix = Math.round(fx - 0.5), iy = Math.round(fy - 0.5);
+				if (ix < 0 || iy < 0 || ix >= W || iy >= H) return null;
+				var o = (iy * W + ix) * 4;
+				px[0] = S[o]; px[1] = S[o + 1]; px[2] = S[o + 2]; px[3] = S[o + 3];
+				return px;
+			}
+			var gx = fx - 0.5, gy = fy - 0.5, ax = Math.floor(gx), ay = Math.floor(gy), tx = gx - ax, ty = gy - ay;
+			if (ax < 0 || ay < 0 || ax + 1 >= W || ay + 1 >= H) return null;
+			var o00 = (ay * W + ax) * 4, o10 = o00 + 4, o01 = o00 + W * 4, o11 = o01 + 4;
+			for (var c = 0; c < 4; c++) {
+				px[c] = (S[o00 + c] * (1 - tx) + S[o10 + c] * tx) * (1 - ty) + (S[o01 + c] * (1 - tx) + S[o11 + c] * tx) * ty;
+			}
+			return px;
+		};
+		for (var y = y0; y < y1; y++) {
+			for (var x = x0; x < x1; x++) {
+				var d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / r;
+				if (d > 1) continue;
+				var k = y * w + x;
+				var f = opacity * (d < 0.8 ? 1 : (1 - d) / 0.2);
+				if (f <= M[k]) continue;
+				var src = Clone.map({ x: layer.x + (x + 0.5) / sx, y: layer.y + (y + 0.5) / sy });
+				var sp = fetch(src.x, src.y);
+				if (!sp) continue;
+				M[k] = f;
+				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
+				//source-over of the sampled pixel at strength f
+				var sa = sp[3] / 255 * f, da = O[i + 3] / 255, oa = sa + da * (1 - sa);
+				if (oa <= 0) { img.data[j + 3] = 0; continue; }
+				for (var c = 0; c < 3; c++) {
+					img.data[j + c] = (sp[c] * sa + O[i + c] * da * (1 - sa)) / oa;
+				}
+				img.data[j + 3] = oa * 255;
 			}
 		}
 		ctx.putImageData(img, x0, y0);

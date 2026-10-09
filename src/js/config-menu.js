@@ -379,7 +379,7 @@ const M = [
 		{ name: 'Channels', target: 'ps/commands.toggle_panel', parameter: 'channels', checked: 'panel:channels' },
 		{ name: 'Character', target: 'ps/commands.toggle_panel', parameter: 'character', checked: 'panel:character' },
 		'Character Styles',
-		'Clone Source',
+		{ name: 'Clone Source', target: 'ps/commands.toggle_panel', parameter: 'clone_source', checked: 'panel:clone_source' },
 		{ name: 'Color', shortcut: 'F6', target: 'ps/commands.toggle_panel', parameter: 'color', checked: 'panel:color' },
 		{ name: 'Histogram', target: 'ps/commands.toggle_panel', parameter: 'histogram', checked: 'panel:histogram' },
 		{ name: 'History', target: 'ps/commands.toggle_panel', parameter: 'history', checked: 'panel:history' },

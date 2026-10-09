@@ -94,6 +94,7 @@ const IC = {
 	warp: SVG(`<path d="M2 12c3-6 5 2 7-4s5-2 7-4" ${ST}/><text x="3" y="17" font-size="7" fill="currentColor" font-family="Times New Roman">T</text>`),
 	type_orient: SVG(`<text x="2" y="12" font-size="10" fill="currentColor" font-family="Times New Roman">T</text><path d="M12 4v10M12 14l-2-2M12 14l2-2" ${ST}/>`),
 	gear: SVG(`<circle cx="9" cy="9" r="2.5" ${ST}/><path d="M9 1.5v3M9 13.5v3M1.5 9h3M13.5 9h3M3.7 3.7l2.1 2.1M12.2 12.2l2.1 2.1M3.7 14.3l2.1-2.1M12.2 5.8l2.1-2.1" ${ST}/>`),
+	clone_source: SVG(`<path d="M5 2.5h4v3c0 1.2-1.2 1.6-1.2 2.8h3.7v2.5H2.5V8.3h3.7C6.2 7.1 5 6.7 5 5.5z" fill="currentColor"/><path d="M10.5 12h5v3.5h-5z" ${ST}/>`),
 	path_ops: SVG(`<rect x="2" y="2" width="9" height="9" fill="currentColor"/><rect x="7" y="7" width="9" height="9" ${ST}/>`),
 };
 
@@ -272,16 +273,16 @@ const LAYOUTS = {
 	clone_stamp: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Clone Source panel' },
+		{ type: 'icon', icon: IC.clone_source, title: 'Toggle the Clone Source panel', action: () => app.GUI.Ps_workspace.toggle_panel('clone_source') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: MODES },
-		{ type: 'pct', label: 'Opacity:', value: 100 },
+		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
 		{ type: 'pct', label: 'Flow:', value: 100 },
 		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
 		{ type: 'sep' },
-		{ type: 'check', label: 'Aligned', value: true },
+		{ type: 'check', label: 'Aligned', bind: 'aligned' },
 		{ type: 'select', label: 'Sample:', values: ['Current Layer', 'Current & Below', 'All Layers'],
-			bind: 'source_layer', map: { 'Current Layer': 'Current', 'Current & Below': 'Previous' } },
+			bind: 'sample', map: { 'Current Layer': 'Current Layer', 'Current & Below': 'Current & Below', 'All Layers': 'All Layers' } },
 	],
 	eraser: [
 		{ type: 'brush', bind: 'size' },

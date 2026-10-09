@@ -23,6 +23,7 @@ import Ps_styles_class from './styles.js';
 import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_warp_text_class from './warp-text.js';
 import Ps_text_aa_class from './text-aa.js';
+import Ps_clone_source_class from './clone-source.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -52,10 +53,11 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes', clone_source: 'Clone Source',
 };
 
 const STRIP_ICONS = {
+	clone_source: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M5 2.5h4v3c0 1.2-1.2 1.6-1.2 2.8h3.7v2.5H2.5V8.3h3.7C6.2 7.1 5 6.7 5 5.5z" fill="currentColor"/><path d="M10.5 12h5v3.5h-5z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	notes: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 2.5h9l3 3v10H3z M12 2.5v3h3M5.5 8h7M5.5 10.5h7M5.5 13h4.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	actions: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M5 3l9 6-9 6z" fill="currentColor"/></svg>',
 	histogram: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M2 15.5h14M3 15V11M5 15V7M7 15V4M9 15V6M11 15V9M13 15V8M15 15v-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
@@ -103,6 +105,7 @@ class Ps_workspace_class {
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Warp_text = new Ps_warp_text_class();
 		this.Text_aa = new Ps_text_aa_class();
+		this.Clone_source = new Ps_clone_source_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -162,6 +165,7 @@ class Ps_workspace_class {
 		this.render_channels();
 		this.Preferences.install();
 		this.Notes.install();
+		this.Clone_source.install();
 
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());
@@ -779,6 +783,9 @@ class Ps_workspace_class {
 		}
 		if (panel == 'paragraph') {
 			render_paragraph(document.getElementById('ps_paragraph'));
+		}
+		if (panel == 'clone_source') {
+			this.Clone_source.render();
 		}
 	}
 
