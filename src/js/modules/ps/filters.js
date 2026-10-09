@@ -163,6 +163,9 @@ class Ps_filters_class {
 	 * fields: [{ key, label, min, max, step, value, unit }] or { key, label, type: 'select'|'check'|'radio', values, value }
 	 */
 	dialog(key, title, fields, build) {
+		this.builders = this.builders || {};
+		this.builders[key] = { title: title, build: build, fields: fields };
+		if (this.silent) return;
 		var defaults = {};
 		fields.forEach(f => { defaults[f.key] = f.value; });
 		var saved = (this.saved = this.saved || {})[key];
@@ -213,6 +216,27 @@ class Ps_filters_class {
 			this.last = { key: key, title: title, build: build };
 			return build(state);
 		}, key);
+	}
+
+	/**
+	 * Actions playback: a filter with given settings, no dialog
+	 */
+	apply_settings(key, settings) {
+		this.builders = this.builders || {};
+		if (!this.builders[key] && typeof this[key] == 'function') {
+			this.silent = true;
+			try { this[key](); } finally { this.silent = false; }
+		}
+		var b = this.builders[key];
+		if (!b) return false;
+		var state = {};
+		b.fields.forEach(f => { state[f.key] = f.value; });
+		Object.assign(state, settings);
+		var adjust = this.adjust();
+		var job = adjust.begin(b.title);
+		if (!job) return true;
+		adjust.finish(job, b.build(state), b.title);
+		return true;
 	}
 
 	/**

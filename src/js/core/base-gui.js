@@ -181,7 +181,7 @@ class Base_gui_class {
 				alertify.error('Module function not found. ' + module + '.' + function_name);
 				return;
 			}
-			this.modules['ps/commands'].remember_filter(target);
+			this.modules['ps/commands'].remember_filter(target, param);
 			this.modules[module][function_name](param);
 		});
 

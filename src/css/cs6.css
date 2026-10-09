@@ -1467,3 +1467,12 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 #hist_graph { border: 1px solid #222; }
 .ps_hist_stats { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2px 8px; font-size: 11px; color: #ccc; }
 .ps_hist_stats b { font-weight: normal; color: #f0f0f0; }
+/* Actions panel */
+.ps_actions_list { min-height: 120px; max-height: 340px; overflow-y: auto; width: 260px; }
+.ps_act_row { display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px; border-bottom: 1px solid #3a3a3a; white-space: nowrap; }
+.ps_act_row.active { background: var(--ps-select); color: #fff; }
+.ps_act_check { width: 14px; color: #ccc; font-size: 10px; }
+.ps_act_toggle { width: 10px; cursor: default; }
+.ps_act_indent { width: 14px; } .ps_act_indent2 { width: 30px; }
+.ps_act_rec { color: #e33; }
+.ps_panel_footer button.recording { color: #e33; }

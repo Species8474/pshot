@@ -50,6 +50,8 @@ class Ps_commands_class {
 	gradient_map() { this.Adjust.gradient_map(); }
 	selective_color() { this.Adjust.selective_color(); }
 	black_white() { this.Adjust.black_white(); }
+	invert() { this.Adjust.invert(); }
+	desaturate() { this.Adjust.desaturate(); }
 	replace_color() { this.Adjust.replace_color(); }
 	auto_tone() { this.Adjust.auto('tone'); }
 	auto_contrast() { this.Adjust.auto('contrast'); }
@@ -2480,7 +2482,9 @@ class Ps_commands_class {
 
 	// ---------- Filter ----------
 
-	remember_filter(target) {
+	remember_filter(target, parameter) {
+		//Actions panel recording
+		if (app.GUI.Ps_workspace && app.GUI.Ps_workspace.Actions) app.GUI.Ps_workspace.Actions.record(target, parameter);
 		if (target.indexOf('effects/') === 0 || target.indexOf('ps/filters.') === 0) {
 			this.last_filter_target = target;
 		}

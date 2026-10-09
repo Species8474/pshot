@@ -832,6 +832,31 @@ class Ps_adjust_class {
 	}
 
 	/**
+	 * one-step adjustments (no dialog in CS6): Invert, Desaturate
+	 */
+	direct(title, fn) {
+		var job = this.begin(title);
+		if (!job) return;
+		this.finish(job, fn, title);
+	}
+
+	invert() {
+		this.direct('Invert', (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) { dst[i] = 255 - src[i]; dst[i + 1] = 255 - src[i + 1]; dst[i + 2] = 255 - src[i + 2]; }
+		});
+	}
+
+	desaturate() {
+		//CS6 Desaturate: lightness ((max + min) / 2)
+		this.direct('Desaturate', (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var v = (Math.max(src[i], src[i + 1], src[i + 2]) + Math.min(src[i], src[i + 1], src[i + 2])) / 2;
+				dst[i] = dst[i + 1] = dst[i + 2] = v;
+			}
+		});
+	}
+
+	/**
 	 * CS6 Black & White: six color sliders and an optional Tint
 	 */
 	black_white() {

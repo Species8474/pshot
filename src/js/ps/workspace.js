@@ -27,6 +27,7 @@ import Ps_paths_class from './paths.js';
 import Ps_alpha_channels_class from './alpha-channels.js';
 import Ps_brush_panel_class from './brush-panel.js';
 import Ps_layer_comps_class from './layer-comps.js';
+import Ps_actions_panel_class from './actions-panel.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
@@ -36,10 +37,11 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions',
 };
 
 const STRIP_ICONS = {
+	actions: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M5 3l9 6-9 6z" fill="currentColor"/></svg>',
 	histogram: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M2 15.5h14M3 15V11M5 15V7M7 15V4M9 15V6M11 15V9M13 15V8M15 15v-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
 	comps: '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2.5" y="5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 5V3h10.5v9.5h-2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	brush: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M15 2.5c.5.5-4.5 7-6.2 8.5l-1.6-1.6C8.6 7.6 14.5 2 15 2.5zM6.7 10.3c-1.6 0-2.8 1-3 2.6-.2 1.5-.8 2.1-1.9 2.6 2.5 1.2 6.1.5 6.6-2 .2-1-.3-2.2-1.7-3.2z" fill="currentColor"/></svg>',
@@ -80,6 +82,7 @@ class Ps_workspace_class {
 		this.Alpha = new Ps_alpha_channels_class();
 		this.Brush_panel = new Ps_brush_panel_class();
 		this.Comps = new Ps_layer_comps_class();
+		this.Actions = new Ps_actions_panel_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Guides = new Ps_guides_class();
@@ -691,6 +694,9 @@ class Ps_workspace_class {
 		}
 		if (panel == 'character') {
 			render_character(document.getElementById('ps_character'));
+		}
+		if (panel == 'actions') {
+			this.Actions.render();
 		}
 		if (panel == 'histogram') {
 			this.render_histogram_panel();

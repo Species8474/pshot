@@ -68,6 +68,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - The dock: Color, Swatches, Adjustments, Styles, Layers, Channels, Paths. The icon strip holds History and Properties; Navigator and Info open from the Window menu.
   - Character and Paragraph panels (Window menu, Type > Panels): font, style, size, leading, tracking, colour, faux styles, alignment. With a type layer selected but not being edited, changes apply to all its text.
   - Screen modes (F) and Tab to hide panels.
+  - Actions panel (Alt+F9, `ps/actions-panel.js`): sets, record/stop/play, new/delete; records menu commands and shortcuts (hook in `ps/commands.remember_filter`); filters replay with their recorded settings, other dialogs open during playback; stored in localStorage; Default Actions set.
   - Histogram panel (Window > Histogram: channel, source, Mean/Std Dev/Median/Pixels).
   - Workspaces (Window > Workspace and the switcher): Essentials, Painting, Photography, Typography.
   - Layer Comps panel (Window > Layer Comps, `ps/layer-comps.js`): new/apply/update/delete, previous/next; records visibility, position, layer style per layer; per document.
@@ -120,7 +121,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Link Layers (chain button / Layer menu, label toggles to Unlink): linked layers move together; Select Linked Layers. (`ps_link` token; not saved to PSD.)
   - As in CS6, selecting a layer and toggling visibility are not History states (`base-state.js`).
 - **Image**
-  - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Black & White (6 sliders + Tint), Replace Color (sample + Fuzziness, Hue/Saturation/Lightness), Threshold (histogram), Posterize, Shadows/Highlights and Equalize (destructive here, as in CS6); Auto Tone / Auto Contrast / Auto Color (distinct CS6 algorithms).
+  - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Black & White (6 sliders + Tint), Replace Color (sample + Fuzziness, Hue/Saturation/Lightness), Threshold (histogram), Posterize, Shadows/Highlights, Equalize, Invert and Desaturate (one step) (destructive here, as in CS6); Auto Tone / Auto Contrast / Auto Color (distinct CS6 algorithms).
   - Image > Mode: RGB Color / Grayscale ("Discard color information?"; all layers to luminosity, colors kept gray, Gray channel, tab shows Gray/8; undoable). Other modes are greyed.
   - Image and Canvas Size, rotation (incl. Arbitrary: canvas grows, Background fills with the background color, masks rotate), Trim (transparent / corner color, per side), crop, Perspective Crop tool (`tools/ps_pcrop.js`: every layer and mask rectified; type/shape layers are rasterized), trim, Reveal All, Duplicate (new tab, optionally merged), Apply Image (layer or merged source, invert, blend mode, opacity; RGB channel only). File > Revert (back to the opened state, undoable).
 - **Filters**: Liquify (Shift+Ctrl+X: Forward Warp, Reconstruct, Pucker, Bloat, Push Left; size/density/pressure; Restore All; Show Backdrop; `ps/liquify.js`), Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse, Surface Blur, Smart Blur, Sharpen Edges, Wave, ZigZag, Shear, Crystallize, Pointillize, Facet, Fragment, Mezzotint, Fibers, Lens Flare, Tiles, Trace Contour, Wind, Extrude, Custom. Also Blur, Blur More, Sharpen, Sharpen More, Despeckle, Find Edges, Solarize (one-step), Box Blur, Radial Blur, Reduce Noise, Mosaic, Emboss, Color Halftone, Oil Paint. Filter Gallery and Tilt-Shift still use miniPaint's effects.
@@ -137,12 +138,12 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Warp presets (Arc, Bulge, Flag...). Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
+- Warp presets (Arc, Bulge, Flag...). Mixer Brush, Art History Brush, Actions: batch/droplets and recording of tool strokes, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart filters, and PSD placed layers (smart objects save as pixels).
 - Brush panel sections other than Tip Shape / Shape Dynamics (size jitter) / Scattering / Transfer; Brush Presets.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T in a normal window, so those commands work from the menus there. The full screen modes (F) also take the browser full screen and call the Keyboard Lock API, so the shortcuts reach pshot (not verifiable in headless tests).
 
 ## Testing
-- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 301 targets, 0 errors at last run.
+- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 303 targets, 0 errors at last run.
 - Feature checks run through the Playwright MCP browser. Screenshots are in `docs/screens/`.
