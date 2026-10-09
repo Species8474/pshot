@@ -20,6 +20,7 @@ import Ps_mask_class from './mask.js';
 import Ps_transform_class from './transform.js';
 import Ps_groups_class from './groups.js';
 import Ps_styles_class from './styles.js';
+import Ps_adjustment_layers_class from './adjustment-layers.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 
@@ -61,6 +62,7 @@ class Ps_workspace_class {
 		this.Transform = new Ps_transform_class();
 		this.Groups = new Ps_groups_class();
 		this.Styles = new Ps_styles_class();
+		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
 		this.two_column = false;
@@ -1106,7 +1108,7 @@ class Ps_workspace_class {
 			if (i == 4 || i == 11) {
 				html += '<div class="ps_adjust_break"></div>';
 			}
-			html += '<button type="button" class="ps_adjust' + (adj[1] ? '' : ' disabled') + '" data-index="' + i + '" title="' + adj[0] + '">'
+			html += '<button type="button" class="ps_adjust' + (adj[3] ? '' : ' disabled') + '" data-index="' + i + '" title="' + adj[0] + '">'
 				+ '<svg viewBox="0 0 18 18" width="18" height="18">' + adj[2] + '</svg></button>';
 		});
 		html += '</div>';
@@ -1114,7 +1116,8 @@ class Ps_workspace_class {
 		el.addEventListener('click', (event) => {
 			var button = event.target.closest('.ps_adjust');
 			if (!button || button.classList.contains('disabled')) return;
-			run_target(ADJUSTMENTS[button.dataset.index][1]);
+			//CS6: the Adjustments panel adds an adjustment layer
+			this.Adjustment_layers.create(ADJUSTMENTS[button.dataset.index][3]);
 		});
 	}
 

@@ -104,6 +104,14 @@ function install_pixel_layer_guard() {
 			alert_box('Could not use the ' + (member ? member.name : 'tool') + ' because the target layer is hidden.');
 			return;
 		}
+		if ((PAINT_TOOLS.includes(tool) || PIXEL_TOOLS.includes(tool)) && config.layer && config.layer.type == 'ps_adjust'
+			&& !(config.layer.ps_mask_editing && ['brush', 'pencil', 'gradient'].includes(tool))) {
+			event.stopPropagation();
+			event.preventDefault();
+			blocked = true;
+			alert_box('Could not complete your request because the target is an adjustment layer. Paint on its layer mask with the Brush, Pencil or Gradient tool.');
+			return;
+		}
 		if (PAINT_TOOLS.includes(tool) && config.layer && KIND[config.layer.type]) {
 			event.stopPropagation();
 			event.preventDefault();

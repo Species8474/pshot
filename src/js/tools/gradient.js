@@ -34,7 +34,7 @@ class Gradient_class extends Base_tools_class {
 		}
 
 		//pshot: CS6 draws the gradient into the active pixel layer
-		this.paint_target = config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
+		this.paint_target = (config.layer.ps_mask && config.layer.ps_mask_editing) || config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
 
 		//register new object - current layer is not ours or params changed
 		this.layer = {

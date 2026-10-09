@@ -37,6 +37,8 @@ class Ps_commands_class {
 
 	levels() { this.Adjust.levels(); }
 
+	new_adjustment_layer(kind) { app.GUI.Ps_workspace.Adjustment_layers.create(kind); }
+
 	layer_style(key) { app.GUI.Ps_workspace.Styles.open(null, key || 'blending'); }
 	copy_layer_style() { app.GUI.Ps_workspace.Styles.copy(); }
 	paste_layer_style() { app.GUI.Ps_workspace.Styles.paste(); }

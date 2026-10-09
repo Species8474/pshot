@@ -409,6 +409,15 @@ class Base_layers_class {
 			ctx.globalAlpha *= Groups.group_opacity(object);
 		}
 
+		//pshot: adjustment layers change what is already drawn
+		if (object.type == "ps_adjust") {
+			if (this.Base_gui.Ps_workspace) {
+				var adj_groups = this.Base_gui.Ps_workspace.Groups;
+				this.Base_gui.Ps_workspace.Adjustment_layers.apply(ctx, object, object.ps_parent ? adj_groups.group_opacity(object) : 1);
+			}
+			return;
+		}
+
 		//pshot: layer mask / layer styles - render the layer offscreen, keep only the
 		//revealed pixels, then add the effects
 		var ps_styles = this.Base_gui.Ps_workspace ? this.Base_gui.Ps_workspace.Styles : null;

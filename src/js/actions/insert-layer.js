@@ -108,6 +108,7 @@ export class Insert_layer_action extends Base_action {
 			render_function: null,
 			ps_parent: null,
 			ps_collapsed: false,
+			ps_adjust: null,
 		};
 
 		// Build data

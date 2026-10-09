@@ -50,7 +50,8 @@ async function commit_stroke(tool, pending, label) {
 		return;
 	}
 	var target = app.Layers.get_layer(target_id);
-	if (!target || target.type != 'image' || !target.link || !temp || temp.type != tool.name) {
+	var mask_target = !!(target && target.ps_mask && target.ps_mask_editing);
+	if (!target || (!mask_target && (target.type != 'image' || !target.link)) || !temp || temp.type != tool.name) {
 		return;
 	}
 

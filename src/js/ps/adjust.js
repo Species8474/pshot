@@ -208,7 +208,10 @@ class Ps_adjust_class {
 		}
 	}
 
-	show(title, html, setup, build_fn) {
+	show(title, html, setup, build_fn, kind) {
+		if (this.layer_mode) {
+			return this.show_for_layer(title, html, setup, kind);
+		}
 		var POP = new Dialog_class();
 		var job = this.begin(title);
 		if (!job) {
@@ -234,6 +237,54 @@ class Ps_adjust_class {
 		update();
 	}
 
+	/**
+	 * the same dialogs, editing an adjustment layer's settings (live, non-destructive)
+	 */
+	show_for_layer(title, html, setup, kind) {
+		var mode = this.layer_mode;
+		this.layer_mode = null;
+		var layer = mode.layer;
+		var original = JSON.parse(JSON.stringify(layer.ps_adjust));
+		var state = JSON.parse(JSON.stringify(layer.ps_adjust.state || {}));
+		//histogram of what is below the adjustment layer
+		var below = document.createElement('canvas');
+		below.width = config.WIDTH;
+		below.height = config.HEIGHT;
+		var visible = layer.visible;
+		layer.visible = false;
+		app.Layers.convert_layers_to_canvas(below.getContext('2d'), null, false);
+		layer.visible = visible;
+		var job = { original: below.getContext('2d').getImageData(0, 0, below.width, below.height) };
+		var POP = new Dialog_class();
+		POP.show({
+			title: title,
+			className: 'ps_adjust_dialog',
+			params: [{ function() { return '<div class="ps_adj">' + html + '<label class="ps_adj_preview"><input type="checkbox" id="ps_adj_preview" checked> Preview</label></div>'; } }],
+			on_finish() {
+				layer.ps_adjust = original;
+				var settings = { ps_adjust: { kind: kind, state: JSON.parse(JSON.stringify(state)) } };
+				app.State.do_action(new app.Actions.Bundle_action('adjustment_layer', mode.description || title, [
+					new app.Actions.Update_layer_action(layer.id, settings),
+				]));
+				if (mode.on_done) mode.on_done();
+			},
+			on_cancel() {
+				layer.ps_adjust = original;
+				config.need_render = true;
+				if (mode.on_done) mode.on_done();
+			},
+		});
+		var root = document.querySelector('#popups .popup .ps_adj');
+		var update = () => {
+			var preview = root.querySelector('#ps_adj_preview').checked;
+			layer.ps_adjust = preview ? { kind: kind, state: JSON.parse(JSON.stringify(state)) } : original;
+			config.need_render = true;
+		};
+		root.querySelector('#ps_adj_preview').addEventListener('change', update);
+		setup(root, state, update, job);
+		update();
+	}
+
 	// ---------- Levels ----------
 
 	levels() {
@@ -246,8 +297,10 @@ class Ps_adjust_class {
 			+ '<div class="ps_adj_pair"><input id="lv_out_black" type="number" min="0" max="255" value="0"><input id="lv_out_white" type="number" min="0" max="255" value="255"></div>';
 		var channels = { RGB: null, Red: null, Green: null, Blue: null };
 		this.show('Levels', html, (root, state, update, job) => {
-			state.values = {};
-			for (var c in channels) state.values[c] = { ib: 0, g: 1, iw: 255, ob: 0, ow: 255 };
+			if (!state.values) {
+				state.values = {};
+				for (var c in channels) state.values[c] = { ib: 0, g: 1, iw: 255, ob: 0, ow: 255 };
+			}
 			state.channel = 'RGB';
 			var fields = { ib: '#lv_in_black', g: '#lv_gamma', iw: '#lv_in_white', ob: '#lv_out_black', ow: '#lv_out_white' };
 			var load = () => {
@@ -265,30 +318,7 @@ class Ps_adjust_class {
 				});
 			}
 			load();
-		}, (state) => {
-			var luts = [0, 1, 2].map((ch) => {
-				var name = ['Red', 'Green', 'Blue'][ch];
-				var lut = new Uint8ClampedArray(256);
-				for (var x = 0; x < 256; x++) {
-					var v = x;
-					for (var key of ['RGB', name]) {
-						var p = state.values[key];
-						var t = clamp((v - p.ib) / Math.max(1, p.iw - p.ib), 0, 1);
-						t = Math.pow(t, 1 / clamp(p.g, 0.1, 9.99));
-						v = p.ob + t * (p.ow - p.ob);
-					}
-					lut[x] = v;
-				}
-				return lut;
-			});
-			return (src, dst) => {
-				for (var i = 0; i < src.length; i += 4) {
-					dst[i] = luts[0][src[i]];
-					dst[i + 1] = luts[1][src[i + 1]];
-					dst[i + 2] = luts[2][src[i + 2]];
-				}
-			};
-		});
+		}, (state) => this.build_levels(state), 'levels');
 	}
 
 	// ---------- Curves ----------
@@ -299,8 +329,10 @@ class Ps_adjust_class {
 			+ '<div class="ps_adj_pair"><span>Output: <b id="cv_out">-</b></span><span>Input: <b id="cv_in">-</b></span></div>'
 			+ '<div class="ps_adj_hint">Click to add a point, drag to move it, drag it off the graph to remove it.</div>';
 		this.show('Curves', html, (root, state, update, job) => {
-			state.points = {};
-			for (var c of ['RGB', 'Red', 'Green', 'Blue']) state.points[c] = [{ x: 0, y: 0 }, { x: 255, y: 255 }];
+			if (!state.points) {
+				state.points = {};
+				for (var c of ['RGB', 'Red', 'Green', 'Blue']) state.points[c] = [{ x: 0, y: 0 }, { x: 255, y: 255 }];
+			}
 			state.channel = 'RGB';
 			var canvas = root.querySelector('#cv_graph');
 			var draw = () => {
@@ -376,7 +408,89 @@ class Ps_adjust_class {
 			document.addEventListener('mouseup', () => { dragging = null; });
 			root.querySelector('#cv_channel').addEventListener('change', (e) => { state.channel = e.target.value; draw(); });
 			draw();
-		}, (state) => {
+		}, (state) => this.build_curves(state), 'curves');
+	}
+
+	// ---------- Hue/Saturation ----------
+
+	hue_saturation() {
+		var row = (id, label, min, max) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="' + id + '_n" value="0" min="' + min + '" max="' + max + '">'
+			+ '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="0"></div>';
+		var html = '<div class="ps_adj_row"><span>Preset:</span><select disabled><option>Default</option></select></div>'
+			+ '<div class="ps_adj_row"><select disabled><option>Master</option></select></div>'
+			+ row('hs_hue', 'Hue:', -180, 180) + row('hs_sat', 'Saturation:', -100, 100) + row('hs_light', 'Lightness:', -100, 100)
+			+ '<label class="ps_adj_check"><input type="checkbox" id="hs_colorize"> Colorize</label>';
+		this.show('Hue/Saturation', html, (root, state, update) => {
+			state.h = state.h || 0; state.s = state.s || 0; state.l = state.l || 0; state.colorize = !!state.colorize;
+			root.querySelector('#hs_colorize').checked = state.colorize;
+			for (let [id, key] of [['hs_hue', 'h'], ['hs_sat', 's'], ['hs_light', 'l']]) {
+				var range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
+				range.value = num.value = state[key];
+				var set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
+				range.addEventListener('input', () => set(parseInt(range.value)));
+				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
+			}
+			root.querySelector('#hs_colorize').addEventListener('change', (e) => {
+				state.colorize = e.target.checked;
+				if (state.colorize && state.s == 0) {
+					state.s = 25;
+					root.querySelector('#hs_sat').value = 25;
+					root.querySelector('#hs_sat_n').value = 25;
+				}
+				update();
+			});
+		}, (state) => this.build_hue_saturation(state), 'hue_saturation');
+	}
+
+	// ---------- Brightness/Contrast ----------
+
+	brightness_contrast() {
+		var row = (id, label, min, max) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="' + id + '_n" value="0" min="' + min + '" max="' + max + '">'
+			+ '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="0"></div>';
+		var html = row('bc_b', 'Brightness:', -150, 150) + row('bc_c', 'Contrast:', -50, 100)
+			+ '<label class="ps_adj_check"><input type="checkbox" id="bc_legacy"> Use Legacy</label>';
+		this.show('Brightness/Contrast', html, (root, state, update) => {
+			state.b = state.b || 0; state.c = state.c || 0; state.legacy = !!state.legacy;
+			root.querySelector('#bc_legacy').checked = state.legacy;
+			for (let [id, key] of [['bc_b', 'b'], ['bc_c', 'c']]) {
+				var range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
+				range.value = num.value = state[key];
+				var set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
+				range.addEventListener('input', () => set(parseInt(range.value)));
+				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
+			}
+			root.querySelector('#bc_legacy').addEventListener('change', (e) => { state.legacy = e.target.checked; update(); });
+		}, (state) => this.build_brightness_contrast(state), 'brightness_contrast');
+	}
+
+	// ---------- pixel functions (shared with adjustment layers) ----------
+
+	build_levels(state) {
+			var luts = [0, 1, 2].map((ch) => {
+				var name = ['Red', 'Green', 'Blue'][ch];
+				var lut = new Uint8ClampedArray(256);
+				for (var x = 0; x < 256; x++) {
+					var v = x;
+					for (var key of ['RGB', name]) {
+						var p = state.values[key];
+						var t = clamp((v - p.ib) / Math.max(1, p.iw - p.ib), 0, 1);
+						t = Math.pow(t, 1 / clamp(p.g, 0.1, 9.99));
+						v = p.ob + t * (p.ow - p.ob);
+					}
+					lut[x] = v;
+				}
+				return lut;
+			});
+			return (src, dst) => {
+				for (var i = 0; i < src.length; i += 4) {
+					dst[i] = luts[0][src[i]];
+					dst[i + 1] = luts[1][src[i + 1]];
+					dst[i + 2] = luts[2][src[i + 2]];
+				}
+			};
+	}
+
+	build_curves(state) {
 			var rgb = curve_lut(state.points.RGB);
 			var luts = ['Red', 'Green', 'Blue'].map((name) => {
 				var own = curve_lut(state.points[name]);
@@ -391,36 +505,9 @@ class Ps_adjust_class {
 					dst[i + 2] = luts[2][src[i + 2]];
 				}
 			};
-		});
 	}
 
-	// ---------- Hue/Saturation ----------
-
-	hue_saturation() {
-		var row = (id, label, min, max) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="' + id + '_n" value="0" min="' + min + '" max="' + max + '">'
-			+ '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="0"></div>';
-		var html = '<div class="ps_adj_row"><span>Preset:</span><select disabled><option>Default</option></select></div>'
-			+ '<div class="ps_adj_row"><select disabled><option>Master</option></select></div>'
-			+ row('hs_hue', 'Hue:', -180, 180) + row('hs_sat', 'Saturation:', -100, 100) + row('hs_light', 'Lightness:', -100, 100)
-			+ '<label class="ps_adj_check"><input type="checkbox" id="hs_colorize"> Colorize</label>';
-		this.show('Hue/Saturation', html, (root, state, update) => {
-			state.h = 0; state.s = 0; state.l = 0; state.colorize = false;
-			for (let [id, key] of [['hs_hue', 'h'], ['hs_sat', 's'], ['hs_light', 'l']]) {
-				var range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
-				var set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
-				range.addEventListener('input', () => set(parseInt(range.value)));
-				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
-			}
-			root.querySelector('#hs_colorize').addEventListener('change', (e) => {
-				state.colorize = e.target.checked;
-				if (state.colorize && state.s == 0) {
-					state.s = 25;
-					root.querySelector('#hs_sat').value = 25;
-					root.querySelector('#hs_sat_n').value = 25;
-				}
-				update();
-			});
-		}, (state) => {
+	build_hue_saturation(state) {
 			var dh = state.h / 360, ds = state.s / 100, dl = state.l / 100, colorize = state.colorize;
 			return (src, dst) => {
 				for (var i = 0; i < src.length; i += 4) {
@@ -441,26 +528,9 @@ class Ps_adjust_class {
 					dst[i + 2] = rgb[2];
 				}
 			};
-		});
 	}
 
-	// ---------- Brightness/Contrast ----------
-
-	brightness_contrast() {
-		var row = (id, label, min, max) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="' + id + '_n" value="0" min="' + min + '" max="' + max + '">'
-			+ '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="0"></div>';
-		var html = row('bc_b', 'Brightness:', -150, 150) + row('bc_c', 'Contrast:', -50, 100)
-			+ '<label class="ps_adj_check"><input type="checkbox" id="bc_legacy"> Use Legacy</label>';
-		this.show('Brightness/Contrast', html, (root, state, update) => {
-			state.b = 0; state.c = 0; state.legacy = false;
-			for (let [id, key] of [['bc_b', 'b'], ['bc_c', 'c']]) {
-				var range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
-				var set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
-				range.addEventListener('input', () => set(parseInt(range.value)));
-				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
-			}
-			root.querySelector('#bc_legacy').addEventListener('change', (e) => { state.legacy = e.target.checked; update(); });
-		}, (state) => {
+	build_brightness_contrast(state) {
 			var lut = new Uint8ClampedArray(256);
 			var c = state.c / 100;
 			for (var x = 0; x < 256; x++) {
@@ -485,7 +555,6 @@ class Ps_adjust_class {
 					dst[i + 2] = lut[src[i + 2]];
 				}
 			};
-		});
 	}
 }
 

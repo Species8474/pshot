@@ -90,9 +90,15 @@ Phase 1 (CS6 workspace) is built:
   - Effects are drawn at render time from the layer's alpha. They show in the panel's Effects list, and double-clicking a layer opens the dialog.
   - Copy, Paste and Clear Layer Style work, and effects survive PSD open and save.
 
+- **Adjustment layers** (`ps/adjustment-layers.js`): the Adjustments panel, the ◐ button and Layer > New Adjustment Layer create non-destructive `ps_adjust` layers.
+  - Kinds: Brightness/Contrast, Levels, Curves, Hue/Saturation, Black & White, Invert, Posterize, Threshold.
+  - They apply to the composite below at render time and respect opacity and the reveal-all mask (paint on it to hide the effect). Double-click the thumbnail to edit.
+  - PSD: adjustments map to and from ag-psd `adjustment`.
+  - Image > Adjustments stays destructive, as in CS6.
+
 ### Known gaps (next)
 - Quick Selection and Magnetic Lasso. The bucket, eraser, blur and clone tools don't respect the selection yet.
-- Adjustment layers; Bevel & Emboss, Satin and Pattern Overlay styles; vector masks.
+- More adjustment layer kinds (Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color); Bevel & Emboss, Satin and Pattern Overlay styles; vector masks.
 - Real Levels and Curves dialogs.
 - Brush hardness, opacity and flow (the controls exist but are greyed out).
 - Free Transform handles for pixel layers.

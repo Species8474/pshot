@@ -187,6 +187,22 @@ async function file_to_layers(file) {
 					});
 					continue;
 				}
+				if (child.adjustment) {
+					const adj = app.GUI.Ps_workspace.Adjustment_layers.from_psd(child.adjustment);
+					if (adj) {
+						layers.push({
+							name: child.name || 'Adjustment',
+							type: 'ps_adjust',
+							x: 0, y: 0, width: psd.width, height: psd.height,
+							opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
+							visible: !child.hidden,
+							ps_adjust: adj,
+							_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+							_parent_key: parent_key,
+						});
+						continue;
+					}
+				}
 				if (!child.canvas || child.canvas.width == 0 || child.canvas.height == 0) {
 					continue;
 				}
@@ -433,6 +449,18 @@ function build_psd() {
 					opacity: (layer.opacity == null ? 100 : layer.opacity) / 100,
 					children: build(layer.id),
 				});
+			}
+			else if (layer.type == 'ps_adjust') {
+				const adjustment = app.GUI.Ps_workspace.Adjustment_layers.to_psd(layer.ps_adjust || {});
+				if (adjustment) {
+					nodes.push({
+						name: layer.name,
+						opacity: (layer.opacity == null ? 100 : layer.opacity) / 100,
+						hidden: layer.visible == false,
+						adjustment: adjustment,
+						mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
+					});
+				}
 			}
 			else if (layer.type != null) {
 				nodes.push(psd_node(layer));

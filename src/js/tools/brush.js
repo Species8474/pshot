@@ -205,7 +205,7 @@ class Brush_class extends Base_tools_class {
 		if (config.layer.type != this.name || params_hash != this.params_hash) {
 			//register new object - current layer is not ours or params changed
 			//pshot: remember the pixel layer the stroke belongs to (CS6 paints into it)
-			this.paint_target = config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
+			this.paint_target = (config.layer.ps_mask && config.layer.ps_mask_editing) || config.layer.type == 'image' ? config.layer.id : (config.layer.type == null ? 'self' : null);
 			this.layer = {
 				type: this.name,
 				data: [[]],

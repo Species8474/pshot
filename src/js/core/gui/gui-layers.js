@@ -193,6 +193,12 @@ class GUI_layers_class {
 			if (row && row.classList.contains('ps_group_row')) {
 				return;
 			}
+			var row_layer = row ? _this.Base_layers.get_layer(row.dataset.id) : null;
+			if (row_layer && row_layer.type == 'ps_adjust' && event.target.closest('[data-action="layer_thumb"]')) {
+				//CS6: double-click the adjustment thumbnail edits the adjustment
+				app.GUI.Ps_workspace.Adjustment_layers.edit(row_layer);
+				return;
+			}
 			if (row && !event.target.closest('[data-action]')) {
 				//CS6: double-click the layer row opens Layer Style > Blending Options
 				app.GUI.Ps_workspace.Styles.open(_this.Base_layers.get_layer(row.dataset.id), 'blending');
@@ -367,6 +373,22 @@ class GUI_layers_class {
 	draw_thumbnail(canvas, layer) {
 		var ctx = canvas.getContext('2d');
 		var size = canvas.width;
+		if (layer.type == 'ps_adjust') {
+			//CS6 shows the adjustment's icon instead of pixels
+			ctx.clearRect(0, 0, size, size);
+			ctx.fillStyle = '#5a5a5a';
+			ctx.fillRect(0, 0, size, size);
+			ctx.strokeStyle = '#e6e6e6';
+			ctx.lineWidth = 2;
+			ctx.beginPath();
+			ctx.arc(size / 2, size / 2, size / 3, 0, Math.PI * 2);
+			ctx.stroke();
+			ctx.fillStyle = '#e6e6e6';
+			ctx.beginPath();
+			ctx.arc(size / 2, size / 2, size / 3, -Math.PI / 2, Math.PI / 2);
+			ctx.fill();
+			return;
+		}
 		var W = config.WIDTH;
 		var H = config.HEIGHT;
 		var scale = Math.min(size / W, size / H);
