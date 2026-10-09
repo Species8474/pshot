@@ -26,6 +26,7 @@ import Ps_text_aa_class from './text-aa.js';
 import Ps_clone_source_class from './clone-source.js';
 import Ps_measure_log_class from './measure-log.js';
 import Ps_brush_presets_class from './brush-presets.js';
+import Ps_tool_presets_class from './tool-presets.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -55,10 +56,11 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes', clone_source: 'Clone Source', brush_presets: 'Brush Presets',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes', clone_source: 'Clone Source', brush_presets: 'Brush Presets', tool_presets: 'Tool Presets',
 };
 
 const STRIP_ICONS = {
+	tool_presets: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 3h7l5 5-7 7-5-5z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="6.5" r="1.4" fill="currentColor"/></svg>',
 	brush_presets: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M14 2.5c.5.5-4 6.3-5.6 7.6L7 8.7C8.2 7 13.5 2 14 2.5zM6.4 9.6c-1.4 0-2.5.9-2.7 2.3-.2 1.3-.7 1.9-1.7 2.3 2.2 1.1 5.4.5 5.9-1.8.2-.9-.3-2-1.5-2.8z" fill="currentColor"/><path d="M11 12.5h5M11 15h5" stroke="currentColor" stroke-width="1.2"/></svg>',
 	clone_source: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M5 2.5h4v3c0 1.2-1.2 1.6-1.2 2.8h3.7v2.5H2.5V8.3h3.7C6.2 7.1 5 6.7 5 5.5z" fill="currentColor"/><path d="M10.5 12h5v3.5h-5z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	notes: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 2.5h9l3 3v10H3z M12 2.5v3h3M5.5 8h7M5.5 10.5h7M5.5 13h4.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
@@ -111,6 +113,7 @@ class Ps_workspace_class {
 		this.Clone_source = new Ps_clone_source_class();
 		this.Measure_log = new Ps_measure_log_class();
 		this.Brush_presets = new Ps_brush_presets_class();
+		this.Tool_presets = new Ps_tool_presets_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -171,6 +174,7 @@ class Ps_workspace_class {
 		this.Preferences.install();
 		this.Notes.install();
 		this.Clone_source.install();
+		this.Tool_presets.install();
 
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());
@@ -481,6 +485,7 @@ class Ps_workspace_class {
 			el.innerHTML = '<svg viewBox="0 0 18 18" width="18" height="18">' + member.icon + '</svg><span class="ps_caret">&#9662;</span>';
 			el.title = 'Tool Preset picker - ' + member.name;
 		}
+		if (this.Tool_presets && this.Tool_presets.current_only) this.Tool_presets.render();
 	}
 
 	init_toolbox_extras() {
@@ -794,6 +799,9 @@ class Ps_workspace_class {
 		}
 		if (panel == 'brush_presets') {
 			this.Brush_presets.render();
+		}
+		if (panel == 'tool_presets') {
+			this.Tool_presets.render();
 		}
 	}
 

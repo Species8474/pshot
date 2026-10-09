@@ -399,7 +399,7 @@ const M = [
 		{ name: 'Styles', target: 'ps/commands.toggle_panel', parameter: 'styles', checked: 'panel:styles' },
 		{ name: 'Swatches', target: 'ps/commands.toggle_panel', parameter: 'swatches', checked: 'panel:swatches' },
 		'Timeline',
-		'Tool Presets',
+		{ name: 'Tool Presets', target: 'ps/commands.toggle_panel', parameter: 'tool_presets', checked: 'panel:tool_presets' },
 		'-',
 		{ name: 'Options', target: 'ps/commands.toggle_options_bar', checked: 'options_bar' },
 		{ name: 'Tools', target: 'ps/commands.toggle_toolbox', checked: 'toolbox' },
