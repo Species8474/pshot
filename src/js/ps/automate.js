@@ -9,6 +9,8 @@ import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import { file_to_layers, is_psd } from './document.js';
 import { best_offset } from './auto-align.js';
+import { make_pdf, canvas_page } from './pdf.js';
+import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 function pick(multiple) {
@@ -330,6 +332,119 @@ class Ps_automate_class {
 			}
 			await new_document('ContactSheet-' + String(page + 1).padStart(3, '0'), W, H, items, 'Contact Sheet II');
 		}
+	}
+
+	// ---------- PDF ----------
+
+	/**
+	 * the active document merged (on the given background)
+	 */
+	merged(background) {
+		var c = new_canvas(config.WIDTH, config.HEIGHT), ctx = c.getContext('2d');
+		ctx.fillStyle = background || '#ffffff';
+		ctx.fillRect(0, 0, c.width, c.height);
+		app.Layers.convert_layers_to_canvas(ctx, null, false);
+		return c;
+	}
+
+	save_pdf(pages, name, opts) {
+		var bytes = make_pdf(pages, opts);
+		filesaver.saveAs(new Blob([bytes], { type: 'application/pdf' }), name + '.pdf');
+	}
+
+	/**
+	 * File > Automate > PDF Presentation
+	 */
+	pdf_presentation() {
+		var files = [];
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'PDF Presentation',
+			params: [
+				{ title: 'Source Files:', html: '<button type="button" id="pdf_browse">Browse...</button> <span id="pdf_count">No files</span>' },
+				{ name: 'open_files', title: 'Add Open Files', value: true },
+				{ name: 'output', title: 'Output Options:', values: ['Multi-Page Document', 'Presentation'], value: 'Multi-Page Document' },
+				{ name: 'background', title: 'Background:', values: ['White', 'Black'], value: 'White' },
+				{ name: 'filename', title: 'Include Filename', value: false },
+				{ name: 'advance', title: 'Advance Every (seconds):', value: 5 },
+				{ name: 'transition', title: 'Transition:', type: 'select', values: ['None', 'Wipe', 'Dissolve', 'Box', 'Blinds', 'Split', 'Glitter'], value: 'None' },
+			],
+			on_load: (params, pop) => {
+				pop.el.querySelector('#pdf_browse').addEventListener('click', async () => {
+					files = await pick(true);
+					pop.el.querySelector('#pdf_count').textContent = files.length + ' file' + (files.length == 1 ? '' : 's');
+				});
+			},
+			on_finish: (p) => this.make_presentation(files, p),
+		});
+	}
+
+	async make_presentation(files, p) {
+		var bg = p.background == 'Black' ? '#000000' : '#ffffff';
+		var sources = [];
+		if (p.open_files) {
+			var Docs = app.GUI.Ps_workspace.Documents;
+			var active = Docs.active;
+			for (var i = 0; i < Docs.docs.length; i++) {
+				Docs.switch_to(i);
+				await wait(50);
+				sources.push({ name: Docs.current().name || 'Untitled', canvas: this.merged(bg) });
+			}
+			Docs.switch_to(active);
+		}
+		for (var f of files) sources.push({ name: f.name, canvas: await file_canvas(f) });
+		if (!sources.length) {
+			alertify.error('PDF Presentation needs source files or open documents.');
+			return;
+		}
+		var pages = [];
+		for (var s of sources) {
+			var c = new_canvas(s.canvas.width, s.canvas.height), ctx = c.getContext('2d');
+			ctx.fillStyle = bg;
+			ctx.fillRect(0, 0, c.width, c.height);
+			ctx.drawImage(s.canvas, 0, 0);
+			if (p.filename) {
+				var fs = Math.max(10, Math.round(c.height / 30));
+				ctx.font = fs + 'px Arial';
+				ctx.fillStyle = bg == '#000000' ? '#ffffff' : '#000000';
+				ctx.textBaseline = 'bottom';
+				ctx.fillText(s.name, fs / 2, c.height - fs / 2);
+			}
+			pages.push(await canvas_page(c));
+		}
+		var presentation = p.output == 'Presentation';
+		var TRANS = { Wipe: 'Wipe', Dissolve: 'Dissolve', Box: 'Box', Blinds: 'Blinds', Split: 'Split', Glitter: 'Glitter' };
+		this.save_pdf(pages, 'Presentation', {
+			full_screen: presentation,
+			duration: presentation ? Math.max(1, parseFloat(p.advance) || 5) : 0,
+			transition: presentation ? TRANS[p.transition] : null,
+		});
+		app.GUI.Ps_workspace.status_message('PDF Presentation: ' + pages.length + ' page' + (pages.length == 1 ? '' : 's') + '.');
+	}
+
+	/**
+	 * File > Scripts > Layer Comps to PDF
+	 */
+	async comps_to_pdf() {
+		var comps = config.ps_comps || [];
+		if (!comps.length) {
+			alertify.error('There are no layer comps in the document.');
+			return;
+		}
+		var Comps = app.GUI.Ps_workspace.Comps;
+		var start = app.State.action_history_index;
+		var pages = [];
+		for (var i = 0; i < comps.length; i++) {
+			await Comps.apply(i);
+			await wait(150);
+			pages.push(await canvas_page(this.merged('#ffffff')));
+		}
+		//back to the state before the export
+		await app.GUI.Ps_workspace.goto_history(start);
+		app.State.action_history.length = start;
+		app.GUI.Ps_workspace.render_history();
+		this.save_pdf(pages, app.GUI.Ps_workspace.document_name().replace(/\.[^.]+$/, '') + ' Comps', {});
+		app.GUI.Ps_workspace.status_message('Layer Comps to PDF: ' + pages.length + ' pages.');
 	}
 
 	// ---------- Conditional Mode Change ----------
