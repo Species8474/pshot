@@ -9,6 +9,7 @@ import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import { ensure_pixel_layer } from './pixel-layer.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
+import { quantize } from './indexed.js';
 
 function clamp(v, lo, hi) {
 	return v < lo ? lo : (v > hi ? hi : v);
@@ -222,12 +223,12 @@ class Ps_adjust_class {
 		});
 	}
 
-	finish(job, fn, title) {
+	finish(job, fn, title, extra) {
 		delete job.layer.link_canvas;
 		var canvas = this.render(job, fn);
-		app.State.do_action(new app.Actions.Bundle_action('adjust', title, [
+		return app.State.do_action(new app.Actions.Bundle_action('adjust', title, [
 			new app.Actions.Update_layer_image_action(canvas, job.layer.id),
-		]));
+		].concat(extra || [])));
 	}
 
 	cancel(job) {
@@ -302,7 +303,8 @@ class Ps_adjust_class {
 					else SF.add(job.layer, job.smart_filter.key, title, state);
 					return;
 				}
-				_this.finish(job, build_fn(state), (hooks && hooks.history_name) || title);
+				var done = _this.finish(job, build_fn(state), (hooks && hooks.history_name) || title, hooks && hooks.extra ? hooks.extra(state) : null);
+				if (hooks && hooks.after) done.then(() => hooks.after(state));
 			},
 			on_cancel() {
 				_this.cancel(job);
@@ -1240,6 +1242,58 @@ class Ps_adjust_class {
 				dst[i] = o[0] * 255 + e; dst[i + 1] = o[1] * 255 + e; dst[i + 2] = o[2] * 255 + e;
 			}
 		};
+	}
+
+	/**
+	 * Image > Mode > Indexed Color (after flattening, like CS6)
+	 */
+	indexed_color() {
+		var palettes = ['Exact', 'System (Mac OS)', 'System (Windows)', 'Web', 'Uniform', 'Local (Perceptual)', 'Local (Selective)', 'Local (Adaptive)', 'Master (Perceptual)', 'Master (Selective)', 'Master (Adaptive)', 'Custom...', 'Previous'];
+		var enabled = ['Web', 'Local (Perceptual)', 'Local (Selective)', 'Local (Adaptive)'];
+		var html = '<div class="ps_adj_row"><span>Palette:</span><select id="ix_palette">' + palettes.map(p => '<option' + (enabled.includes(p) ? '' : ' disabled') + (p == 'Local (Selective)' ? ' selected' : '') + '>' + p + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><span>Colors:</span><input type="number" id="ix_colors" min="2" max="256" value="256" style="width:60px"></div>'
+			+ '<div class="ps_adj_row"><span>Forced:</span><select disabled><option>Black and White</option></select></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="ix_transparency" checked> Transparency</label>'
+			+ '<div class="ps_adj_label">Options</div>'
+			+ '<div class="ps_adj_row"><span>Matte:</span><select disabled><option>None</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Dither:</span><select id="ix_dither"><option>None</option><option selected>Diffusion</option><option disabled>Pattern</option><option disabled>Noise</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Amount:</span><input type="number" id="ix_amount" min="0" max="100" value="75" style="width:60px"><span>%</span></div>'
+			+ '<label class="ps_adj_check disabled"><input type="checkbox" disabled> Preserve Exact Colors</label>';
+		var open = () => this.show('Indexed Color', html, (root, state, update) => {
+			Object.assign(state, { palette: 'Local (Selective)', colors: 256, transparency: true, dither: 'Diffusion', amount: 75 });
+			root.querySelector('#ix_palette').addEventListener('change', (e) => { state.palette = e.target.value; if (state.palette == 'Web') { state.colors = 216; root.querySelector('#ix_colors').value = 216; } update(); });
+			root.querySelector('#ix_colors').addEventListener('change', (e) => { state.colors = Math.max(2, Math.min(256, parseInt(e.target.value) || 256)); e.target.value = state.colors; update(); });
+			root.querySelector('#ix_transparency').addEventListener('change', (e) => { state.transparency = e.target.checked; update(); });
+			root.querySelector('#ix_dither').addEventListener('change', (e) => { state.dither = e.target.value; root.querySelector('#ix_amount').disabled = state.dither == 'None'; update(); });
+			root.querySelector('#ix_amount').addEventListener('change', (e) => { state.amount = Math.max(0, Math.min(100, parseInt(e.target.value) || 0)); update(); });
+		}, (state) => (src, dst, w, h) => {
+			var q = quantize(src, w, h, { colors: state.colors, transparency: state.transparency, dither: state.dither == 'None' ? 0 : state.amount,
+				reduction: state.palette == 'Web' ? 'Restrictive (Web)' : (state.palette == 'Local (Perceptual)' ? 'Perceptual' : 'Selective') });
+			this.last_table = q.palette.filter((c, i) => i != q.transparent);
+			for (var i = 0; i < w * h; i++) {
+				var o = i * 4, k = q.index[i];
+				if (k == q.transparent) { dst[o + 3] = 0; continue; }
+				var c = q.palette[k];
+				dst[o] = c[0]; dst[o + 1] = c[1]; dst[o + 2] = c[2]; dst[o + 3] = 255;
+			}
+		}, 'indexed', { extra: () => [new app.Actions.Update_config_action({ ps_mode: 'Indexed', ps_color_table: this.last_table })], after: () => app.GUI.Ps_workspace.enforce_mode() });
+		if (config.layers.filter(l => l.type != null).length > 1) {
+			if (!window.confirm('Flatten layers?')) return;
+			var res = app.GUI.modules['ps/commands'].flatten_image();
+			if (res && res.then) return res.then(open);
+		}
+		return open();
+	}
+
+	/**
+	 * Image > Mode > Color Table (Indexed Color mode)
+	 */
+	color_table() {
+		var table = config.ps_color_table || [];
+		var html = '<div class="ps_adj_row"><span>Table:</span><select disabled><option>Custom</option></select></div><div class="ps_ctable">'
+			+ table.map(c => '<span style="background:rgb(' + c.join(',') + ')" title="' + c.join(', ') + '"></span>').join('') + '</div>';
+		var POP = new Dialog_class();
+		POP.show({ title: 'Color Table', className: 'ps_adjust_dialog', params: [{ function() { return '<div class="ps_adj">' + html + '</div>'; } }] });
 	}
 
 	/**

@@ -98,8 +98,8 @@ const M = [
 	]],
 	['Image', [
 		['Mode', [
-			'Bitmap...', { name: 'Grayscale', checked: 'mode_gray', target: 'ps/commands.mode_grayscale' }, 'Duotone...', 'Indexed Color...|image/decrease_colors.decrease_colors', { name: 'RGB Color', checked: 'mode_rgb', target: 'ps/commands.mode_rgb' }, 'CMYK Color', 'Lab Color', 'Multichannel', '-',
-			{ name: '8 Bits/Channel', checked: true, target: 'ps/commands.noop' }, '16 Bits/Channel', '32 Bits/Channel', '-', 'Color Table...',
+			'Bitmap...', { name: 'Grayscale', checked: 'mode_gray', target: 'ps/commands.mode_grayscale' }, 'Duotone...', { name: 'Indexed Color...', checked: 'mode_indexed', target: 'ps/commands.mode_indexed' }, { name: 'RGB Color', checked: 'mode_rgb', target: 'ps/commands.mode_rgb' }, 'CMYK Color', 'Lab Color', 'Multichannel', '-',
+			{ name: '8 Bits/Channel', checked: true, target: 'ps/commands.noop' }, '16 Bits/Channel', '32 Bits/Channel', '-', 'Color Table...|ps/commands.color_table',
 		]],
 		'-',
 		['Adjustments', [

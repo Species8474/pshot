@@ -971,7 +971,8 @@ class Ps_workspace_class {
 			case 'workspace_photography': return this.workspace_name == 'Photography';
 			case 'workspace_typography': return this.workspace_name == 'Typography';
 			case 'mode_gray': return config.ps_mode == 'Grayscale';
-			case 'mode_rgb': return config.ps_mode != 'Grayscale';
+			case 'mode_rgb': return config.ps_mode != 'Grayscale' && config.ps_mode != 'Indexed';
+			case 'mode_indexed': return config.ps_mode == 'Indexed';
 			case 'screen_mode_standard': return this.screen_mode == 'standard';
 			case 'screen_mode_menu': return this.screen_mode == 'menu';
 			case 'screen_mode_full': return this.screen_mode == 'full';
@@ -1073,7 +1074,7 @@ class Ps_workspace_class {
 	}
 
 	tab_label(name, zoom, layer) {
-		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + (config.ps_mode == 'Grayscale' ? 'Gray' : 'RGB') + '/8)';
+		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + (config.ps_mode == 'Grayscale' ? 'Gray' : (config.ps_mode == 'Indexed' ? 'Index' : 'RGB')) + (config.ps_mode == 'Indexed' ? ')' : '/8)');
 	}
 
 	render_document_tab() {

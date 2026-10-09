@@ -1299,8 +1299,11 @@ class Ps_commands_class {
 		app.GUI.Ps_workspace.enforce_mode();
 	}
 
+	mode_indexed() { if (config.ps_mode != 'Indexed') return this.Adjust.indexed_color(); }
+	color_table() { if (config.ps_mode == 'Indexed') this.Adjust.color_table(); }
+
 	async mode_rgb() {
-		if (config.ps_mode != 'Grayscale') return;
+		if (config.ps_mode != 'Grayscale' && config.ps_mode != 'Indexed') return;
 		await app.State.do_action(new app.Actions.Bundle_action('mode', 'RGB Color', [new app.Actions.Update_config_action({ ps_mode: 'RGB' })]));
 		app.GUI.Ps_workspace.enforce_mode();
 	}
