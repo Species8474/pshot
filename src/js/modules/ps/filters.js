@@ -425,6 +425,68 @@ class Ps_filters_class {
 
 	// ---------- Distort ----------
 
+	/**
+	 * CS6 Filter > Lens Correction (Custom): distortion, chromatic aberration,
+	 * vignette, perspective, angle, scale
+	 */
+	lens_correction() {
+		this.dialog('lens_correction', 'Lens Correction', [
+			{ key: 'distortion', label: 'Remove Distortion:', min: -100, max: 100, value: 0 },
+			{ key: 'red', label: 'Fix Red/Cyan Fringe:', min: -100, max: 100, value: 0 },
+			{ key: 'blue', label: 'Fix Blue/Yellow Fringe:', min: -100, max: 100, value: 0 },
+			{ key: 'vignette', label: 'Vignette Amount:', min: -100, max: 100, value: 0 },
+			{ key: 'midpoint', label: 'Vignette Midpoint:', min: 0, max: 100, value: 50 },
+			{ key: 'vertical', label: 'Vertical Perspective:', min: -100, max: 100, value: 0 },
+			{ key: 'horizontal', label: 'Horizontal Perspective:', min: -100, max: 100, value: 0 },
+			{ key: 'angle', label: 'Angle:', min: 0, max: 360, step: 0.1, value: 0, unit: '°' },
+			{ key: 'scale', label: 'Scale:', min: 50, max: 150, value: 100, unit: '%' },
+			{ key: 'edge', label: 'Edge:', type: 'select', values: ['Edge Extension', 'Transparency', 'Black Color', 'White Color'], value: 'Transparency' },
+		], (s) => (src, dst, w, h) => {
+			var cx = w / 2, cy = h / 2, R = Math.hypot(cx, cy);
+			var k = s.distortion / 100 * 0.5, sc = s.scale / 100;
+			var a = -s.angle * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+			var pv = s.vertical / 100 * 0.6, ph = s.horizontal / 100 * 0.6;
+			var cr = 1 + s.red / 100 * 0.01, cb = 1 + s.blue / 100 * 0.01;
+			var vig = s.vignette / 100, mid = s.midpoint / 100;
+			var px = [0, 0, 0, 0];
+			var fetch = (x, y, c) => {
+				if (x < -0.5 || y < -0.5 || x > w - 0.5 || y > h - 0.5) {
+					if (s.edge == 'Edge Extension') { x = Math.max(0, Math.min(w - 1, x)); y = Math.max(0, Math.min(h - 1, y)); }
+					else return null;
+				}
+				sample(src, w, h, x, y, px, 0);
+				return c < 0 ? px : px[c];
+			};
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var u = (x + 0.5 - cx) / R / sc, v = (y + 0.5 - cy) / R / sc;
+					var ru = u * ca - v * sa, rv = u * sa + v * ca;
+					var dw = 1 - pv * rv - ph * ru;
+					ru /= dw; rv /= dw;
+					var f = 1 + k * (ru * ru + rv * rv);
+					var bx = ru * f * R + cx - 0.5, by = rv * f * R + cy - 0.5;
+					var o = (y * w + x) * 4;
+					var base = fetch(bx, by, -1);
+					if (!base) {
+						if (s.edge == 'Black Color' || s.edge == 'White Color') { var e = s.edge == 'Black Color' ? 0 : 255; dst[o] = dst[o + 1] = dst[o + 2] = e; dst[o + 3] = 255; }
+						else dst[o + 3] = 0;
+						continue;
+					}
+					dst[o + 1] = base[1]; dst[o + 3] = base[3];
+					var rr = fetch((bx + 0.5 - cx) * cr + cx - 0.5, (by + 0.5 - cy) * cr + cy - 0.5, 0);
+					var bb = fetch((bx + 0.5 - cx) * cb + cx - 0.5, (by + 0.5 - cy) * cb + cy - 0.5, 2);
+					dst[o] = rr == null ? base[0] : rr;
+					dst[o + 2] = bb == null ? base[2] : bb;
+					if (vig) {
+						var r = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / R, t = r <= mid * 0.7 ? 0 : Math.min(1, (r - mid * 0.7) / (1 - mid * 0.7));
+						var m = 1 + vig * t * t;
+						dst[o] *= m; dst[o + 1] *= m; dst[o + 2] *= m;
+					}
+				}
+			}
+		});
+	}
+
 	twirl() {
 		this.dialog('twirl', 'Twirl', [{ key: 'angle', label: 'Angle:', min: -999, max: 999, value: 50, unit: '°' }],
 			(s) => (src, dst, w, h) => distort(src, dst, w, h, (r, a) => [r, a - s.angle * Math.PI / 180 * (1 - r) * (1 - r)]));

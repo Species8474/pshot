@@ -249,7 +249,7 @@ const M = [
 		'-',
 		'Filter Gallery...|ps/commands.filter_gallery',
 		'Adaptive Wide Angle...|Alt+Shift+Ctrl+A',
-		'Lens Correction...|Shift+Ctrl+R',
+		'Lens Correction...|Shift+Ctrl+R|ps/filters.lens_correction',
 		'Liquify...|Shift+Ctrl+X|ps/commands.liquify',
 		'Oil Paint...|ps/filters.oil_paint',
 		'Vanishing Point...|Alt+Ctrl+V',
