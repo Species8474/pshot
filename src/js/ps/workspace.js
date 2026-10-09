@@ -158,6 +158,7 @@ class Ps_workspace_class {
 	}
 
 	tick() {
+		this.enforce_mode();
 		this.render_document_tab();
 		this.render_statusbar();
 		this.render_fg_bg();
@@ -435,6 +436,25 @@ class Ps_workspace_class {
 		this.set_fg(config.BG_COLOR);
 		config.BG_COLOR = fg;
 		this.render_fg_bg();
+	}
+
+	/**
+	 * Grayscale mode: the foreground/background colors stay gray; the Channels panel shows Gray
+	 */
+	enforce_mode() {
+		if (config.ps_mode == 'Grayscale') {
+			var gray = (hex) => {
+				var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
+				var v = Math.round(r * 0.299 + g * 0.587 + b * 0.114).toString(16).padStart(2, '0');
+				return '#' + v + v + v;
+			};
+			if (config.COLOR && gray(config.COLOR) != config.COLOR.toLowerCase().substr(0, 7)) this.set_fg(gray(config.COLOR));
+			if (config.BG_COLOR && gray(config.BG_COLOR) != config.BG_COLOR.toLowerCase().substr(0, 7)) config.BG_COLOR = gray(config.BG_COLOR);
+		}
+		if (this.channels_mode !== config.ps_mode) {
+			this.channels_mode = config.ps_mode;
+			this.render_channels(true);
+		}
 	}
 
 	render_fg_bg() {
@@ -775,6 +795,8 @@ class Ps_workspace_class {
 			case 'workspace_painting': return this.workspace_name == 'Painting';
 			case 'workspace_photography': return this.workspace_name == 'Photography';
 			case 'workspace_typography': return this.workspace_name == 'Typography';
+			case 'mode_gray': return config.ps_mode == 'Grayscale';
+			case 'mode_rgb': return config.ps_mode != 'Grayscale';
 			case 'screen_mode_standard': return this.screen_mode == 'standard';
 			case 'screen_mode_menu': return this.screen_mode == 'menu';
 			case 'screen_mode_full': return this.screen_mode == 'full';
@@ -849,7 +871,7 @@ class Ps_workspace_class {
 	}
 
 	tab_label(name, zoom, layer) {
-		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', RGB/8)';
+		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + (config.ps_mode == 'Grayscale' ? 'Gray' : 'RGB') + '/8)';
 	}
 
 	render_document_tab() {
@@ -1169,7 +1191,7 @@ class Ps_workspace_class {
 			delete el.dataset.ready;
 		}
 		if (!el.dataset.ready) {
-			var rows = [['RGB', 'Ctrl+2', null], ['Red', 'Ctrl+3', 0], ['Green', 'Ctrl+4', 1], ['Blue', 'Ctrl+5', 2]];
+			var rows = config.ps_mode == 'Grayscale' ? [['Gray', 'Ctrl+2', null]] : [['RGB', 'Ctrl+2', null], ['Red', 'Ctrl+3', 0], ['Green', 'Ctrl+4', 1], ['Blue', 'Ctrl+5', 2]];
 			var html = '';
 			for (var row of rows) {
 				html += '<div class="ps_channel_row' + (row[0] == 'RGB' ? '' : '') + ' active">'

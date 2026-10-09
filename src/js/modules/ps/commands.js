@@ -1106,6 +1106,51 @@ class Ps_commands_class {
 		a.click();
 	}
 
+	/**
+	 * Image > Mode > Grayscale: every layer's colors become luminosity ("Discard color information?")
+	 */
+	async mode_grayscale() {
+		if (config.ps_mode == 'Grayscale') return;
+		if (!window.confirm('Discard color information?')) return;
+		var gray = (hex) => {
+			if (!hex || hex[0] != '#') return hex;
+			var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
+			var v = Math.round(r * 0.299 + g * 0.587 + b * 0.114).toString(16).padStart(2, '0');
+			return '#' + v + v + v + (hex.length == 9 ? hex.substr(7, 2) : '');
+		};
+		var actions = [];
+		for (var layer of config.layers) {
+			if (layer.type == 'image' && layer.link) {
+				var c = document.createElement('canvas');
+				c.width = layer.width_original;
+				c.height = layer.height_original;
+				var ctx = c.getContext('2d', { willReadFrequently: true });
+				ctx.drawImage(layer.link, 0, 0);
+				var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+				for (var i = 0; i < d.length; i += 4) d[i] = d[i + 1] = d[i + 2] = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+				ctx.putImageData(img, 0, 0);
+				actions.push(new app.Actions.Update_layer_image_action(c, layer.id));
+			}
+			else if (layer.type == 'text' && layer.data) {
+				var data = JSON.parse(JSON.stringify(layer.data));
+				data.forEach(line => line.forEach(span => { if (span.meta) { span.meta.fill_color = gray(span.meta.fill_color); span.meta.stroke_color = gray(span.meta.stroke_color); } }));
+				actions.push(new app.Actions.Update_layer_action(layer.id, { data: data }));
+			}
+			else if (layer.params && (layer.params.fill_color || layer.params.border_color)) {
+				actions.push(new app.Actions.Update_layer_action(layer.id, { params: Object.assign({}, layer.params, { fill_color: gray(layer.params.fill_color), border_color: gray(layer.params.border_color) }), color: gray(layer.color) }));
+			}
+		}
+		actions.push(new app.Actions.Update_config_action({ ps_mode: 'Grayscale' }));
+		await app.State.do_action(new app.Actions.Bundle_action('mode', 'Grayscale', actions));
+		app.GUI.Ps_workspace.enforce_mode();
+	}
+
+	async mode_rgb() {
+		if (config.ps_mode != 'Grayscale') return;
+		await app.State.do_action(new app.Actions.Bundle_action('mode', 'RGB Color', [new app.Actions.Update_config_action({ ps_mode: 'RGB' })]));
+		app.GUI.Ps_workspace.enforce_mode();
+	}
+
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
 	toggle_pixel_grid() {

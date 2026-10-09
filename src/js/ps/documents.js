@@ -124,6 +124,7 @@ class Ps_documents_class {
 			ps_path_active: config.ps_path_active,
 			ps_alpha: config.ps_alpha,
 			ps_alpha_active: config.ps_alpha_active,
+			ps_mode: config.ps_mode,
 		};
 	}
 
@@ -147,6 +148,7 @@ class Ps_documents_class {
 		app.GUI.Ps_workspace.Selection.restore(state.ps_selection);
 		commands.undo_toggle_index = state.undo_toggle_index;
 		commands.last_selection = state.last_selection;
+		config.ps_mode = state.ps_mode || 'RGB';
 		config.ps_alpha = state.ps_alpha || [];
 		config.ps_alpha_active = state.ps_alpha_active == null ? -1 : state.ps_alpha_active;
 		config.ps_paths = state.ps_paths || [];
@@ -212,6 +214,7 @@ class Ps_documents_class {
 		config.ps_path_active = -1;
 		config.ps_alpha = [];
 		config.ps_alpha_active = -1;
+		config.ps_mode = 'RGB';
 		app.GUI.Ps_workspace.Paths.selected = null;
 		app.GUI.Ps_workspace.Paths.drawing = false;
 		app.GUI.Ps_workspace.Paths.render_panel();
