@@ -39,21 +39,20 @@ class Layer_duplicate_class {
 		delete params.id;
 		delete params.order;
 
-		//generate name
-		var name_number = params.name.match(/^(.*) #([0-9]+)$/);
-		if(name_number == null){
-			//first duplicate
-			params.name = params.name + " #2";
+		//pshot: CS6 names duplicates "X copy", "X copy 2", ... and keeps them in place
+		var base = params.name.replace(/ copy( \d+)?$/, '');
+		var existing = config.layers.map(l => l.name);
+		var name = base + ' copy';
+		for (var n = 2; existing.indexOf(name) >= 0; n++) {
+			name = base + ' copy ' + n;
 		}
-		else{
-			//nth duplicate - name like "query #17"
-			params.name = name_number[1] + " #" + (parseInt(name_number[2]) + 1)
-		}
-
-		if(params.x != 0 || params.y != 0 || params.width != config.WIDTH || params.height != config.HEIGHT){
-			params.x += 10;
-			params.y += 10;
-		}
+		params.name = name;
+		var source = config.layer;
+		delete params.ps_mask;
+		delete params.ps_mask_x;
+		delete params.ps_mask_y;
+		delete params.ps_mask_disabled;
+		delete params.ps_mask_editing;
 
 		for (var i in params) {
 			//remove private attributes
@@ -66,11 +65,23 @@ class Layer_duplicate_class {
 			params.link = config.layer.link.cloneNode(true);
 		}
 
+		var actions = [new app.Actions.Insert_layer_action(params)];
 		app.State.do_action(
-			new app.Actions.Bundle_action('duplicate_layer', 'Duplicate Layer', [
-				new app.Actions.Insert_layer_action(params)
-			])
-		);
+			new app.Actions.Bundle_action('duplicate_layer', 'Duplicate Layer', actions)
+		).then(() => {
+			//the layer mask comes along (canvas can't go through JSON)
+			if (source.ps_mask && config.layer && config.layer !== source) {
+				var mask = document.createElement('canvas');
+				mask.width = source.ps_mask.width;
+				mask.height = source.ps_mask.height;
+				mask.getContext('2d').drawImage(source.ps_mask, 0, 0);
+				config.layer.ps_mask = mask;
+				config.layer.ps_mask_x = source.ps_mask_x;
+				config.layer.ps_mask_y = source.ps_mask_y;
+				config.layer.ps_mask_disabled = source.ps_mask_disabled;
+				app.GUI.GUI_layers.render_layers();
+			}
+		});
 	}
 
 }

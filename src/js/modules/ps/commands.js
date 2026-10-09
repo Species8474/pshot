@@ -240,16 +240,48 @@ class Ps_commands_class {
 		}
 		var part = this.selected_pixels(merged === true);
 		this.clipboard = part;
+		this.clipboard_internal_only = false;
 		try {
 			var blob = await new Promise((resolve) => part.canvas.toBlob(resolve));
 			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 		} catch (e) {
-			//system clipboard unavailable (permissions/http): internal clipboard still works
+			//system clipboard unavailable (permissions): Ctrl+V uses the internal clipboard
+			this.clipboard_internal_only = true;
 		}
 	}
 
 	copy_merged() {
 		return this.copy(true);
+	}
+
+	/**
+	 * Edit > Paste from the menu: the internal clipboard first (works without
+	 * clipboard permissions), otherwise the system clipboard
+	 */
+	paste() {
+		if (this.clipboard) {
+			var c = this.clipboard.canvas;
+			return app.GUI.modules['file/open'].on_paste(c.toDataURL('image/png'), c.width, c.height);
+		}
+		return app.GUI.modules['edit/paste'].paste();
+	}
+
+	/**
+	 * Paste in Place: back at the position it was copied from
+	 */
+	paste_in_place() {
+		if (!this.clipboard) {
+			return this.paste();
+		}
+		var part = this.clipboard;
+		return app.State.do_action(new app.Actions.Bundle_action('paste', 'Paste', [
+			new app.Actions.Insert_layer_action({
+				type: 'image', x: part.x, y: part.y,
+				width: part.canvas.width, height: part.canvas.height,
+				width_original: part.canvas.width, height_original: part.canvas.height,
+				data: part.canvas.toDataURL('image/png'),
+			}, false),
+		]));
 	}
 
 	free_transform() {

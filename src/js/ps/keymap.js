@@ -123,6 +123,15 @@ class Ps_keymap_class {
 			return;
 		}
 
+		//Ctrl+V normally goes to the browser's paste event; when the last copy could
+		//only reach pshot's internal clipboard, paste from there instead
+		if (combo == 'Ctrl+V' && app.GUI.modules['ps/commands'].clipboard_internal_only) {
+			run_target('ps/commands.paste');
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		if (NATIVE.includes(combo) || PASSTHROUGH.includes(event.key)) {
 			return;
 		}

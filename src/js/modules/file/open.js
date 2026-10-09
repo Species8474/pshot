@@ -69,13 +69,24 @@ class File_open_class {
 	}
 
 	on_paste(data, width, height) {
+		//pshot: CS6 pastes a new "Layer N" centered on the selection, or on the canvas
+		var box = app.GUI.Ps_workspace.Selection.bounds || { x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT };
 		var new_layer = {
-			name: 'Paste',
 			type: 'image',
 			data: data,
 		};
+		if (width && height) {
+			new_layer.x = Math.round(box.x + (box.width - width) / 2);
+			new_layer.y = Math.round(box.y + (box.height - height) / 2);
+			new_layer.width = width;
+			new_layer.height = height;
+			new_layer.width_original = width;
+			new_layer.height_original = height;
+		}
 		app.State.do_action(
-			new app.Actions.Insert_layer_action(new_layer)
+			new app.Actions.Bundle_action('paste', 'Paste', [
+				new app.Actions.Insert_layer_action(new_layer, false)
+			])
 		);
 	}
 
