@@ -111,6 +111,7 @@ config.TOOLS = [
 		on_leave: 'on_leave',
 		attributes: {
 			mode: 'pen',
+			pen_mode: 'Path',
 			auto_add: true,
 		},
 	},

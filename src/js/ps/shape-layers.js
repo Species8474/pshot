@@ -106,6 +106,32 @@ class Ps_shape_layers_class {
 		app.GUI.Ps_workspace.Paths.changed();
 	}
 
+	/**
+	 * Pen options bar Make: Shape - a shape layer from the active path
+	 */
+	from_current_path() {
+		var path = app.GUI.Ps_workspace.Paths.active();
+		if (!path || !path.subpaths.length || config.ps_path_active == 'layer') {
+			app.GUI.Ps_workspace.status_message('Make Shape needs an active path.');
+			return;
+		}
+		this.create(this.next_name('Shape'), JSON.parse(JSON.stringify(path.subpaths)), config.COLOR, null, 'New Shape Layer');
+	}
+
+	/**
+	 * Pen tool in Shape mode: an empty shape layer whose path the pen then draws
+	 */
+	async create_empty(x, y) {
+		await app.State.do_action(new app.Actions.Bundle_action('shape_layer', 'New Shape Layer', [
+			new app.Actions.Insert_layer_action({
+				name: this.next_name('Shape'), type: 'ps_shape', x: x, y: y, width: 1, height: 1, rotate: 0, is_vector: true,
+				ps_shape: { subpaths: [], bx: x, by: y, bw: 1, bh: 1, fill: config.COLOR, stroke: null },
+			}),
+		]));
+		config.ps_path_active = 'layer';
+		app.GUI.GUI_layers.render_layers();
+	}
+
 	next_name(base) {
 		var n = 0;
 		var re = new RegExp('^' + base + ' (\\d+)$');

@@ -115,6 +115,11 @@ class Ps_pen_class extends Base_tools_class {
 		}
 		if (mode != 'pen') return;
 
+		//Shape mode: a new path starts a new shape layer (CS6)
+		if (config.TOOL.attributes.pen_mode == 'Shape' && !Paths.drawing && !(config.ps_path_active == 'layer' && config.layer && config.layer.type == 'ps_shape')) {
+			await app.GUI.Ps_workspace.Shapes.create_empty(p.x, p.y);
+		}
+
 		var ed4 = Paths.editable();
 		var subs = ed4.path.subpaths;
 		var current = Paths.drawing && subs.length ? subs[subs.length - 1] : null;
@@ -128,7 +133,7 @@ class Ps_pen_class extends Base_tools_class {
 		}
 		var description = 'Add Anchor Point';
 		if (!current || current.closed) {
-			description = config.ps_paths && config.ps_paths[config.ps_path_active] ? 'Add Anchor Point' : 'New Work Path';
+			description = config.ps_path_active == 'layer' || (config.ps_paths && config.ps_paths[config.ps_path_active]) ? 'Add Anchor Point' : 'New Work Path';
 			current = { closed: false, pts: [] };
 			subs.push(current);
 		}
