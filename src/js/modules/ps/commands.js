@@ -997,6 +997,93 @@ class Ps_commands_class {
 	}
 
 	/**
+	 * replace a smart object's original pixels (Replace / Edit Contents)
+	 */
+	async update_smart_source(layer, source, description) {
+		var pixels = app.GUI.Ps_workspace.Transform.render_smart(layer, source);
+		await app.State.do_action(new app.Actions.Bundle_action('smart_object', description, [
+			new app.Actions.Update_layer_action(layer.id, {
+				x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT, width_original: config.WIDTH, height_original: config.HEIGHT,
+				ps_smart: Object.assign({}, layer.ps_smart, { source: source, lx: layer.x, ly: layer.y }),
+			}),
+			new app.Actions.Update_layer_image_action(pixels, layer.id),
+		]));
+	}
+
+	/**
+	 * Layer > Smart Objects > Replace Contents: a new image for the smart object
+	 */
+	async replace_smart_contents() {
+		var layer = config.layer;
+		if (!layer || !layer.ps_smart) return;
+		var input = document.createElement('input');
+		input.type = 'file';
+		input.accept = 'image/*';
+		input.addEventListener('change', () => {
+			var file = input.files && input.files[0];
+			if (!file) return;
+			var img = new Image();
+			img.onload = () => {
+				var c = document.createElement('canvas');
+				c.width = img.width;
+				c.height = img.height;
+				c.getContext('2d').drawImage(img, 0, 0);
+				this.update_smart_source(layer, c, 'Replace Contents');
+			};
+			img.src = URL.createObjectURL(file);
+		});
+		input.click();
+	}
+
+	/**
+	 * Layer > Smart Objects > Edit Contents: the original pixels open in their own
+	 * tab (.psb); saving that tab (Ctrl+S) updates the smart object
+	 */
+	async edit_smart_contents() {
+		var layer = config.layer;
+		if (!layer || !layer.ps_smart) return;
+		var ws = app.GUI.Ps_workspace;
+		var parent = ws.Documents.current();
+		var src = layer.ps_smart.source;
+		var entry = ws.Documents.add(layer.name + '.psb');
+		entry.smart_link = { parent: parent, layer: layer };
+		await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', [
+			new app.Actions.Prepare_canvas_action('undo'),
+			new app.Actions.Update_config_action({ WIDTH: src.width, HEIGHT: src.height }),
+			new app.Actions.Reset_layers_action(),
+			new app.Actions.Insert_layer_action({ type: 'image', name: 'Layer 0', x: 0, y: 0, width: src.width, height: src.height, width_original: src.width, height_original: src.height, data: src.toDataURL('image/png') }, false),
+			new app.Actions.Prepare_canvas_action('do'),
+		]));
+		app.State.action_history = [];
+		app.State.action_history_index = 0;
+		app.GUI.GUI_preview.zoom_auto(true);
+	}
+
+	/**
+	 * Ctrl+S in a smart object's tab: flatten it into the smart object
+	 */
+	async save_smart_contents(entry) {
+		var ws = app.GUI.Ps_workspace;
+		var flat = document.createElement('canvas');
+		flat.width = config.WIDTH;
+		flat.height = config.HEIGHT;
+		this.Base_layers.convert_layers_to_canvas(flat.getContext('2d'), null, false);
+		var parent_index = ws.Documents.docs.indexOf(entry.smart_link.parent);
+		if (parent_index < 0) {
+			alertify.error('The document that contains this smart object is closed.');
+			return;
+		}
+		ws.Documents.switch_to(parent_index);
+		var layer = entry.smart_link.layer;
+		if (config.layers.includes(layer) && layer.ps_smart) {
+			await this.update_smart_source(layer, flat, 'Update Smart Object');
+		}
+		ws.Documents.switch_to(ws.Documents.docs.indexOf(entry));
+		app.State.ps_saved_index = app.State.action_history_index;
+		ws.status_message('Smart object updated');
+	}
+
+	/**
 	 * Layer > Smart Objects > Rasterize: drop the original pixels
 	 */
 	rasterize_smart_object() {
@@ -1963,6 +2050,9 @@ class Ps_commands_class {
 	 */
 	save() {
 		var ws = app.GUI.Ps_workspace;
+		if (ws.Documents.current().smart_link) {
+			return this.save_smart_contents(ws.Documents.current());
+		}
 		if (ws.saved_as_psd) {
 			save_psd(ws.document_name());
 			app.State.ps_saved_index = app.State.action_history_index;

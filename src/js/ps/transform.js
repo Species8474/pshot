@@ -216,6 +216,29 @@ class Ps_transform_class {
 	}
 
 	/**
+	 * Smart Objects: the layer's pixels from a (new) source at its current box/quad
+	 */
+	render_smart(layer, source) {
+		var smart = layer.ps_smart;
+		var dx = layer.x - smart.lx, dy = layer.y - smart.ly;
+		var out = doc_canvas();
+		var ctx = out.getContext('2d');
+		if (smart.quad) {
+			draw_quad_exact(ctx, source, smart.quad.map(c => ({ x: c.x + dx, y: c.y + dy })));
+		}
+		else {
+			var b = smart.box;
+			ctx.save();
+			ctx.translate(b.cx + dx, b.cy + dy);
+			ctx.rotate(b.angle);
+			ctx.imageSmoothingQuality = 'high';
+			ctx.drawImage(source, -b.w / 2, -b.h / 2, b.w, b.h);
+			ctx.restore();
+		}
+		return out;
+	}
+
+	/**
 	 * Smart Objects: transform from the original pixels (non-destructive)
 	 */
 	start_smart(layer) {
