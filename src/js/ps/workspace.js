@@ -27,6 +27,7 @@ import Ps_clone_source_class from './clone-source.js';
 import Ps_measure_log_class from './measure-log.js';
 import Ps_brush_presets_class from './brush-presets.js';
 import Ps_tool_presets_class from './tool-presets.js';
+import Ps_proof_class from './proof.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -114,6 +115,7 @@ class Ps_workspace_class {
 		this.Measure_log = new Ps_measure_log_class();
 		this.Brush_presets = new Ps_brush_presets_class();
 		this.Tool_presets = new Ps_tool_presets_class();
+		this.Proof = new Ps_proof_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -1009,6 +1011,9 @@ class Ps_workspace_class {
 			}
 			return this.open_popout == panel;
 		}
+		if (key.indexOf('proof:') === 0) {
+			return this.Proof.setup == key.substr(6);
+		}
 		if (key.indexOf('snap_to:') === 0) {
 			return config.ps_snap_to[key.substr(8)] == true;
 		}
@@ -1032,6 +1037,8 @@ class Ps_workspace_class {
 			case 'grid': return app.GUI.grid == true;
 			case 'pixel_grid': return this.pixel_grid !== false;
 			case 'layer_edges': return this.layer_edges === true;
+			case 'proof_colors': return this.Proof.colors;
+			case 'gamut_warning': return this.Proof.gamut;
 			case 'measure_log': return this.Measure_log.open;
 			case 'target_path': return this.target_path !== false;
 			case 'show_notes': return this.show_notes !== false;
@@ -1129,7 +1136,7 @@ class Ps_workspace_class {
 	}
 
 	tab_label(name, zoom, layer) {
-		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + ({ Grayscale: 'Gray', Indexed: 'Index', Bitmap: 'Bitmap', Duotone: 'Duotone' }[config.ps_mode] || 'RGB') + (config.ps_mode == 'Indexed' || config.ps_mode == 'Bitmap' ? ')' : '/8)');
+		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + ({ Grayscale: 'Gray', Indexed: 'Index', Bitmap: 'Bitmap', Duotone: 'Duotone' }[config.ps_mode] || 'RGB') + (config.ps_mode == 'Indexed' || config.ps_mode == 'Bitmap' ? '' : '/8') + (this.Proof && this.Proof.label() ? '/' + this.Proof.label() : '') + ')';
 	}
 
 	render_document_tab() {

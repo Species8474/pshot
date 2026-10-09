@@ -209,6 +209,11 @@ class Base_layers_class {
 				this.ctx.save();
 			});
 
+			//pshot: View > Proof Colors / Gamut Warning (display only)
+			if (this.Base_gui.Ps_workspace) {
+				this.Base_gui.Ps_workspace.Proof.apply(this.ctx);
+			}
+
 			//grid
 			this.Base_gui.draw_grid(this.ctx);
 

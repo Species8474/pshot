@@ -763,6 +763,9 @@ class Ps_commands_class {
 	record_measurements() { app.GUI.Ps_workspace.Measure_log.record(); }
 	measurement_scale(kind) { app.GUI.Ps_workspace.Measure_log.set_scale(kind); }
 	data_points(kind) { app.GUI.Ps_workspace.Measure_log.select_points(kind); }
+	proof_setup(s) { app.GUI.Ps_workspace.Proof.set_setup(s); app.GUI.Ps_workspace.render_document_tab(); }
+	proof_colors() { app.GUI.Ps_workspace.Proof.toggle_colors(); app.GUI.Ps_workspace.render_document_tab(); }
+	gamut_warning() { app.GUI.Ps_workspace.Proof.toggle_gamut(); }
 	define_brush_preset() { app.GUI.Ps_workspace.Brush_presets.define(); }
 	place_scale_marker() { app.GUI.Ps_workspace.Measure_log.place_scale_marker(); }
 	toggle_measure_log() { app.GUI.Ps_workspace.Measure_log.toggle(); }

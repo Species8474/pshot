@@ -309,9 +309,13 @@ const M = [
 		'Browse 3D Content Online...',
 	]],
 	['View', [
-		['Proof Setup', ['Custom...', '-', 'Working CMYK', 'Working Cyan Plate', 'Working Magenta Plate', 'Working Yellow Plate', 'Working Black Plate', 'Working CMY Plates', '-', 'Legacy Macintosh RGB (Gamma 1.8)', 'Internet Standard RGB (sRGB)', 'Monitor RGB', '-', 'Color Blindness - Protanopia-type', 'Color Blindness - Deuteranopia-type']],
-		'Proof Colors|Ctrl+Y',
-		'Gamut Warning|Shift+Ctrl+Y',
+		['Proof Setup', ['Custom...', '-'].concat([
+			['Working CMYK', 'cmyk'], ['Working Cyan Plate', 'cyan'], ['Working Magenta Plate', 'magenta'], ['Working Yellow Plate', 'yellow'], ['Working Black Plate', 'black'], ['Working CMY Plates', 'cmy'], '-',
+			['Legacy Macintosh RGB (Gamma 1.8)', 'mac'], ['Internet Standard RGB (sRGB)', 'srgb'], ['Monitor RGB', 'monitor'], '-',
+			['Color Blindness - Protanopia-type', 'protanopia'], ['Color Blindness - Deuteranopia-type', 'deuteranopia'],
+		].map(p => (p == '-' ? p : { name: p[0], target: 'ps/commands.proof_setup', parameter: p[1], checked: 'proof:' + p[1] })))],
+		{ name: 'Proof Colors', shortcut: 'Ctrl+Y', target: 'ps/commands.proof_colors', checked: 'proof_colors' },
+		{ name: 'Gamut Warning', shortcut: 'Shift+Ctrl+Y', target: 'ps/commands.gamut_warning', checked: 'gamut_warning' },
 		['Pixel Aspect Ratio', ['Custom Pixel Aspect Ratio...', 'Delete Pixel Aspect Ratio...', 'Reset Pixel Aspect Ratios...', '-', 'Square']],
 		'Pixel Aspect Ratio Correction',
 		'32-bit Preview Options...',
