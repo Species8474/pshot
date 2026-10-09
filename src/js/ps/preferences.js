@@ -23,13 +23,11 @@ const DEFAULTS = {
 
 //CS6 interface brightness: Black, Dark Gray (default), Medium Gray, Light Gray
 const THEMES = {
-	1: { panel: '#323232', 'panel-dark': '#262626', tabstrip: '#1f1f1f', pasteboard: '#1b1b1b', border: '#141414', bevel: '#3e3e3e', field: '#222222', 'field-border': '#121212', text: '#d6d6d6', 'text-dim': '#8a8a8a', 'text-disabled': '#646464', hover: '#3d3d3d' },
+	1: { panel: '#323232', 'panel-dark': '#262626', tabstrip: '#1f1f1f', pasteboard: '#1b1b1b', border: '#141414', bevel: '#3e3e3e', field: '#222222', 'field-border': '#121212', text: '#d6d6d6', 'text-dim': '#8a8a8a', 'text-disabled': '#646464', hover: '#3d3d3d', 'hover-strong': '#4a4a4a', 'text-strong': '#ffffff', icon: '#b8b8b8', control: '#383838', 'control-light': '#424242', well: '#161616', 'grad-top': '#444444', 'grad-bottom': '#363636', 'grad-hover-top': '#505050', 'grad-hover-bottom': '#404040', 'pressed-top': '#141414', 'pressed-bottom': '#1c1c1c' },
 	2: null,
-	3: { panel: '#b8b8b8', 'panel-dark': '#a8a8a8', tabstrip: '#9c9c9c', pasteboard: '#a0a0a0', border: '#8a8a8a', bevel: '#cacaca', field: '#d9d9d9', 'field-border': '#8c8c8c', text: '#141414', 'text-dim': '#3c3c3c', 'text-disabled': '#7a7a7a', hover: '#c8c8c8' },
-	4: { panel: '#d6d6d6', 'panel-dark': '#c8c8c8', tabstrip: '#bcbcbc', pasteboard: '#bdbdbd', border: '#a3a3a3', bevel: '#e6e6e6', field: '#f2f2f2', 'field-border': '#a6a6a6', text: '#111111', 'text-dim': '#3a3a3a', 'text-disabled': '#8a8a8a', hover: '#e4e4e4' },
+	3: { panel: '#b8b8b8', 'panel-dark': '#a8a8a8', tabstrip: '#9c9c9c', pasteboard: '#a0a0a0', border: '#8a8a8a', bevel: '#cacaca', field: '#d9d9d9', 'field-border': '#8c8c8c', text: '#141414', 'text-dim': '#3c3c3c', 'text-disabled': '#7a7a7a', hover: '#c8c8c8', 'hover-strong': '#d4d4d4', 'text-strong': '#000000', icon: '#2a2a2a', control: '#c6c6c6', 'control-light': '#cdcdcd', well: '#9a9a9a', 'grad-top': '#d2d2d2', 'grad-bottom': '#bdbdbd', 'grad-hover-top': '#dcdcdc', 'grad-hover-bottom': '#c8c8c8', 'pressed-top': '#8e8e8e', 'pressed-bottom': '#9c9c9c' },
+	4: { panel: '#d6d6d6', 'panel-dark': '#c8c8c8', tabstrip: '#bcbcbc', pasteboard: '#bdbdbd', border: '#a3a3a3', bevel: '#e6e6e6', field: '#f2f2f2', 'field-border': '#a6a6a6', text: '#111111', 'text-dim': '#3a3a3a', 'text-disabled': '#8a8a8a', hover: '#e4e4e4', 'hover-strong': '#f0f0f0', 'text-strong': '#000000', icon: '#2a2a2a', control: '#e2e2e2', 'control-light': '#e8e8e8', well: '#b0b0b0', 'grad-top': '#ececec', 'grad-bottom': '#d6d6d6', 'grad-hover-top': '#f6f6f6', 'grad-hover-bottom': '#e2e2e2', 'pressed-top': '#a8a8a8', 'pressed-bottom': '#b6b6b6' },
 };
-//the light themes need the hardcoded light icon/text colors in cs6.css moved to variables first
-const LIGHT_READY = false;
 const THEME_SWATCH = { 1: '#282828', 2: '#535353', 3: '#b8b8b8', 4: '#d6d6d6' };
 
 const CHECKER = {
@@ -87,7 +85,6 @@ class Ps_preferences_class {
 	apply() {
 		var v = this.values;
 		var style = document.body.style;
-		if (!LIGHT_READY && v.theme > 2) v.theme = 2;
 		var vars = theme_vars(THEMES[v.theme]);
 		for (var k of Object.keys(theme_vars(THEMES[1]))) {
 			if (vars) style.setProperty(k, vars[k]);
@@ -288,7 +285,7 @@ class Ps_preferences_class {
 			else if (c.type == 'check') html += '<label class="ps_adj_check' + (c.disabled ? ' disabled' : '') + '"><input type="checkbox"' + (c.value ? ' checked' : '') + (c.disabled ? ' disabled' : '') + '> ' + esc(c.label) + '</label>';
 			else if (c.type == 'row') html += '<div class="ps_prefs_row">' + c.items.map(control).join('') + '</div>';
 			else if (c.type == 'theme') html += '<div class="ps_prefs_row"><span class="ps_prefs_label">' + esc(c.label) + '</span>'
-				+ [1, 2, 3, 4].map(t => '<button type="button" class="ps_prefs_theme' + (d.theme == t ? ' active' : '') + '" data-theme="' + t + '" style="background:' + THEME_SWATCH[t] + '" title="Color theme ' + t + '"' + (LIGHT_READY || t < 3 ? '' : ' disabled') + '></button>').join('') + '</div>';
+				+ [1, 2, 3, 4].map(t => '<button type="button" class="ps_prefs_theme' + (d.theme == t ? ' active' : '') + '" data-theme="' + t + '" style="background:' + THEME_SWATCH[t] + '" title="Color theme ' + t + '"'></button>').join('') + '</div>';
 			else html += control(c);
 		}
 		root.innerHTML = html;
