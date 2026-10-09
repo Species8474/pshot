@@ -5,7 +5,7 @@ pshot is a Photopea-style image editor. It's a fork of [miniPaint](https://githu
 `Species8474/pshot` began as a fork of `photopea/photopea`. That repo has no source because Photopea is closed-source, so on 2026-10-09 the project was rebased onto miniPaint instead.
 
 ## Hard rules
-- **The UI must be identical to classic Photoshop.** Photoshop itself is the spec, not Photopea, and no Photopea comparison is needed. Josh is a Photoshop expert, so any drift in layout, naming, tool order, shortcuts or behaviour is a defect.
+- **pshot must be an identical clone of Photoshop CS6**: UI placement, features and functionality. CS6 itself is the spec, not Photopea, and no Photopea comparison is needed. Josh is a Photoshop expert, so any drift in layout, naming, tool order, shortcuts or behaviour is a defect.
 - **Desktop only. Mobile is not a goal**, which overrides the global responsive-by-default rule.
 - Keep miniPaint's `MIT-LICENSE.txt` and attribution.
 
@@ -22,4 +22,4 @@ pshot is a Photopea-style image editor. It's a fork of [miniPaint](https://githu
 
 ## State / next
 - 2026-10-09: a stock miniPaint 4.14.3 build is live and the smoke test passed (no console errors).
-- Next: reskin miniPaint to be identical to classic Photoshop: menus, toolbox, options bar, panel dock and shortcuts. The page title still reads "miniPaint".
+- Next: reskin miniPaint to be identical to Photoshop CS6: menus, toolbox, options bar, panel dock and shortcuts. The page title still reads "miniPaint".
