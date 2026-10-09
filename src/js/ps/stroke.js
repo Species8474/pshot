@@ -36,8 +36,6 @@ async function commit_stroke(tool, pending, label) {
 		]), { merge_with_history: ['new_' + tool.name + '_layer'] });
 		if (target_id !== 'self' && target_id != null && app.Layers.get_layer(target_id)) {
 			await app.State.do_action(new app.Actions.Select_layer_action(target_id, true));
-			app.State.action_history.pop();
-			app.State.action_history_index = app.State.action_history.length;
 		}
 		//the temp-layer bookkeeping above is not a step of its own
 		app.State.action_history.pop();

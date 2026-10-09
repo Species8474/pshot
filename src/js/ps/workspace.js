@@ -22,6 +22,7 @@ import Ps_groups_class from './groups.js';
 import Ps_styles_class from './styles.js';
 import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_guides_class from './guides.js';
+import Ps_multi_select_class from './multi-select.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
@@ -66,6 +67,7 @@ class Ps_workspace_class {
 		this.Mask = new Ps_mask_class();
 		this.Transform = new Ps_transform_class();
 		this.Groups = new Ps_groups_class();
+		this.Multi = new Ps_multi_select_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Guides = new Ps_guides_class();
@@ -100,6 +102,7 @@ class Ps_workspace_class {
 		this.init_info_panel();
 		this.Keymap.install();
 		this.Guides.install();
+		this.Multi.install_move();
 		this.Groups.install_group_move();
 		install_pixel_layer_guard();
 		install_move_selection();

@@ -182,6 +182,7 @@ class Ps_documents_class {
 	 */
 	add(name, file_name) {
 		this.current().state = this.capture();
+		app.GUI.Ps_workspace.Multi.clear();
 		var entry = this.make_entry(name, file_name);
 		this.docs.push(entry);
 		this.active = this.docs.length - 1;
@@ -209,6 +210,7 @@ class Ps_documents_class {
 			app.GUI.Ps_workspace.Transform.commit();
 		}
 		this.current().state = this.capture();
+		app.GUI.Ps_workspace.Multi.clear();
 		this.active = index;
 		this.apply(this.docs[index].state);
 		this.docs[index].state = null;

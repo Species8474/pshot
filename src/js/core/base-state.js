@@ -69,6 +69,10 @@ class Base_state_class {
 			// Action aborted. This is usually expected behavior as actions throw errors if they shouldn't run.
 			return { status: 'aborted', reason: error };
 		}
+		//pshot: CS6 doesn't record selecting a layer or toggling its visibility in History
+		if (action.action_id == 'select_layer' || action.action_id == 'toggle_layer_visibility') {
+			return { status: 'completed' };
+		}
 		// Remove all redo actions from history
 		if (this.action_history_index < this.action_history.length) {
 			const freed_actions = this.action_history.slice(this.action_history_index, this.action_history.length).reverse();

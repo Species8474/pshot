@@ -133,6 +133,9 @@ class GUI_layers_class {
 			if (target.id == 'insert_layer') {
 				app.State.do_action(new app.Actions.Insert_layer_action());
 			}
+			else if (target.id == 'ps_layer_delete' && app.GUI.Ps_workspace.Multi.multiple()) {
+				app.GUI.Ps_workspace.Multi.delete();
+			}
 			else if (target.id == 'ps_layer_delete') {
 				if (config.layer.type == 'ps_group') {
 					app.GUI.Ps_workspace.Groups.delete_group(config.layer);
@@ -186,6 +189,10 @@ class GUI_layers_class {
 				_this.edit_filter(target.dataset.pid, target.dataset.id, target.dataset.filter);
 			}
 			else if (target.classList.contains('ps_layer_row')) {
+				//CS6: Ctrl+click adds/removes a layer, Shift+click selects a range
+				if (app.GUI.Ps_workspace.Multi.click(_this.Base_layers.get_layer(target.dataset.id), event)) {
+					return;
+				}
 				if (target.dataset.id != config.layer.id) {
 					app.State.do_action(new app.Actions.Select_layer_action(target.dataset.id));
 				}
@@ -447,6 +454,9 @@ class GUI_layers_class {
 		var layers = Groups ? Groups.ordered() : config.layers.concat().sort((a, b) => b.order - a.order);
 		var html = '';
 
+		var Multi = app.GUI && app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Multi : null;
+		var selected = Multi ? Multi.selected() : [config.layer];
+		var is_selected = (layer) => selected.includes(layer);
 		if (config.layer) {
 			for (var value of layers) {
 				var depth = Groups ? Groups.depth(value) : 0;
@@ -455,7 +465,7 @@ class GUI_layers_class {
 				}
 				var indent = depth ? '<span class="ps_indent" style="width:' + (depth * 16) + 'px"></span>' : '';
 				if (value.type == 'ps_group') {
-					html += '<div class="ps_layer_row ps_group_row' + (value.id == config.layer.id ? ' active' : '') + (value.visible != true ? ' hidden_layer' : '') + '" data-id="' + value.id + '" draggable="true">';
+					html += '<div class="ps_layer_row ps_group_row' + (is_selected(value) ? ' active' : '') + (value.visible != true ? ' hidden_layer' : '') + '" data-id="' + value.id + '" draggable="true">';
 					html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
 					html += indent;
 					html += '<span class="ps_group_toggle' + (value.ps_collapsed ? '' : ' open') + '" data-action="toggle_group" data-id="' + value.id + '"></span>';
@@ -467,7 +477,7 @@ class GUI_layers_class {
 				var classes = 'ps_layer_row';
 				var clipped = value.composition === 'source-atop';
 				if (clipped) classes += ' clipped';
-				if (value.id == config.layer.id) classes += ' active';
+				if (is_selected(value)) classes += ' active';
 				if (value.visible != true) classes += ' hidden_layer';
 
 				var Styles = app.GUI && app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Styles : null;

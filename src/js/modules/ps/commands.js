@@ -54,11 +54,29 @@ class Ps_commands_class {
 	copy_layer_style() { app.GUI.Ps_workspace.Styles.copy(); }
 	paste_layer_style() { app.GUI.Ps_workspace.Styles.paste(); }
 
-	group_layers() { app.GUI.Ps_workspace.Groups.group_layers(); }
+	group_layers() {
+		if (app.GUI.Ps_workspace.Multi.multiple()) {
+			return app.GUI.Ps_workspace.Multi.group();
+		}
+		app.GUI.Ps_workspace.Groups.group_layers();
+	}
+
+	/**
+	 * Ctrl+E: Merge Down, or Merge Layers with several layers selected
+	 */
+	merge_down() {
+		if (app.GUI.Ps_workspace.Multi.multiple()) {
+			return app.GUI.Ps_workspace.Multi.merge();
+		}
+		app.GUI.modules['layer/merge'].merge();
+	}
 	ungroup_layers() { app.GUI.Ps_workspace.Groups.ungroup(); }
 	new_group() { app.GUI.Ps_workspace.Groups.new_group(); }
 
 	delete_layer() {
+		if (app.GUI.Ps_workspace.Multi.multiple()) {
+			return app.GUI.Ps_workspace.Multi.delete();
+		}
 		var layer = config.layer;
 		if (layer && layer.type == 'ps_group') {
 			return app.GUI.Ps_workspace.Groups.delete_group(layer);
@@ -593,6 +611,10 @@ class Ps_commands_class {
 	 * to the canvas (Photopea behaviour; CS6 needs 2+ linked layers for that).
 	 */
 	align(mode) {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		if (Multi.multiple()) {
+			return Multi.align(mode, this.get_selection());
+		}
 		var layer = config.layer;
 		var box = this.get_selection() || {x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT};
 		var settings = {};
@@ -615,6 +637,14 @@ class Ps_commands_class {
 	align_left() { this.align('left'); }
 	align_hcenter() { this.align('hcenter'); }
 	align_right() { this.align('right'); }
+
+	distribute(mode) { app.GUI.Ps_workspace.Multi.distribute(mode); }
+	distribute_top() { this.distribute('top'); }
+	distribute_vcenter() { this.distribute('vcenter'); }
+	distribute_bottom() { this.distribute('bottom'); }
+	distribute_left() { this.distribute('left'); }
+	distribute_hcenter() { this.distribute('hcenter'); }
+	distribute_right() { this.distribute('right'); }
 
 	merge_visible() {
 		var hidden = config.layers.filter(l => l.visible == false);

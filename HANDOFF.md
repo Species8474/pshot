@@ -48,6 +48,7 @@ pshot keeps miniPaint's engine: layers in `config.layers`, actions and undo in `
 | CS6 painting model: strokes go into the active pixel layer | `src/js/ps/stroke.js` |
 | Pixel-tool guards: rasterize prompt, hidden, group, adjustment and locked layers; empty layer becomes pixels | `src/js/ps/pixel-layer.js` |
 | Guides from rulers | `src/js/ps/guides.js` |
+| Multiple layer selection | `src/js/ps/multi-select.js` |
 | Hand and Zoom tools | `src/js/tools/hand.js`, `src/js/tools/zoom.js` |
 
 Layer properties pshot adds (all changed through `Update_layer_action`, so they're undoable):
@@ -90,6 +91,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Adjustment layers: Brightness/Contrast, Levels, Curves, Exposure, Vibrance, Hue/Saturation, Color Balance, Black & White, Photo Filter, Channel Mixer, Invert, Posterize, Threshold, Gradient Map, Selective Color.
   - Locks; clipping mask; blend modes.
   - Duplicate layers are named "X copy"; Layer via Copy/Cut.
+  - Multiple layer selection (`ps/multi-select.js`): Ctrl+click and Shift+click in the Layers panel. Move, Group (Ctrl+G), Delete, Merge Layers (Ctrl+E), Align and Distribute act on all selected layers. The set is valid only while it contains `config.layer`.
+  - As in CS6, selecting a layer and toggling visibility are not History states (`base-state.js`).
 - **Image**
   - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Shadows/Highlights and Equalize (destructive here, as in CS6).
   - Image and Canvas Size, rotation, crop, trim.
@@ -106,7 +109,6 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.
-- Multiple layer selection (Shift-click) is not supported: miniPaint has one active layer.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 
 ## Testing
