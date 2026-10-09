@@ -21,6 +21,7 @@ import Ps_transform_class from './transform.js';
 import Ps_groups_class from './groups.js';
 import Ps_styles_class from './styles.js';
 import Ps_adjustment_layers_class from './adjustment-layers.js';
+import Ps_guides_class from './guides.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 
@@ -63,6 +64,7 @@ class Ps_workspace_class {
 		this.Groups = new Ps_groups_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
+		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
 		this.two_column = false;
@@ -92,6 +94,7 @@ class Ps_workspace_class {
 		this.init_statusbar();
 		this.hook_state();
 		this.Keymap.install();
+		this.Guides.install();
 		install_pixel_layer_guard();
 		install_move_selection();
 		this.render_document_tab();
@@ -686,6 +689,7 @@ class Ps_workspace_class {
 			case 'guides': return config.guides_enabled == true;
 			case 'rulers': return config.ruler_active == true;
 			case 'snap': return config.SNAP == true;
+			case 'guides_locked': return this.Guides.locked;
 			case 'options_bar': return !document.getElementById('ps_options').classList.contains('closed');
 			case 'toolbox': return !document.getElementById('ps_toolbox').classList.contains('closed');
 		}

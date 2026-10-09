@@ -681,8 +681,16 @@ class Ps_commands_class {
 	}
 
 	clear_guides() {
-		config.guides = [];
-		config.need_render = true;
+		app.GUI.Ps_workspace.Guides.clear();
+	}
+
+	lock_guides() {
+		app.GUI.Ps_workspace.Guides.toggle_lock();
+	}
+
+	toggle_rulers() {
+		app.GUI.modules['view/ruler'].ruler();
+		app.GUI.Ps_workspace.relayout();
 	}
 
 	screen_mode_standard() { app.GUI.Ps_workspace.set_screen_mode('standard'); }

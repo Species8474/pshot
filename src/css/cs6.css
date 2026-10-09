@@ -1330,3 +1330,6 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 .ps_lock:hover { background: #5f5f5f; }
 .ps_lock.pressed { background: #3a3a3a; border-color: #262626; color: #fff; }
 .ps_layer_lock.partial { opacity: 0.55; }
+
+/* rulers (CS6: light gray with dark ticks) */
+body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { cursor: default; }

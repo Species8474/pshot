@@ -107,7 +107,7 @@ const LAYOUTS = {
 	move: [
 		{ type: 'check', label: 'Auto-Select:', bind: 'auto_select' },
 		{ type: 'select', values: ['Layer', 'Group'], value: 'Layer', disabled_values: ['Group'] },
-		{ type: 'check', label: 'Show Transform Controls', value: false },
+		{ type: 'check', label: 'Show Transform Controls', bind: 'show_transform' },
 		{ type: 'sep' },
 		{ type: 'icons', items: [
 			{ icon: IC.align_t, title: 'Align top edges', action: () => run('align_top') },
@@ -458,7 +458,10 @@ class Ps_options_bar_class {
 			wrap.innerHTML = '<label class="ps_opt_check' + (bound ? '' : ' disabled') + '"><input type="checkbox"' + (checked ? ' checked' : '') + (bound ? '' : ' disabled') + '> '
 				+ c.label.replace(/:$/, '') + (c.label.endsWith(':') ? ':' : '') + '</label>';
 			if (bound) {
-				wrap.querySelector('input').addEventListener('change', (e) => this.set(c.bind, e.target.checked));
+				wrap.querySelector('input').addEventListener('change', (e) => {
+					this.set(c.bind, e.target.checked);
+					config.need_render = true;
+				});
 			}
 			return wrap;
 		}

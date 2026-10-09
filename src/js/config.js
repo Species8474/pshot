@@ -115,6 +115,7 @@ config.TOOLS = [
 		title: 'Select object tool',
 		attributes: {
 			auto_select: true,
+			show_transform: false,
 		},
 	},
 	{

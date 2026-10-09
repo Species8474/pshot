@@ -84,7 +84,7 @@ class Base_layers_class {
 			enable_move: false,
 			data_function: function () {
 				//pshot: CS6 shows the layer bounds only with the Move tool (Layer Edges is off)
-				return config.TOOL && config.TOOL.name == 'select' ? config.layer : null;
+				return config.TOOL && config.TOOL.name == 'select' && config.TOOL.attributes.show_transform ? config.layer : null;
 			},
 		};
 		this.Base_selection = new Base_selection_class(
