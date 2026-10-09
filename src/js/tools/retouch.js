@@ -173,6 +173,30 @@ class Retouch_class extends Base_tools_class {
 			Clone.painting = true;
 			this.clone_dab(this.last);
 		}
+		if (mode == 'blur' || mode == 'sharpen') {
+			//Sample All Layers: the merged image is what gets blurred / sharpened
+			this.merged = null;
+			if (this.getParams().sample_all) {
+				var mc = document.createElement('canvas');
+				mc.width = config.WIDTH;
+				mc.height = config.HEIGHT;
+				app.Layers.convert_layers_to_canvas(mc.getContext('2d'), null, false);
+				this.merged = mc.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, mc.width, mc.height);
+			}
+			this.focus_dab(this.last, mode == 'sharpen');
+		}
+		if (mode == 'smudge' && this.getParams().finger_painting) {
+			//Finger Painting: the stroke starts with the foreground color
+			var fctx = this.canvas.getContext('2d');
+			var fr = this.getParams().size / 2 * this.last.s;
+			fctx.save();
+			fctx.fillStyle = config.COLOR;
+			fctx.globalAlpha = (this.getParams().strength == null ? 50 : this.getParams().strength) / 100;
+			fctx.beginPath();
+			fctx.arc(this.last.x, this.last.y, Math.max(0.5, fr), 0, Math.PI * 2);
+			fctx.fill();
+			fctx.restore();
+		}
 		if (mode == 'erase') {
 			this.original = this.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height);
 			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
@@ -235,6 +259,17 @@ class Retouch_class extends Base_tools_class {
 					this.replace_dab(cp);
 				}
 				this.last = cp;
+			}
+		}
+		else if (mode == 'blur' || mode == 'sharpen') {
+			var fstep = Math.max(1, size / 4);
+			if (dist >= fstep) {
+				var fp = this.last;
+				for (var tf = fstep; tf <= dist; tf += fstep) {
+					fp = { x: this.last.x + dx * tf / dist, y: this.last.y + dy * tf / dist, s: p.s };
+					this.focus_dab(fp, mode == 'sharpen');
+				}
+				this.last = fp;
 			}
 		}
 		else if (mode == 'erase') {
@@ -328,7 +363,7 @@ class Retouch_class extends Base_tools_class {
 				extra.push(new app.Actions.Update_layer_action(config.layer.id, { name: 'Layer 0' }));
 			}
 		}
-		var labels = { erase: 'Eraser', clone: 'Clone Stamp', bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { blur: 'Blur Tool', sharpen: 'Sharpen Tool', erase: 'Eraser', clone: 'Clone Stamp', bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		].concat(extra)));
@@ -481,6 +516,78 @@ class Retouch_class extends Base_tools_class {
 			}
 		}
 		ctx.putImageData(img, x0, y0);
+	}
+
+	/**
+	 * Mode of the focus / smudge tools: how the new color replaces the old one
+	 */
+	tone_mode(mode, o, n) {
+		if (!mode || mode == 'Normal') return n;
+		if (mode == 'Darken') return [Math.min(o[0], n[0]), Math.min(o[1], n[1]), Math.min(o[2], n[2])];
+		if (mode == 'Lighten') return [Math.max(o[0], n[0]), Math.max(o[1], n[1]), Math.max(o[2], n[2])];
+		var a = this.hsl(o[0], o[1], o[2]), b = this.hsl(n[0], n[1], n[2]);
+		if (mode == 'Hue') return this.rgb(b[0], a[1], a[2]);
+		if (mode == 'Saturation') return this.rgb(a[0], b[1], a[2]);
+		if (mode == 'Color') return this.rgb(b[0], b[1], a[2]);
+		if (mode == 'Luminosity') return this.rgb(a[0], a[1], b[2]);
+		return n;
+	}
+
+	/**
+	 * Blur / Sharpen dab: a 3 x 3 average (blur) or unsharp step (sharpen) of
+	 * the current pixels (or the merged image), Strength per dab, soft edge;
+	 * Protect Detail keeps sharpened values within the local range (no halos)
+	 */
+	focus_dab(p, sharpen) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var s = layer.width_original / layer.width;
+		var r = Math.max(1, params.size / 2 * s);
+		var strength = (params.strength == null ? 50 : params.strength) / 100;
+		var w = this.canvas.width, h = this.canvas.height;
+		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
+		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
+		if (x1 <= x0 || y1 <= y0) return;
+		//read with a 1 pixel margin for the 3 x 3 neighbourhood
+		var rx0 = Math.max(0, x0 - 1), ry0 = Math.max(0, y0 - 1), rx1 = Math.min(w, x1 + 1), ry1 = Math.min(h, y1 + 1), rw = rx1 - rx0;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(rx0, ry0, rw, ry1 - ry0), D = img.data, out = new Uint8ClampedArray(D);
+		var M = this.merged, MW = M ? M.width : 0, MH = M ? M.height : 0;
+		var src = (x, y, c) => {
+			if (!M) return D[((y - ry0) * rw + (x - rx0)) * 4 + c];
+			var mx = Math.min(MW - 1, Math.max(0, Math.round(x / s + layer.x))), my = Math.min(MH - 1, Math.max(0, Math.round(y / s + layer.y)));
+			return M.data[(my * MW + mx) * 4 + c];
+		};
+		var mode = params.focus_mode || 'Normal';
+		var protect = params.protect_detail !== false;
+		for (var y = y0; y < y1; y++) {
+			for (var x = x0; x < x1; x++) {
+				var d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / r;
+				if (d > 1) continue;
+				var f = strength * (d < 0.6 ? 1 : (1 - d) / 0.4);
+				var i = ((y - ry0) * rw + (x - rx0)) * 4;
+				var o = [D[i], D[i + 1], D[i + 2]], n = [0, 0, 0];
+				for (var c = 0; c < 3; c++) {
+					var sum = 0, cnt = 0, mn = 255, mxv = 0;
+					for (var yy = Math.max(ry0, y - 1); yy <= Math.min(ry1 - 1, y + 1); yy++) {
+						for (var xx = Math.max(rx0, x - 1); xx <= Math.min(rx1 - 1, x + 1); xx++) {
+							var v = src(xx, yy, c);
+							sum += v;
+							cnt++;
+							if (v < mn) mn = v;
+							if (v > mxv) mxv = v;
+						}
+					}
+					var avg = sum / cnt, cur = src(x, y, c);
+					var target = sharpen ? cur + (cur - avg) * 1.5 : avg;
+					if (sharpen && protect) target = Math.max(mn, Math.min(mxv, target));
+					n[c] = target;
+				}
+				var t = this.tone_mode(mode, o, n);
+				for (var c2 = 0; c2 < 3; c2++) out[i + c2] = o[c2] + (t[c2] - o[c2]) * f;
+			}
+		}
+		ctx.putImageData(new ImageData(out, rw, ry1 - ry0), rx0, ry0);
 	}
 
 	/**
@@ -722,9 +829,12 @@ class Retouch_class extends Base_tools_class {
 				if (d > 1) continue;
 				var f = strength * (1 - d * d);
 				var i = (y * size + x) * 4;
-				for (var c = 0; c < 4; c++) {
-					dst.data[i + c] = dst.data[i + c] + (src.data[i + c] - dst.data[i + c]) * f;
+				var mixed = [0, 1, 2, 3].map(c => dst.data[i + c] + (src.data[i + c] - dst.data[i + c]) * f);
+				if (params.focus_mode && params.focus_mode != 'Normal') {
+					var tm = this.tone_mode(params.focus_mode, [dst.data[i], dst.data[i + 1], dst.data[i + 2]], mixed);
+					mixed[0] = tm[0]; mixed[1] = tm[1]; mixed[2] = tm[2];
 				}
+				for (var c = 0; c < 4; c++) dst.data[i + c] = mixed[c];
 			}
 		}
 		ctx.putImageData(dst, tx, ty);

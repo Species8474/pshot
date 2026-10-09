@@ -161,6 +161,10 @@ config.TOOLS = [
 			hardness: 100,
 			eraser_mode: 'Brush',
 			to_history: false,
+			focus_mode: 'Normal',
+			sample_all: false,
+			protect_detail: true,
+			finger_painting: false,
 		},
 	},
 	{

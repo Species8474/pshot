@@ -146,8 +146,8 @@ const groups = [
 		{ id: 'material_drop', name: '3D Material Drop Tool', key: 'G', tool: null, icon: I.material_drop },
 	]},
 	{ members: [
-		{ id: 'blur', name: 'Blur Tool', key: '', tool: 'blur', icon: I.blur },
-		{ id: 'sharpen', name: 'Sharpen Tool', key: '', tool: 'sharpen', icon: I.sharpen },
+		{ id: 'blur', name: 'Blur Tool', key: '', tool: 'retouch', preset: { mode: 'blur' }, icon: I.blur },
+		{ id: 'sharpen', name: 'Sharpen Tool', key: '', tool: 'retouch', preset: { mode: 'sharpen' }, icon: I.sharpen },
 		{ id: 'smudge', name: 'Smudge Tool', key: '', tool: 'retouch', preset: { mode: 'smudge' }, icon: I.smudge },
 	]},
 	{ members: [

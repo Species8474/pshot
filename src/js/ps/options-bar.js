@@ -106,6 +106,7 @@ const SELECTION_OPS = { type: 'icons', items: [
 	{ icon: IC.sel_sub, title: 'Subtract from selection', bind: 'op', bind_value: 'subtract' },
 	{ icon: IC.sel_int, title: 'Intersect with selection', bind: 'op', bind_value: 'intersect' },
 ] };
+const TONE_MODES = ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'];
 const SAMPLE_SIZES = ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'];
 const EYEDROPPER_SAMPLES = ['Current Layer', 'Current & Below', 'All Layers', 'All Layers No Adjustments', 'Current & Below No Adjustments'];
 
@@ -341,27 +342,27 @@ const LAYOUTS = {
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'] },
-		{ type: 'num', label: 'Strength:', bind: 'strength', unit: '', width: 40 },
-		{ type: 'check', label: 'Sample All Layers', value: false },
+		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
+		{ type: 'pct', label: 'Strength:', bind: 'strength' },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 	],
 	sharpen: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'] },
-		{ type: 'pct', label: 'Strength:', value: 50 },
-		{ type: 'check', label: 'Sample All Layers', value: false },
-		{ type: 'check', label: 'Protect Detail', value: true },
+		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
+		{ type: 'pct', label: 'Strength:', bind: 'strength' },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
+		{ type: 'check', label: 'Protect Detail', bind: 'protect_detail' },
 	],
 	smudge: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'] },
+		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
-		{ type: 'check', label: 'Sample All Layers', value: false },
-		{ type: 'check', label: 'Finger Painting', value: false },
+		{ type: 'check', label: 'Sample All Layers', value: false, always_disabled: true },
+		{ type: 'check', label: 'Finger Painting', bind: 'finger_painting' },
 	],
 	perspective_crop: [
 		{ type: 'num', label: 'W:', width: 50, unit: '' },
