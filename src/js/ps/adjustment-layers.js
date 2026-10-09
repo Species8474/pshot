@@ -7,6 +7,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
+import { resolve, two_color } from './gradients.js';
 
 function hex_rgb(hex) {
 	return { r: parseInt(hex.substr(1, 2), 16), g: parseInt(hex.substr(3, 2), 16), b: parseInt(hex.substr(5, 2), 16) };
@@ -242,9 +243,12 @@ class Ps_adjustment_layers_class {
 				var ch = (v) => ({ red: v[0], green: v[1], blue: v[2], constant: v[3] });
 				return { type: 'channel mixer', monochrome: !!s.mono, red: ch(m.Red), green: ch(m.Green), blue: ch(m.Blue) };
 			}
-			case 'gradient_map': return { type: 'gradient map', gradientType: 'solid', name: 'Custom', reverse: !!s.reverse,
-				colorStops: [{ color: hex_rgb(s.c1 || '#000000'), location: 0, midpoint: 50 }, { color: hex_rgb(s.c2 || '#ffffff'), location: 4096, midpoint: 50 }],
-				opacityStops: [{ opacity: 1, location: 0, midpoint: 50 }, { opacity: 1, location: 4096, midpoint: 50 }] };
+			case 'gradient_map': {
+				var gm = resolve(s.gradient || two_color(s.c1, s.c2));
+				return { type: 'gradient map', gradientType: 'solid', name: gm.name || 'Custom', reverse: !!s.reverse, dither: !!s.dither,
+					colorStops: gm.stops.map(st => ({ color: hex_rgb(st.color), location: Math.round(st.pos * 4096), midpoint: 50 })),
+					opacityStops: (gm.alphas || []).map(op => ({ opacity: op.a, location: Math.round(op.pos * 4096), midpoint: 50 })) };
+			}
 			case 'selective_color': {
 				var sv = s.values || {};
 				var cmyk = (c) => { var v = sv[c] || [0, 0, 0, 0]; return { c: v[0], m: v[1], y: v[2], k: v[3] }; };
@@ -290,8 +294,15 @@ class Ps_adjustment_layers_class {
 				return { kind: 'channel_mixer', state: { mono: !!a.monochrome, matrix: { Red: cm(a.red, [100, 0, 0, 0]), Green: cm(a.green, [0, 100, 0, 0]), Blue: cm(a.blue, [0, 0, 100, 0]) } } };
 			}
 			case 'gradient map': {
-				var stops = a.colorStops || [];
-				return { kind: 'gradient_map', state: { c1: rgb_hex(stops[0] && stops[0].color), c2: rgb_hex(stops[stops.length - 1] && stops[stops.length - 1].color), reverse: !!a.reverse } };
+				var stops = a.colorStops || [], ops = a.opacityStops || [];
+				var loc = (v, i, n) => (v == null ? (n > 1 ? i / (n - 1) : 0) : (v > 1 ? v / 4096 : v));
+				var gradient = {
+					name: a.name || 'Custom',
+					stops: stops.map((st, i) => ({ pos: loc(st.location, i, stops.length), color: rgb_hex(st.color) })),
+					alphas: ops.length ? ops.map((op, i) => ({ pos: loc(op.location, i, ops.length), a: op.opacity == null ? 1 : op.opacity })) : [{ pos: 0, a: 1 }, { pos: 1, a: 1 }],
+				};
+				if (gradient.stops.length < 2) gradient = two_color(rgb_hex(stops[0] && stops[0].color), '#ffffff');
+				return { kind: 'gradient_map', state: { gradient: gradient, reverse: !!a.reverse, dither: !!a.dither } };
 			}
 			case 'selective color': {
 				var vals = {};

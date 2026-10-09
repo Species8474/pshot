@@ -10,6 +10,7 @@ import Dialog_class from './../libs/popup.js';
 import { ensure_pixel_layer } from './pixel-layer.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 import { quantize } from './indexed.js';
+import { PRESETS, lut as gradient_lut, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
 
 function clamp(v, lo, hi) {
 	return v < lo ? lo : (v > hi ? hi : v);
@@ -766,15 +767,24 @@ class Ps_adjust_class {
 	}
 
 	gradient_map() {
-		var extra = '<div class="ps_adj_row"><span>Gradient:</span><span class="ps_adj_gradient" id="gm_preview"></span></div>'
+		var extra = '<div class="ps_adj_section">Gradient Used for Grayscale Mapping</div>'
+			+ '<div class="ps_gm_row"><span class="ps_adj_gradient" id="gm_preview" title="Click to edit the gradient"></span><span class="ps_caret" id="gm_caret" title="Gradient presets">&#9662;</span></div>'
+			+ '<div class="ps_adj_section">Gradient Options</div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="gm_dither"> Dither</label>'
 			+ '<label class="ps_adj_check"><input type="checkbox" id="gm_reverse"> Reverse</label>';
 		this.show('Gradient Map', extra, (root, state, update) => {
-			state.c1 = state.c1 || config.COLOR;
-			state.c2 = state.c2 || config.BG_COLOR;
+			state.gradient = state.gradient || (state.c1 ? two_color(state.c1, state.c2) : resolve(PRESETS[0]));
 			state.reverse = !!state.reverse;
-			var paint = () => { root.querySelector('#gm_preview').style.background = 'linear-gradient(90deg,' + (state.reverse ? state.c2 : state.c1) + ',' + (state.reverse ? state.c1 : state.c2) + ')'; };
+			state.dither = !!state.dither;
+			var preview = root.querySelector('#gm_preview');
+			var paint = () => { preview.style.background = gradient_css(state.gradient); preview.style.transform = state.reverse ? 'scaleX(-1)' : ''; };
+			var set = (g) => { state.gradient = resolve(g); paint(); update(); };
+			preview.addEventListener('click', () => gradient_editor(state.gradient, set, (g) => { state.gradient = resolve(g); paint(); update(); }));
+			root.querySelector('#gm_caret').addEventListener('click', (e) => gradient_picker(e.currentTarget, set));
 			root.querySelector('#gm_reverse').checked = state.reverse;
 			root.querySelector('#gm_reverse').addEventListener('change', (e) => { state.reverse = e.target.checked; paint(); update(); });
+			root.querySelector('#gm_dither').checked = state.dither;
+			root.querySelector('#gm_dither').addEventListener('change', (e) => { state.dither = e.target.checked; update(); });
 			paint();
 		}, (state) => this.build_gradient_map(state), 'gradient_map');
 	}
@@ -1849,17 +1859,17 @@ class Ps_adjust_class {
 	}
 
 	build_gradient_map(state) {
-		var c1 = state.reverse ? state.c2 : state.c1, c2 = state.reverse ? state.c1 : state.c2;
-		c1 = c1 || '#000000';
-		c2 = c2 || '#ffffff';
-		var a = [parseInt(c1.substr(1, 2), 16), parseInt(c1.substr(3, 2), 16), parseInt(c1.substr(5, 2), 16)];
-		var b = [parseInt(c2.substr(1, 2), 16), parseInt(c2.substr(3, 2), 16), parseInt(c2.substr(5, 2), 16)];
+		//the gradient's colors along the luminosity (its transparency is not used)
+		var L = gradient_lut(state.gradient || two_color(state.c1, state.c2), !!state.reverse);
+		var dither = !!state.dither;
 		return (src, dst) => {
 			for (var i = 0; i < src.length; i += 4) {
-				var l = (src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114) / 255;
-				dst[i] = a[0] + (b[0] - a[0]) * l;
-				dst[i + 1] = a[1] + (b[1] - a[1]) * l;
-				dst[i + 2] = a[2] + (b[2] - a[2]) * l;
+				var l = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+				if (dither) l += Math.random() - 0.5;
+				var k = (l < 0 ? 0 : (l > 255 ? 255 : Math.round(l))) * 4;
+				dst[i] = L[k];
+				dst[i + 1] = L[k + 1];
+				dst[i + 2] = L[k + 2];
 			}
 		};
 	}

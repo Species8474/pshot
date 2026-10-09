@@ -51,6 +51,22 @@ function color_of(c) {
 	return c;
 }
 
+/**
+ * the gradient with its Foreground / Background stops fixed to the current colors
+ */
+function resolve(g) {
+	var r = clone(g);
+	r.stops.forEach(s => { s.color = color_of(s.color); });
+	return r;
+}
+
+/**
+ * a two-color gradient (older two-color states)
+ */
+function two_color(c1, c2) {
+	return { name: 'Custom', stops: [S(0, c1 || '#000000'), S(1, c2 || '#ffffff')], alphas: OPAQUE.slice() };
+}
+
 function presets() {
 	return PRESETS.concat(USER);
 }
@@ -243,4 +259,4 @@ function editor(initial, on_ok, on_preview) {
 	return root;
 }
 
-export { PRESETS, presets, lut, css, picker, editor, clone };
+export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color };

@@ -1371,7 +1371,7 @@ body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { cursor: default; }
 
 .ps_app > .ps_options { height: 34px; box-sizing: border-box; }
 
-.ps_adj_gradient { display: inline-block; width: 180px; height: 18px; border: 1px solid #222; }
+.ps_adj_gradient { display: inline-block; width: 180px; height: 18px; border: 1px solid #222; cursor: pointer; }
 
 /* Image Size / Canvas Size */
 .ps_sz { display: flex; flex-direction: column; gap: 6px; min-width: 340px; }
@@ -1733,3 +1733,7 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_ge_stop.active { outline: 2px solid var(--ps-select-light); }
 .ps_ge_stops { border: 1px solid var(--ps-border); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; }
 .ps_ge_swatch { width: 40px; height: 18px; border: 1px solid #222; cursor: pointer; display: inline-block; }
+.ps_adj_section { font-weight: 600; margin: 4px 0 2px; white-space: nowrap; }
+.ps_gm_row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.ps_gm_row .ps_adj_gradient { width: 240px; height: 22px; }
+.ps_gm_row .ps_caret { cursor: pointer; padding: 4px; }
