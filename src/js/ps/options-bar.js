@@ -537,7 +537,7 @@ const LAYOUTS = {
 	rectangle: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
 	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', value: true }]),
 	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
-	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', value: 5, width: 36 }, { type: 'check', label: 'Align Edges', value: true }]),
+	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', bind: 'sides', width: 36 }, { type: 'check', label: 'Align Edges', value: true }]),
 	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', value: true }]),
 	type: [
 		{ type: 'icon', icon: IC.type_orient, title: 'Toggle text orientation' },

@@ -1,7 +1,7 @@
 /*
  * pshot - the shape tools' CS6 tool modes (options bar: Shape / Path / Pixels).
  * miniPaint draws the shape as a temporary vector layer; in Shape mode it
- * becomes a CS6 shape layer (ps/shape-layers.js, polygons stay vector layers),
+ * becomes a CS6 shape layer (ps/shape-layers.js),
  * in Path mode a subpath of the Work Path, in Pixels mode it is painted into
  * the active pixel layer. The temporary layer is undone so History shows only
  * the result.
@@ -46,13 +46,22 @@ function rect_subpath(x, y, w, h, r) {
 	}) };
 }
 
+//CS6 Polygon: a regular polygon (Sides) in the dragged box, a vertex at the top
+function polygon_subpath(x, y, w, h) {
+	var n = Math.max(3, Math.min(100, Math.round(config.TOOL.attributes.sides || 5)));
+	var cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2, pts = [];
+	for (var i = 0; i < n; i++) {
+		var a = -Math.PI / 2 + i * Math.PI * 2 / n;
+		pts.push(point(cx + Math.cos(a) * r, cy + Math.sin(a) * r));
+	}
+	return { closed: true, pts: pts };
+}
+
 function install_shape_modes() {
 	var pending = null;
 	document.addEventListener('mousedown', () => {
 		if (!SHAPE_TOOLS.includes(config.TOOL.name)) return;
 		var mode = config.TOOL.attributes.shape_mode || 'Shape';
-		//Shape mode: rectangles, ellipses and lines become CS6 shape layers (polygons stay vector layers)
-		if (mode == 'Shape' && config.TOOL.name == 'pentagon') return;
 		pending = { mode: mode, before: config.layer, history: app.State.action_history_index };
 	}, true);
 	document.addEventListener('mouseup', () => {
@@ -77,6 +86,7 @@ async function convert(job) {
 		var shape_path = null, name = 'Shape';
 		if (layer.type == 'rectangle') { shape_path = rect_subpath(sx0, sy0, sw, shh, radius); name = radius ? 'Rounded Rectangle' : 'Rectangle'; }
 		else if (layer.type == 'ellipse') { shape_path = ellipse_subpath(sx0, sy0, sw, shh); name = 'Ellipse'; }
+		else if (layer.type == 'pentagon') { shape_path = polygon_subpath(sx0, sy0, sw, shh); name = 'Polygon'; }
 		else if (layer.type == 'line') {
 			//CS6 lines are thin filled rectangles (Weight)
 			var len = Math.hypot(w, h) || 1, wt = Math.max(1, (layer.params && layer.params.size) || 1) / 2;
@@ -93,7 +103,7 @@ async function convert(job) {
 		}
 		app.State.action_history.length = app.State.action_history_index;
 		var Shapes = app.GUI.Ps_workspace.Shapes;
-		var tool_names = { rectangle: 'Rectangle Tool', ellipse: 'Ellipse Tool', line: 'Line Tool' };
+		var tool_names = { rectangle: 'Rectangle Tool', ellipse: 'Ellipse Tool', line: 'Line Tool', pentagon: 'Polygon Tool' };
 		await Shapes.create(Shapes.next_name(name), [shape_path], fill, stroke, tool_names[layer.type]);
 		return;
 	}
@@ -102,6 +112,7 @@ async function convert(job) {
 		if (layer.type == 'rectangle') subpath = rect_subpath(x, y, aw, ah, (layer.params && layer.params.radius && (layer.params.radius.value || layer.params.radius)) || 0);
 		else if (layer.type == 'ellipse') subpath = ellipse_subpath(x, y, aw, ah);
 		else if (layer.type == 'line') subpath = { closed: false, pts: [point(layer.x, layer.y), point(layer.x + w, layer.y + h)] };
+		else if (layer.type == 'pentagon') subpath = polygon_subpath(x, y, aw, ah);
 	}
 	if (!subpath) {
 		pixels = document.createElement('canvas');
@@ -120,6 +131,8 @@ async function convert(job) {
 	}
 	app.State.action_history.length = app.State.action_history_index;
 	if (job.mode == 'Path') {
+		//shape tools in Path mode draw into the Work Path, not a targeted shape layer's path
+		if (config.ps_path_active == 'layer') config.ps_path_active = -1;
 		if (subpath) {
 			var ed = Paths.editable();
 			ed.path.subpaths.push(subpath);

@@ -413,6 +413,7 @@ config.TOOLS = [
 			border_color: '#555555',
 			fill_color: '#aaaaaa',
 			shape_mode: 'Shape',
+			sides: 5,
 		},
 	},
 	{
