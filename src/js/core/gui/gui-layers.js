@@ -159,6 +159,12 @@ class GUI_layers_class {
 			else if (target.id == 'ps_layer_mask') {
 				app.GUI.Ps_workspace.Mask.add(event.altKey);
 			}
+			else if ((action == 'mask_thumb' || action == 'layer_thumb') && (event.ctrlKey || event.metaKey)) {
+				//CS6: Ctrl+click a thumbnail loads its pixels (or mask) as a selection
+				var src_layer = _this.Base_layers.get_layer(target.dataset.id);
+				var op = event.shiftKey && event.altKey ? 'intersect' : (event.shiftKey ? 'add' : (event.altKey ? 'subtract' : 'new'));
+				app.GUI.modules['ps/commands'].load_layer_selection(src_layer, action == 'mask_thumb', op);
+			}
 			else if (action == 'mask_thumb' || action == 'layer_thumb') {
 				var layer = _this.Base_layers.get_layer(target.dataset.id);
 				var Mask = app.GUI.Ps_workspace.Mask;
@@ -178,6 +184,9 @@ class GUI_layers_class {
 			}
 			else if (target.id == 'ps_layer_adjust') {
 				show_popup_menu(target, adjustment_items(true), {placement: 'below'});
+			}
+			else if (action == 'visibility' && event.altKey) {
+				app.GUI.modules['ps/commands'].solo_visibility(_this.Base_layers.get_layer(target.dataset.id));
 			}
 			else if (action == 'visibility') {
 				app.State.do_action(new app.Actions.Toggle_layer_visibility_action(target.dataset.id));

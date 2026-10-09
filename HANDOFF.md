@@ -129,6 +129,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Hand, Zoom and Space-to-pan.
   - CS6 zoom steps.
   - Ctrl+Z toggles a single undo; Alt+Ctrl+Z and Shift+Ctrl+Z step through History.
+  - Layers panel: Ctrl+click a layer/mask thumbnail loads it as a selection (Shift add, Alt subtract, Shift+Alt intersect); Alt+click an eye shows only that layer (again to restore). Hidden shortcuts: Shift+Ctrl+Alt+E Stamp Visible, Shift+Ctrl+Alt+N new layer, Alt+[ / Alt+] select layer below/above, Alt/Ctrl+Backspace fill FG/BG.
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next

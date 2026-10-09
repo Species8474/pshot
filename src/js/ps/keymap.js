@@ -69,6 +69,11 @@ class Ps_keymap_class {
 		this.map['Ctrl+='] = this.map['Ctrl++'];
 		this.map['Ctrl+Shift+='] = this.map['Ctrl++'];
 		this.map['Alt+Ctrl+Backspace'] = null;
+		//CS6 shortcuts without a menu item
+		this.map[this.parse_shortcut('Alt+Shift+Ctrl+E')] = { target: 'ps/commands.stamp_visible' };
+		this.map[this.parse_shortcut('Alt+Shift+Ctrl+N')] = { target: 'ps/commands.new_layer_silent' };
+		this.map[this.parse_shortcut('Alt+]')] = { target: 'ps/commands.select_layer_step', parameter: 1 };
+		this.map[this.parse_shortcut('Alt+[')] = { target: 'ps/commands.select_layer_step', parameter: -1 };
 
 		window.addEventListener('keydown', (event) => this.on_keydown(event), true);
 		window.addEventListener('keyup', (event) => this.on_keyup(event), true);

@@ -1152,6 +1152,89 @@ class Ps_commands_class {
 		app.GUI.Ps_workspace.enforce_mode();
 	}
 
+	/**
+	 * Ctrl+click a layer (or mask) thumbnail: its pixels (or mask) as a selection
+	 */
+	load_layer_selection(layer, use_mask, op) {
+		if (!layer) return;
+		var sel = this.selection();
+		var shape = document.createElement('canvas');
+		shape.width = config.WIDTH;
+		shape.height = config.HEIGHT;
+		var ctx = shape.getContext('2d');
+		if (use_mask && layer.ps_mask) {
+			//mask: white reveals; alpha holds the value
+			ctx.drawImage(layer.ps_mask, layer.x - layer.ps_mask_x, layer.y - layer.ps_mask_y);
+		}
+		else {
+			var plain = Object.assign(Object.create(Object.getPrototypeOf(layer)), layer, { opacity: 100, ps_mask: null, ps_styles: null, visible: true, _ps_ignore_groups: true });
+			this.Base_layers.render_object(ctx, plain);
+		}
+		ctx.globalCompositeOperation = 'source-in';
+		ctx.fillStyle = '#fff';
+		ctx.fillRect(0, 0, shape.width, shape.height);
+		sel.commit(sel.combine(shape, op || 'new'), 'Load Selection');
+	}
+
+	/**
+	 * Alt+click an eye: show only this layer; Alt+click again brings the others back
+	 */
+	solo_visibility(layer) {
+		if (!layer) return;
+		var others = config.layers.filter(l => l !== layer && l.type != 'ps_group');
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var ancestors = Groups.ancestors(layer);
+		if (this.solo && this.solo.layer === layer && others.every(l => l.visible === false || ancestors.includes(l))) {
+			for (var id of this.solo.visible) {
+				var l = this.Base_layers.get_layer(id);
+				if (l) l.visible = true;
+			}
+			this.solo = null;
+		}
+		else {
+			this.solo = { layer: layer, visible: others.filter(l => l.visible !== false).map(l => l.id) };
+			for (var o of others) o.visible = false;
+			layer.visible = true;
+			for (var g of ancestors) g.visible = true;
+		}
+		app.GUI.GUI_layers.render_layers();
+		config.need_render = true;
+	}
+
+	/**
+	 * Stamp Visible (Shift+Ctrl+Alt+E): a new layer with all visible layers merged
+	 */
+	stamp_visible() {
+		var canvas = document.createElement('canvas');
+		canvas.width = config.WIDTH;
+		canvas.height = config.HEIGHT;
+		this.Base_layers.convert_layers_to_canvas(canvas.getContext('2d'), null, false);
+		return app.State.do_action(new app.Actions.Bundle_action('stamp_visible', 'Stamp Visible', [
+			new app.Actions.Insert_layer_action({
+				type: 'image', x: 0, y: 0, width: canvas.width, height: canvas.height, width_original: canvas.width, height_original: canvas.height,
+				data: canvas.toDataURL('image/png'),
+			}),
+		]));
+	}
+
+	new_layer_silent() {
+		return app.State.do_action(new app.Actions.Insert_layer_action({}));
+	}
+
+	/**
+	 * Alt+] / Alt+[: select the layer above / below (CS6)
+	 */
+	select_layer_step(direction) {
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var list = Groups.ordered().filter(l => !Groups.ancestors(l).some(g => g.ps_collapsed));
+		var i = list.indexOf(config.layer);
+		var next = list[i - (direction || 1)];
+		if (next) {
+			app.GUI.Ps_workspace.Multi.clear();
+			app.State.do_action(new app.Actions.Select_layer_action(next.id));
+		}
+	}
+
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
 	toggle_pixel_grid() {
