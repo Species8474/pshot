@@ -101,11 +101,21 @@ class Ps_multi_select_class {
 	}
 
 	/**
-	 * movable pixel/text/shape layers of the selection (group contents included)
+	 * layers linked to the selected ones (Layer > Link Layers)
+	 */
+	linked() {
+		var sel = this.selected();
+		var links = sel.map(l => l.ps_link).filter(Boolean);
+		if (!links.length) return [];
+		return config.layers.filter(l => l.ps_link && links.includes(l.ps_link) && !sel.includes(l));
+	}
+
+	/**
+	 * movable pixel/text/shape layers of the selection (group contents and linked layers included)
 	 */
 	members() {
 		var out = [];
-		for (var l of this.top_level()) {
+		for (var l of this.top_level().concat(this.linked())) {
 			var list = this.groups().is_group(l) ? this.groups().descendants(l) : [l];
 			for (var m of list) {
 				if (m.type != 'ps_group' && m.type != 'ps_adjust' && m.x != null && !out.includes(m)) out.push(m);
@@ -284,7 +294,7 @@ class Ps_multi_select_class {
 			return app.Layers.get_world_coords(e.clientX - rect.left, e.clientY - rect.top);
 		};
 		document.addEventListener('mousedown', (e) => {
-			if (config.TOOL.name != 'select' || e.button != 0 || !this.multiple()) return;
+			if (config.TOOL.name != 'select' || e.button != 0 || !(this.multiple() || this.linked().length)) return;
 			if (e.target.id != 'canvas_minipaint' && e.target.id != 'main_wrapper') return;
 			var members = this.members();
 			if (members.length == 0) return;

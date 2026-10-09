@@ -1409,3 +1409,4 @@ body.theme-cs6 #popups .popup.ps_liquify { width: auto; max-width: none; max-hei
 .ps_lq_field input { width: 64px; }
 .ps_opt_readout { color: #e0e0e0; min-width: 56px; white-space: nowrap; }
 .ps_info_samplers { display: none; grid-template-columns: 1fr 1fr; gap: 8px 12px; border-bottom: 1px solid #444; padding: 8px 0; }
+.ps_layer_linked { color: #d0d0d0; margin-left: 4px; display: inline-flex; }

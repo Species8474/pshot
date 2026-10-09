@@ -111,6 +111,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Layer Mask > From Transparency; New > Background from Layer; Arrange > Reverse; Matting (Defringe, Remove Black/White Matte); Scripts > Delete All Empty Layers.
   - Duplicate layers are named "X copy"; Layer via Copy/Cut.
   - Multiple layer selection (`ps/multi-select.js`): Ctrl+click and Shift+click in the Layers panel. Move, Group (Ctrl+G), Delete, Merge Layers (Ctrl+E), Align and Distribute act on all selected layers. The set is valid only while it contains `config.layer`.
+  - Link Layers (chain button / Layer menu, label toggles to Unlink): linked layers move together; Select Linked Layers. (`ps_link` token; not saved to PSD.)
   - As in CS6, selecting a layer and toggling visibility are not History states (`base-state.js`).
 - **Image**
   - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Shadows/Highlights and Equalize (destructive here, as in CS6).

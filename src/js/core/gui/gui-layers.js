@@ -68,7 +68,7 @@ var template = `
 	</div>
 	<div class="layers_list" id="layers"></div>
 	<div class="ps_layers_footer">
-		<button type="button" class="disabled" title="Link layers">${ICON.link}</button>
+		<button type="button" id="ps_layer_link" title="Link layers">${ICON.link}</button>
 		<button type="button" id="ps_layer_fx" title="Add a layer style">${ICON.fx}</button>
 		<button type="button" id="ps_layer_mask" title="Add layer mask">${ICON.mask}</button>
 		<button type="button" id="ps_layer_adjust" title="Create new fill or adjustment layer">${ICON.adjust}</button>
@@ -132,6 +132,9 @@ class GUI_layers_class {
 			var action = target.dataset.action;
 			if (target.id == 'insert_layer') {
 				app.State.do_action(new app.Actions.Insert_layer_action());
+			}
+			else if (target.id == 'ps_layer_link') {
+				app.GUI.modules['ps/commands'].toggle_link_layers();
 			}
 			else if (target.id == 'ps_layer_delete' && app.GUI.Ps_workspace.Multi.multiple()) {
 				app.GUI.Ps_workspace.Multi.delete();
@@ -498,6 +501,9 @@ class GUI_layers_class {
 				}
 				var is_background = value.name == 'Background' && value === layers[layers.length - 1];
 				html += '<span class="ps_layer_name' + (is_background ? ' background' : '') + '" data-id="' + value.id + '">' + this.Helper.escapeHtml(value.name) + '</span>';
+				if (value.ps_link) {
+					html += '<span class="ps_layer_linked" title="Linked">' + ICON.link + '</span>';
+				}
 				var lk = value.ps_lock || {};
 				if (is_background || lk.all) {
 					html += '<span class="ps_layer_lock" title="Locked">' + ICON.lock_all + '</span>';

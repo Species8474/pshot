@@ -911,6 +911,48 @@ class Ps_commands_class {
 	/**
 	 * Edit > Define Pattern: the selection's bounding box (or the document), all visible layers
 	 */
+	/**
+	 * Layer > Link Layers / Unlink Layers (the Layers panel chain button toggles)
+	 */
+	toggle_link_layers() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		var sel = Multi.selected();
+		var all_linked = sel.length && sel.every(l => l.ps_link && l.ps_link == sel[0].ps_link);
+		if (all_linked || (sel.length == 1 && sel[0].ps_link)) return this.unlink_layers();
+		if (sel.length < 2) return;
+		var token = 'link' + Date.now();
+		var keep = Multi.ids.slice();
+		app.State.do_action(new app.Actions.Bundle_action('link_layers', 'Link Layers', sel.map(l => new app.Actions.Update_layer_action(l.id, { ps_link: token }))))
+			.then(() => { Multi.ids = keep; app.GUI.GUI_layers.render_layers(); });
+	}
+
+	link_label() {
+		var sel = app.GUI.Ps_workspace.Multi.selected();
+		return sel.length && sel.some(l => l.ps_link) ? 'Unlink Layers' : 'Link Layers';
+	}
+
+	link_layers() {
+		var sel = app.GUI.Ps_workspace.Multi.selected();
+		if (sel.length >= 2 && !sel.every(l => l.ps_link && l.ps_link == sel[0].ps_link)) this.toggle_link_layers();
+	}
+
+	unlink_layers() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		var sel = Multi.selected().filter(l => l.ps_link);
+		if (!sel.length) return;
+		var keep = Multi.ids.slice();
+		app.State.do_action(new app.Actions.Bundle_action('link_layers', 'Unlink Layers', sel.map(l => new app.Actions.Update_layer_action(l.id, { ps_link: null }))))
+			.then(() => { Multi.ids = keep; app.GUI.GUI_layers.render_layers(); });
+	}
+
+	select_linked_layers() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		var layer = config.layer;
+		if (!layer || !layer.ps_link) return;
+		Multi.ids = config.layers.filter(l => l.ps_link == layer.ps_link).map(l => l.id);
+		app.GUI.GUI_layers.render_layers();
+	}
+
 	toggle_pixel_grid() {
 		var ws = app.GUI.Ps_workspace;
 		ws.pixel_grid = ws.pixel_grid === false;

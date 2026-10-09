@@ -271,7 +271,7 @@ class Ps_groups_class {
 			return app.Layers.get_world_coords(e.clientX - rect.left, e.clientY - rect.top);
 		};
 		document.addEventListener('mousedown', (e) => {
-			if (config.TOOL.name != 'select' || e.button != 0 || !this.is_group(config.layer) || app.GUI.Ps_workspace.Multi.multiple()) return;
+			if (config.TOOL.name != 'select' || e.button != 0 || !this.is_group(config.layer) || app.GUI.Ps_workspace.Multi.multiple() || app.GUI.Ps_workspace.Multi.linked().length) return;
 			if (e.target.id != 'canvas_minipaint' && e.target.id != 'main_wrapper') return;
 			var members = this.descendants(config.layer).filter(l => l.type != 'ps_group' && l.x != null);
 			if (members.length == 0) return;
