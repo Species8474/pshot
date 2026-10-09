@@ -48,166 +48,68 @@ class Magic_erase_class extends Base_tools_class {
 		this.magic_erase(mouse);
 	}
 
+	/**
+	 * pshot: CS6 Magic Eraser - the area similar to the clicked pixel (Tolerance,
+	 * Contiguous, Sample All Layers; Anti-alias softens its edge) becomes
+	 * transparent by the Opacity; on the Background it becomes Layer 0 first
+	 */
 	async magic_erase(mouse) {
 		var params = this.getParams();
-
-		if(this.working == true){
+		if (this.working == true) {
 			return;
 		}
-
-		if (config.layer.type != 'image') {
+		var layer = config.layer;
+		if (layer.type != 'image' || !layer.link) {
 			alertify.error('This layer must contain an image. Please convert it to raster to apply this tool.');
 			return;
 		}
-		if (config.layer.is_vector == true) {
-			alertify.error('Layer is vector, convert it to raster to apply this tool.');
+		var W = config.WIDTH, H = config.HEIGHT;
+		if (mouse.x < 0 || mouse.y < 0 || mouse.x >= W || mouse.y >= H) {
 			return;
 		}
-
-		//get canvas from layer
-		var canvas = document.createElement('canvas');
-		var ctx = canvas.getContext("2d");
-		canvas.width = config.layer.width_original;
-		canvas.height = config.layer.height_original;
-		ctx.drawImage(config.layer.link, 0, 0);
-
-		var mouse_x = Math.round(mouse.x) - config.layer.x;
-		var mouse_y = Math.round(mouse.y) - config.layer.y;
-
-		//adapt to origin size
-		mouse_x = this.adaptSize(mouse_x, 'width');
-		mouse_y = this.adaptSize(mouse_y, 'height');
-
-		//convert float coords to integers
-		mouse_x = Math.round(mouse_x);
-		mouse_y = Math.round(mouse_y);
-
-		//change
 		this.working = true;
-		this.magic_erase_general(ctx, config.WIDTH, config.HEIGHT,
-			mouse_x, mouse_y, params.power, params.anti_aliasing, params.contiguous);
-
-		app.State.do_action(
-			new app.Actions.Bundle_action('magic_erase_tool', 'Magic Eraser Tool', [
-				new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(canvas, config.layer))
-			])
-		);
-		//prevent crash bug on touch screen - hard to explain and debug
-		await new Promise(r => setTimeout(r, 10));
-		this.working = false;
-	}
-
-	/**
-	 * apply magic erase
-	 *
-	 * @param {ctx} context
-	 * @param {int} W
-	 * @param {int} H
-	 * @param {int} x
-	 * @param {int} y
-	 * @param {int} sensitivity max 100
-	 * @param {Boolean} anti_aliasing
-	 */
-	magic_erase_general(context, W, H, x, y, sensitivity, anti_aliasing, contiguous = false) {
-		sensitivity = sensitivity * 255 / 100; //convert to 0-255 interval
-		x = parseInt(x);
-		y = parseInt(y);
-		var canvasTemp = document.createElement('canvas');
-		canvasTemp.width = W;
-		canvasTemp.height = H;
-		var ctxTemp = canvasTemp.getContext("2d");
-
-		ctxTemp.rect(0, 0, W, H);
-		ctxTemp.fillStyle = "rgba(255, 255, 255, 0)";
-		ctxTemp.fill();
-
-		var img_tmp = ctxTemp.getImageData(0, 0, W, H);
-		var imgData_tmp = img_tmp.data;
-
-		var img = context.getImageData(0, 0, W, H);
-		var imgData = img.data;
-		var k = ((y * (img.width * 4)) + (x * 4));
-		var dx = [0, -1, +1, 0];
-		var dy = [-1, 0, 0, +1];
-		var color_to = {
-			r: 255,
-			g: 255,
-			b: 255,
-			a: 255
-		};
-		var color_from = {
-			r: imgData[k + 0],
-			g: imgData[k + 1],
-			b: imgData[k + 2],
-			a: imgData[k + 3]
-		};
-		if (color_from.r == color_to.r &&
-			color_from.g == color_to.g &&
-			color_from.b == color_to.b &&
-			color_from.a == 0) {
-			return false;
-		}
-		if (contiguous == false) {
-			//check only nearest pixels
-			var stack = [];
-			stack.push([x, y]);
-			while (stack.length > 0) {
-				var curPoint = stack.pop();
-				for (var i = 0; i < 4; i++) {
-					var nextPointX = curPoint[0] + dx[i];
-					var nextPointY = curPoint[1] + dy[i];
-					if (nextPointX < 0 || nextPointY < 0 || nextPointX >= W || nextPointY >= H)
-						continue;
-					var k = (nextPointY * W + nextPointX) * 4;
-					if (imgData_tmp[k + 3] != 0)
-						continue; //already parsed
-
-					if (Math.abs(imgData[k] - color_from.r) <= sensitivity
-						&& Math.abs(imgData[k + 1] - color_from.g) <= sensitivity
-						&& Math.abs(imgData[k + 2] - color_from.b) <= sensitivity
-						&& Math.abs(imgData[k + 3] - color_from.a) <= sensitivity) {
-						//erase
-						imgData_tmp[k] = color_to.r; //r
-						imgData_tmp[k + 1] = color_to.g; //g
-						imgData_tmp[k + 2] = color_to.b; //b
-						imgData_tmp[k + 3] = color_to.a; //a
-
-						stack.push([nextPointX, nextPointY]);
-					}
-				}
+		try {
+			var Selection = app.GUI.Ps_workspace.Selection;
+			var src = Selection.sample_source(!!params.sample_all);
+			var tolerance = params.tolerance == null ? 32 : params.tolerance;
+			var area = Selection.flood(src, mouse.x, mouse.y, tolerance, params.contiguous !== false, null, null);
+			if (!area) return;
+			var mask = Selection.array_to_mask(area);
+			if (params.anti_aliasing !== false) {
+				var soft = document.createElement('canvas');
+				soft.width = W;
+				soft.height = H;
+				var sctx = soft.getContext('2d');
+				sctx.filter = 'blur(0.6px)';
+				sctx.drawImage(mask, 0, 0);
+				sctx.filter = 'none';
+				sctx.drawImage(mask, 0, 0);
+				mask = soft;
 			}
-		}
-		else {
-			//global mode - contiguous
-			for (var i = 0; i < imgData.length; i += 4) {
-				if (imgData[i + 3] == 0)
-					continue;	//transparent
-
-				//imgData[i] + 0.7152 * imgData[i + 1] + 0.0722 * imgData[i + 2]);
-
-				for (var j = 0; j < 4; j++) {
-					var k = i + j;
-
-					if (Math.abs(imgData[k] - color_from.r) <= sensitivity
-						&& Math.abs(imgData[k + 1] - color_from.g) <= sensitivity
-						&& Math.abs(imgData[k + 2] - color_from.b) <= sensitivity
-						&& Math.abs(imgData[k + 3] - color_from.a) <= sensitivity) {
-						imgData_tmp[k] = color_to.r; //r
-						imgData_tmp[k + 1] = color_to.g; //g
-						imgData_tmp[k + 2] = color_to.b; //b
-						imgData_tmp[k + 3] = color_to.a; //a
-					}
-				}
+			var canvas = document.createElement('canvas');
+			canvas.width = layer.width_original;
+			canvas.height = layer.height_original;
+			var ctx = canvas.getContext('2d');
+			ctx.drawImage(layer.link, 0, 0);
+			ctx.save();
+			ctx.scale(layer.width_original / layer.width, layer.height_original / layer.height);
+			ctx.translate(-layer.x, -layer.y);
+			ctx.globalAlpha = (params.opacity == null ? 100 : params.opacity) / 100;
+			ctx.globalCompositeOperation = 'destination-out';
+			ctx.drawImage(mask, 0, 0);
+			ctx.restore();
+			var actions = [new app.Actions.Update_layer_image_action(Selection.restrict(canvas, layer))];
+			var ordered = app.GUI.Ps_workspace.Groups.ordered();
+			if (layer.name == 'Background' && ordered[ordered.length - 1] === layer) {
+				actions.push(new app.Actions.Update_layer_action(layer.id, { name: 'Layer 0' }));
 			}
+			await app.State.do_action(new app.Actions.Bundle_action('magic_erase_tool', 'Magic Eraser', actions));
 		}
-
-		//destination-out + blur = anti-aliasing
-		ctxTemp.putImageData(img_tmp, 0, 0);
-		context.globalCompositeOperation = "destination-out";
-		if (anti_aliasing == true) {
-			context.filter = 'blur(1px)';
+		finally {
+			//prevent crash bug on touch screen - hard to explain and debug
+			await new Promise(r => setTimeout(r, 10));
+			this.working = false;
 		}
-		context.drawImage(canvasTemp, 0, 0);
 	}
 
 }

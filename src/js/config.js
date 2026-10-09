@@ -205,6 +205,7 @@ config.TOOLS = [
 			contrast: 10,
 			frequency: 57,
 			sample_size: 'Point Sample',
+			auto_enhance: false,
 			style: 'Normal',
 			ratio_w: 1,
 			ratio_h: 1,
@@ -301,9 +302,11 @@ config.TOOLS = [
 		name: 'magic_erase',
 		title: 'Magic Eraser Tool',
 		attributes: {
-			power: 15,
+			tolerance: 32,
 			anti_aliasing: true,
-			contiguous: false,
+			contiguous: true,
+			sample_all: false,
+			opacity: 100,
 		},
 	},
 	{

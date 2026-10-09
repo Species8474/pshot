@@ -240,7 +240,28 @@ class Ps_select_class extends Base_tools_class {
 			var sel = this.selection();
 			sel.quick_preview = null;
 			if (q.arr) {
-				sel.commit(sel.combine(sel.array_to_mask(q.arr), q.op), NAMES.quick);
+				var qmask = sel.array_to_mask(q.arr);
+				if (this.attrs().auto_enhance) {
+					//Auto-Enhance: a smoother, less blocky edge (blur, re-threshold, slight softening)
+					var en = document.createElement('canvas');
+					en.width = qmask.width;
+					en.height = qmask.height;
+					var ectx = en.getContext('2d', { willReadFrequently: true });
+					ectx.filter = 'blur(2.5px)';
+					ectx.drawImage(qmask, 0, 0);
+					ectx.filter = 'none';
+					var ed = ectx.getImageData(0, 0, en.width, en.height);
+					for (var ei = 3; ei < ed.data.length; ei += 4) ed.data[ei] = ed.data[ei] >= 128 ? 255 : 0;
+					ectx.putImageData(ed, 0, 0);
+					var en2 = document.createElement('canvas');
+					en2.width = en.width;
+					en2.height = en.height;
+					var e2 = en2.getContext('2d');
+					e2.filter = 'blur(0.7px)';
+					e2.drawImage(en, 0, 0);
+					qmask = en2;
+				}
+				sel.commit(sel.combine(qmask, q.op), NAMES.quick);
 			}
 			return;
 		}
