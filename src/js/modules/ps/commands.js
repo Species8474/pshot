@@ -11,6 +11,7 @@ import { ensure_pixel_layer } from './../../ps/pixel-layer.js';
 import { open_document, place, save_psd } from './../../ps/document.js';
 import Ps_adjust_class from './../../ps/adjust.js';
 import { show_new_dialog } from './../../ps/new-dialog.js';
+import Ps_size_dialogs_class from './../../ps/size-dialogs.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -30,6 +31,7 @@ class Ps_commands_class {
 		this.last_selection = null;
 		this.last_filter_target = null;
 		this.Adjust = new Ps_adjust_class();
+		this.Size = new Ps_size_dialogs_class();
 	}
 
 	noop() {
@@ -723,6 +725,9 @@ class Ps_commands_class {
 	reset_workspace() { app.GUI.Ps_workspace.reset_workspace(); }
 
 	// ---------- File ----------
+
+	image_size() { this.Size.image_size(); }
+	canvas_size() { this.Size.canvas_size(); }
 
 	new_document() {
 		show_new_dialog();

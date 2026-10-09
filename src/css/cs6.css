@@ -1337,3 +1337,17 @@ body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { cursor: default; }
 .ps_app > .ps_options { height: 34px; box-sizing: border-box; }
 
 .ps_adj_gradient { display: inline-block; width: 180px; height: 18px; border: 1px solid #222; }
+
+/* Image Size / Canvas Size */
+.ps_sz { display: flex; flex-direction: column; gap: 6px; min-width: 340px; }
+.ps_sz_head { margin-top: 6px; font-weight: normal; color: #ececec; }
+.ps_sz_row { display: flex; align-items: center; gap: 6px; padding-left: 12px; }
+.ps_sz_row > label { width: 92px; text-align: right; }
+.ps_sz_row input[type="number"] { width: 80px; }
+.ps_sz_info span { color: #cfcfcf; }
+.ps_sz_link { color: #aaa; }
+.ps_sz_check { display: flex; align-items: center; gap: 6px; padding-left: 12px; }
+.ps_sz_method { margin-left: 34px; width: 260px; }
+.ps_cs_grid { display: grid; grid-template-columns: repeat(3, 22px); gap: 2px; }
+.ps_cs_anchor { width: 22px; height: 22px; padding: 0; background: #444; border: 1px solid #2a2a2a; border-radius: 0; }
+.ps_cs_anchor.active { background: #d8d8d8; }
