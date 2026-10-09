@@ -20,15 +20,33 @@ const BLEND = {
 };
 const BLEND_NAMES = Object.keys(BLEND);
 
+//CS6 contour presets: t (0..1 along the edge) -> 0..1
+const CONTOURS = {
+	'Linear': (t) => t,
+	'Cone': (t) => 1 - Math.abs(2 * t - 1),
+	'Cone - Inverted': (t) => Math.abs(2 * t - 1),
+	'Cove - Deep': (t) => t * t * t,
+	'Cove - Shallow': (t) => t * t,
+	'Gaussian': (t) => t * t * (3 - 2 * t),
+	'Half Round': (t) => Math.sqrt(1 - (1 - t) * (1 - t)),
+	'Ring': (t) => Math.sin(t * Math.PI),
+	'Ring - Double': (t) => Math.abs(Math.sin(t * Math.PI * 2)),
+	'Rolling Slope - Descending': (t) => 1 - t + Math.sin(t * Math.PI) * 0.3,
+	'Rounded Steps': (t) => { var s = Math.floor(t * 4) / 4, f = t * 4 - Math.floor(t * 4); return Math.min(1, s + (f * f * (3 - 2 * f)) / 4); },
+	'Sawtooth 1': (t) => (t * 3) % 1,
+};
+const CONTOUR_NAMES = Object.keys(CONTOURS);
+
 // CS6 defaults
 const DEFAULTS = {
-	drop_shadow: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 75, angle: 120, distance: 5, size: 5 },
-	inner_shadow: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 75, angle: 120, distance: 5, size: 5 },
-	outer_glow: { enabled: false, blend: 'Screen', color: '#ffffbe', opacity: 75, size: 5 },
-	inner_glow: { enabled: false, blend: 'Screen', color: '#ffffbe', opacity: 75, size: 5 },
+	drop_shadow: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 75, angle: 120, distance: 5, size: 5, contour: 'Linear' },
+	inner_shadow: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 75, angle: 120, distance: 5, size: 5, contour: 'Linear' },
+	outer_glow: { enabled: false, blend: 'Screen', color: '#ffffbe', opacity: 75, size: 5, contour: 'Linear' },
+	inner_glow: { enabled: false, blend: 'Screen', color: '#ffffbe', opacity: 75, size: 5, contour: 'Linear' },
 	stroke: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100, size: 3, position: 'Outside' },
 	bevel: { enabled: false, style: 'Inner Bevel', technique: 'Smooth', depth: 100, direction: 'Up', size: 5, soften: 0, angle: 120, altitude: 30,
-		highlight_blend: 'Screen', highlight_color: '#ffffff', highlight_opacity: 75, shadow_blend: 'Multiply', shadow_color: '#000000', shadow_opacity: 75 },
+		highlight_blend: 'Screen', highlight_color: '#ffffff', highlight_opacity: 75, shadow_blend: 'Multiply', shadow_color: '#000000', shadow_opacity: 75,
+		contour_on: false, contour: 'Linear', contour_range: 50, texture_on: false, texture_pattern: 'Checkerboard', texture_scale: 100, texture_depth: 100, texture_invert: false },
 	satin: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 50, angle: 19, distance: 11, size: 14, invert: true },
 	color_overlay: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100 },
 	gradient_overlay: { enabled: false, blend: 'Normal', opacity: 100, color_1: '#000000', color_2: '#ffffff', angle: 90, reverse: false },
@@ -38,7 +56,7 @@ const DEFAULTS = {
 // left column of the CS6 Layer Style dialog (null = not available yet)
 const LIST = [
 	['blending', 'Blending Options: Default'],
-	['bevel', 'Bevel & Emboss'], [null, 'Contour'], [null, 'Texture'],
+	['bevel', 'Bevel & Emboss'], ['bevel_contour', 'Contour'], ['bevel_texture', 'Texture'],
 	['stroke', 'Stroke'],
 	['inner_shadow', 'Inner Shadow'],
 	['inner_glow', 'Inner Glow'],
@@ -52,6 +70,8 @@ const LIST = [
 
 const TITLES = {};
 for (const [key, title] of LIST) if (key) TITLES[key] = title;
+//Contour and Texture are parts of Bevel & Emboss
+const SUB = { bevel_contour: 'contour_on', bevel_texture: 'texture_on' };
 
 function rgba(hex, alpha) {
 	var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
@@ -168,6 +188,20 @@ class Ps_styles_class {
 		else {
 			height = this.alpha_of(this.blurred(content, size / 2));
 		}
+		//Contour: reshape the edge profile (Range 50% = the full contour)
+		if (e.contour_on && CONTOURS[e.contour] && e.contour != 'Linear') {
+			var cf = CONTOURS[e.contour], mixk = Math.min(1, (e.contour_range == null ? 50 : e.contour_range) / 50);
+			for (var ci = 0; ci < height.length; ci++) height[ci] = height[ci] + (cf(height[ci]) - height[ci]) * mixk;
+		}
+		//Texture: the pattern's brightness adds relief inside the shape
+		if (e.texture_on) {
+			var tex = Patterns.tiled(e.texture_pattern || 'Checkerboard', w, h, (e.texture_scale || 100) * scale, 0, 0);
+			var td = tex.getContext('2d').getImageData(0, 0, w, h).data, tk = (e.texture_depth == null ? 100 : e.texture_depth) / 100 * 0.25 * (e.texture_invert ? -1 : 1);
+			for (var ti = 0; ti < height.length; ti++) {
+				var tv = (td[ti * 4] * 0.299 + td[ti * 4 + 1] * 0.587 + td[ti * 4 + 2] * 0.114) / 255;
+				height[ti] += (tv - 0.5) * tk * shape[ti];
+			}
+		}
 		var depth = (e.depth == null ? 100 : e.depth) / 100 * (e.direction == 'Down' ? -1 : 1);
 		var k = size * depth * 1.5;
 		var th = (e.angle || 0) * Math.PI / 180, ph = (e.altitude == null ? 30 : e.altitude) * Math.PI / 180;
@@ -192,6 +226,23 @@ class Ps_styles_class {
 			return soften > 0 ? this.blurred(c, soften) : c;
 		};
 		return [mk(hi, e.highlight_color, e.highlight_opacity), mk(sh, e.shadow_color, e.shadow_opacity)];
+	}
+
+	/**
+	 * Quality > Contour for shadows and glows: reshape the falloff of a
+	 * colored effect canvas (alpha relative to the effect's opacity)
+	 */
+	contoured(c, e) {
+		var f = CONTOURS[e.contour];
+		if (!f || e.contour == 'Linear') return c;
+		var ctx = c.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, max = Math.max(1, (e.opacity == null ? 100 : e.opacity) / 100 * 255);
+		for (var i = 3; i < d.length; i += 4) {
+			if (!d[i]) continue;
+			d[i] = Math.max(0, Math.min(1, f(Math.min(1, d[i] / max)))) * max;
+		}
+		ctx.putImageData(img, 0, 0);
+		return c;
 	}
 
 	/**
@@ -231,12 +282,12 @@ class Ps_styles_class {
 		if (on('drop_shadow')) {
 			var e = s.drop_shadow, o = offset(e);
 			ctx.globalCompositeOperation = BLEND[e.blend] || 'multiply';
-			ctx.drawImage(this.shadow_only(content, e.color, e.opacity, o.dx, o.dy, e.size * scale), 0, 0);
+			ctx.drawImage(this.contoured(this.shadow_only(content, e.color, e.opacity, o.dx, o.dy, e.size * scale), e), 0, 0);
 		}
 		if (on('outer_glow')) {
 			var g = s.outer_glow;
 			ctx.globalCompositeOperation = BLEND[g.blend] || 'screen';
-			var glow = this.shadow_only(content, g.color, g.opacity, 0, 0, g.size * scale * 1.2);
+			var glow = this.contoured(this.shadow_only(content, g.color, g.opacity, 0, 0, g.size * scale * 1.2), g);
 			ctx.drawImage(glow, 0, 0);
 			ctx.drawImage(glow, 0, 0);
 		}
@@ -312,12 +363,12 @@ class Ps_styles_class {
 		if (on('inner_glow')) {
 			var ig = s.inner_glow;
 			bctx.globalCompositeOperation = BLEND[ig.blend] || 'screen';
-			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), ig.color, ig.opacity, 0, 0, ig.size * scale * 1.2)), 0, 0);
+			bctx.drawImage(clip_to_shape(this.contoured(this.shadow_only(this.inverted(content), ig.color, ig.opacity, 0, 0, ig.size * scale * 1.2), ig)), 0, 0);
 		}
 		if (on('inner_shadow')) {
 			var is = s.inner_shadow, io = offset(is);
 			bctx.globalCompositeOperation = BLEND[is.blend] || 'multiply';
-			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), is.color, is.opacity, io.dx, io.dy, is.size * scale)), 0, 0);
+			bctx.drawImage(clip_to_shape(this.contoured(this.shadow_only(this.inverted(content), is.color, is.opacity, io.dx, io.dy, is.size * scale), is)), 0, 0);
 		}
 		if (bevel && (s.bevel.style || 'Inner Bevel') != 'Outer Bevel') {
 			bctx.globalCompositeOperation = BLEND[s.bevel.highlight_blend] || 'screen';
@@ -399,8 +450,8 @@ class Ps_styles_class {
 			+ '<div class="ps_fx_title">Styles</div>'
 			+ LIST.map(([k, t]) => k == 'blending'
 				? '<div class="ps_fx_item' + (state.current == k ? ' active' : '') + '" data-key="blending">' + t + '</div>'
-				: '<div class="ps_fx_item' + (k ? '' : ' disabled') + (state.current == k ? ' active' : '') + '" data-key="' + (k || '') + '">'
-					+ '<input type="checkbox"' + (k && styles[k].enabled ? ' checked' : '') + (k ? '' : ' disabled') + ' data-check="' + (k || '') + '"> ' + t + '</div>').join('')
+				: '<div class="ps_fx_item' + (k ? '' : ' disabled') + (SUB[k] ? ' ps_fx_sub' : '') + (state.current == k ? ' active' : '') + '" data-key="' + (k || '') + '">'
+					+ '<input type="checkbox"' + (k && (SUB[k] ? styles.bevel[SUB[k]] : styles[k].enabled) ? ' checked' : '') + (k ? '' : ' disabled') + ' data-check="' + (k || '') + '"> ' + t + '</div>').join('')
 			+ '</div><div class="ps_fx_panel" id="ps_fx_panel"></div></div>';
 		POP.show({
 			title: 'Layer Style',
@@ -429,13 +480,25 @@ class Ps_styles_class {
 			item.addEventListener('click', (e) => {
 				var key = item.dataset.key;
 				if (!key) return;
+				var set_on = (on) => {
+					if (SUB[key]) {
+						state.styles.bevel[SUB[key]] = on;
+						//turning on Contour / Texture turns on Bevel & Emboss
+						if (on && !state.styles.bevel.enabled) {
+							state.styles.bevel.enabled = true;
+							root.querySelector('[data-check="bevel"]').checked = true;
+						}
+					}
+					else state.styles[key].enabled = on;
+				};
+				var is_on = () => SUB[key] ? state.styles.bevel[SUB[key]] : state.styles[key].enabled;
 				if (e.target.matches('input[type="checkbox"]')) {
-					state.styles[key].enabled = e.target.checked;
+					set_on(e.target.checked);
 					apply_preview();
 				}
-				else if (key != 'blending' && !state.styles[key].enabled) {
+				else if (key != 'blending' && !is_on()) {
 					//CS6: clicking a style name turns it on and shows its settings
-					state.styles[key].enabled = true;
+					set_on(true);
 					item.querySelector('input').checked = true;
 					apply_preview();
 				}
@@ -463,6 +526,22 @@ class Ps_styles_class {
 				+ row('Opacity:', num('opacity', state.opacity, '%', 0, 100))
 				+ '<div class="ps_fx_group">Advanced Blending</div>'
 				+ row('Fill Opacity:', num('fill', state.fill, '%', 0, 100));
+		}
+		else if (SUB[key]) {
+			var bv = state.styles.bevel;
+			if (key == 'bevel_contour') {
+				html += '<div class="ps_fx_head">Contour</div><div class="ps_fx_group">Elements</div>'
+					+ row('Contour:', select('contour', CONTOUR_NAMES, bv.contour) + '<label class="ps_fx_check disabled"><input type="checkbox" checked disabled> Anti-aliased</label>')
+					+ row('Range:', num('contour_range', bv.contour_range, '%', 1, 100));
+			}
+			else {
+				html += '<div class="ps_fx_head">Texture</div><div class="ps_fx_group">Elements</div>'
+					+ row('Pattern:', select('texture_pattern', Patterns.names(), bv.texture_pattern))
+					+ row('Scale:', num('texture_scale', bv.texture_scale, '%', 1, 1000))
+					+ row('Depth:', num('texture_depth', bv.texture_depth, '%', -1000, 1000))
+					+ row('', '<label class="ps_fx_check"><input type="checkbox" data-field="texture_invert"' + (bv.texture_invert ? ' checked' : '') + '> Invert</label>'
+						+ '<label class="ps_fx_check disabled"><input type="checkbox" checked disabled> Link with Layer</label>');
+			}
 		}
 		else {
 			var e = state.styles[key];
@@ -520,10 +599,13 @@ class Ps_styles_class {
 				if ('size' in e) {
 					html += row('Size:', num('size', e.size, 'px', 0, 250));
 				}
+				if ('contour' in e) {
+					html += '<div class="ps_fx_group">Quality</div>' + row('Contour:', select('contour', CONTOUR_NAMES, e.contour));
+				}
 			}
 		}
 		panel.innerHTML = html;
-		var target = () => key == 'blending' ? null : state.styles[key];
+		var target = () => key == 'blending' ? null : (SUB[key] ? state.styles.bevel : state.styles[key]);
 		panel.querySelectorAll('[data-field]').forEach((input) => {
 			var update = () => {
 				var field = input.dataset.field;

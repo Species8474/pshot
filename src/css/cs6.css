@@ -1631,3 +1631,4 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_sfilter { display: flex; align-items: center; gap: 6px; padding-left: 6px; }
 .ps_sfilter .ps_effect_name { padding-left: 42px; }
 .ps_sfilters.disabled .ps_effect_name { color: var(--ps-text-disabled); }
+.ps_fx_item.ps_fx_sub { padding-left: 22px; }
