@@ -741,6 +741,13 @@ class Ps_commands_class {
 	transform_distort() { app.GUI.Ps_workspace.Transform.start_mode('distort'); }
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
+	vmask_reveal_all() { app.GUI.Ps_workspace.Vector_mask.reveal_all(); }
+	vmask_hide_all() { app.GUI.Ps_workspace.Vector_mask.hide_all(); }
+	vmask_current_path() { app.GUI.Ps_workspace.Vector_mask.current_path(); }
+	vmask_delete() { app.GUI.Ps_workspace.Vector_mask.remove(); }
+	vmask_toggle_label() { var l = config.layer; return l && l.ps_vmask && l.ps_vmask.disabled ? 'Enable' : 'Disable'; }
+	vmask_toggle() { app.GUI.Ps_workspace.Vector_mask.toggle(); }
+	vmask_rasterize() { app.GUI.Ps_workspace.Vector_mask.rasterize(); }
 	lighting_effects() { app.GUI.Ps_workspace.Lighting.open(); }
 	filter_gallery() { app.GUI.Ps_workspace.Filter_gallery.open(); }
 	puppet_warp() { app.GUI.Ps_workspace.Puppet.start(); }

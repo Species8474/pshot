@@ -272,6 +272,7 @@ async function file_to_layers(file) {
 						visible: !child.hidden,
 						composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
 						_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+						_ps_vmask: child.vectorMask || null,
 						_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
 						_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
 						_parent_key: parent_key,
@@ -296,6 +297,7 @@ async function file_to_layers(file) {
 					composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
 					data: child.canvas.toDataURL('image/png'),
 					_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+					_ps_vmask: child.vectorMask || null,
 					_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
 					_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
 					_parent_key: parent_key,
@@ -390,13 +392,14 @@ async function open_document(files) {
 	});
 	actions.push(new app.Actions.Prepare_canvas_action('do'));
 	await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', actions));
-	//layer styles and fill opacity
+	//layer styles, fill opacity and vector masks
 	for (const settings of doc.layers) {
-		if (settings._ps_styles || settings._ps_fill != null) {
+		if (settings._ps_styles || settings._ps_fill != null || settings._ps_vmask) {
 			const layer = config.layers.find(l => l.order == settings.order);
 			if (layer) {
 				if (settings._ps_styles) layer.ps_styles = settings._ps_styles;
 				if (settings._ps_fill != null) layer.ps_fill = settings._ps_fill;
+				if (settings._ps_vmask) layer.ps_vmask = app.GUI.Ps_workspace.Vector_mask.from_psd(settings._ps_vmask, layer);
 			}
 		}
 	}
@@ -619,7 +622,8 @@ function psd_node(layer) {
 	}
 	else {
 		//vector, text and filtered layers are rasterized at document size
-		const saved = { visible: layer.visible, opacity: layer.opacity, ps_mask_disabled: layer.ps_mask_disabled, ps_styles: layer.ps_styles, ps_fill: layer.ps_fill };
+		const saved = { visible: layer.visible, opacity: layer.opacity, ps_mask_disabled: layer.ps_mask_disabled, ps_styles: layer.ps_styles, ps_fill: layer.ps_fill, ps_vmask: layer.ps_vmask };
+		layer.ps_vmask = null;
 		layer.visible = true;
 		layer.opacity = 100;
 		layer.ps_mask_disabled = true;
@@ -642,6 +646,7 @@ function psd_node(layer) {
 		blendMode: TO_PSD_BLEND[layer.composition] || 'normal',
 		clipping: layer.composition == 'source-atop',
 		mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
+		vectorMask: app.GUI.Ps_workspace.Vector_mask.to_psd(layer),
 		effects: styles_to_effects(layer.ps_styles),
 		fillOpacity: layer.ps_fill == null ? undefined : layer.ps_fill / 100,
 		text: layer.type == 'text' ? text_to_psd(layer) : undefined,

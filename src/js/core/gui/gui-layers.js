@@ -157,7 +157,16 @@ class GUI_layers_class {
 				show_popup_menu(target, layer_style_items(), {placement: 'below'});
 			}
 			else if (target.id == 'ps_layer_mask') {
-				app.GUI.Ps_workspace.Mask.add(event.altKey);
+				//CS6: Ctrl+click, or a click on a layer that already has a pixel mask, adds a vector mask
+				var cur = config.layer;
+				if ((event.ctrlKey || event.metaKey || (cur && cur.ps_mask)) && cur && !cur.ps_vmask) {
+					if (event.altKey) app.GUI.Ps_workspace.Vector_mask.hide_all();
+					else app.GUI.Ps_workspace.Vector_mask.reveal_all();
+				}
+				else app.GUI.Ps_workspace.Mask.add(event.altKey);
+			}
+			else if (action == 'vmask_thumb' && event.shiftKey) {
+				app.GUI.Ps_workspace.Vector_mask.toggle();
 			}
 			else if ((action == 'mask_thumb' || action == 'layer_thumb') && (event.ctrlKey || event.metaKey)) {
 				//CS6: Ctrl+click a thumbnail loads its pixels (or mask) as a selection
@@ -522,6 +531,10 @@ class GUI_layers_class {
 					html += '<span class="ps_mask_wrap' + (value.ps_mask_disabled ? ' disabled' : '') + '">'
 						+ '<canvas class="ps_mask_thumb' + (editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="mask_thumb" title="Layer mask (Shift+click to disable)"></canvas></span>';
 				}
+				if (value.ps_vmask) {
+					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
+					html += '<span class="ps_mask_wrap"><canvas class="ps_vmask_thumb" width="32" height="32" data-id="' + value.id + '" data-action="vmask_thumb" title="Vector mask (Shift+click to disable)"></canvas></span>';
+				}
 				var is_background = value.name == 'Background' && value === layers[layers.length - 1];
 				html += '<span class="ps_layer_name' + (is_background ? ' background' : '') + '" data-id="' + value.id + '">' + this.Helper.escapeHtml(value.name) + '</span>';
 				if (value.ps_link) {
@@ -570,6 +583,12 @@ class GUI_layers_class {
 			var layer = this.Base_layers.get_layer(canvas.dataset.id);
 			if (layer && layer.ps_mask) {
 				app.GUI.Ps_workspace.Mask.thumbnail(canvas, layer);
+			}
+		});
+		target.querySelectorAll('canvas.ps_vmask_thumb').forEach((canvas) => {
+			var layer = this.Base_layers.get_layer(canvas.dataset.id);
+			if (layer && layer.ps_vmask) {
+				app.GUI.Ps_workspace.Vector_mask.thumb(canvas, layer);
 			}
 		});
 		this.render_controls();

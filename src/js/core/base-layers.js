@@ -422,8 +422,9 @@ class Base_layers_class {
 		//revealed pixels, then add the effects
 		var ps_styles = this.Base_gui.Ps_workspace ? this.Base_gui.Ps_workspace.Styles : null;
 		var ps_masked = object.ps_mask && !object.ps_mask_disabled;
+		var ps_vmasked = object.ps_vmask && !object.ps_vmask.disabled && this.Base_gui.Ps_workspace;
 		var ps_styled = ps_styles && ps_styles.needs_offscreen(object);
-		if ((ps_masked || ps_styled) && !object._ps_masking) {
+		if ((ps_masked || ps_vmasked || ps_styled) && !object._ps_masking) {
 			var transform = ctx.getTransform();
 			var temp = document.createElement("canvas");
 			temp.width = ctx.canvas.width;
@@ -439,6 +440,10 @@ class Base_layers_class {
 			if (ps_masked) {
 				tctx.globalCompositeOperation = "destination-in";
 				tctx.drawImage(object.ps_mask, object.x - object.ps_mask_x, object.y - object.ps_mask_y);
+				tctx.globalCompositeOperation = "source-over";
+			}
+			if (ps_vmasked) {
+				this.Base_gui.Ps_workspace.Vector_mask.apply(tctx, object);
 			}
 			var result = ps_styled ? ps_styles.compose(temp, object, Math.abs(transform.a) || 1) : temp;
 			ctx.save();
