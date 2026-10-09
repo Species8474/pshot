@@ -322,9 +322,9 @@ const M = [
 		'-',
 		{ name: 'Extras', shortcut: 'Ctrl+H', target: 'ps/commands.toggle_extras', checked: 'extras' },
 		['Show', [
-			'Layer Edges',
+			{ name: 'Layer Edges', target: 'ps/commands.toggle_layer_edges', checked: 'layer_edges' },
 			{ name: 'Selection Edges', checked: true, target: 'ps/commands.noop' },
-			'Target Path|Shift+Ctrl+H',
+			{ name: 'Target Path', shortcut: 'Shift+Ctrl+H', target: 'ps/commands.toggle_target_path', checked: 'target_path' },
 			{ name: 'Grid', shortcut: "Ctrl+'", target: 'view/grid.grid', checked: 'grid' },
 			{ name: 'Guides', shortcut: 'Ctrl+;', target: 'ps/commands.toggle_guides', checked: 'guides' },
 			'Count', 'Smart Guides', 'Slices', { name: 'Notes', target: 'ps/commands.toggle_show_notes', checked: 'show_notes' }, { name: 'Pixel Grid', target: 'ps/commands.toggle_pixel_grid', checked: 'pixel_grid' }, '3D Secondary View', '3D Ground Plane', '3D Lights', '3D Selection', 'UV Overlay', 'Mesh', 'Edit Pins', '-',

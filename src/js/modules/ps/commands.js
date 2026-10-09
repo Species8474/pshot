@@ -1596,6 +1596,18 @@ class Ps_commands_class {
 		ws.Selection.draw_overlay();
 	}
 
+	toggle_layer_edges() {
+		var ws = app.GUI.Ps_workspace;
+		ws.layer_edges = ws.layer_edges !== true;
+		ws.Selection.draw_overlay();
+	}
+
+	toggle_target_path() {
+		var ws = app.GUI.Ps_workspace;
+		ws.target_path = ws.target_path === false;
+		ws.Selection.draw_overlay();
+	}
+
 	toggle_pixel_grid() {
 		var ws = app.GUI.Ps_workspace;
 		ws.pixel_grid = ws.pixel_grid === false;

@@ -112,6 +112,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Type > Update All Text Layers; Type > Replace All Missing Fonts (fonts the browser lacks, by width detection, become Arial; undoable).
   - Edit > Find and Replace Text (Change All; Search All Layers, Case Sensitive, Whole Word Only; replaces within each style run). No Find Next / Change single yet.
   - Help > System Info (read-only report).
+  - View > Show > Layer Edges (blue pixel bounds of the selected layer, overlay) and Target Path (Shift+Ctrl+H hides/shows the active path).
   - Color Lookup (dialog and adjustment layer): built-in looks with the CS6 3DLUT names, Load 3D LUT... reads .CUBE files (trilinear lookup; stored in the layer state), Dither.
   - HDR Toning: flattens first (confirm), Local Adaptation (Edge Glow radius/strength, Gamma, Exposure, Detail, Shadow, Highlight, Vibrance, Saturation), Equalize Histogram, Exposure and Gamma, Highlight Compression, presets.
   - Match Color: Reinhard-style transfer of the YCbCr mean and spread from another open document (its merged image is cached as `flat` on the document entry when switching away) or the active document's merged image; Luminance, Color Intensity, Fade, Neutralize.

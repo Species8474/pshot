@@ -184,6 +184,21 @@ class Ps_workspace_class {
 				ctx.restore();
 			},
 		});
+		//View > Show > Layer Edges: the selected layer's pixel bounds in blue
+		this.Selection.overlays.push({
+			active: () => this.layer_edges === true && config.layer && config.layer.type != 'ps_adjust',
+			draw: (ctx, scale) => {
+				var l = config.layer, c = l._ps_edges;
+				if (!c || c.link !== l.link || c.key != [l.x, l.y, l.width, l.height, l.rotate, JSON.stringify(l.data)].join()) {
+					c = l._ps_edges = { link: l.link, key: [l.x, l.y, l.width, l.height, l.rotate, JSON.stringify(l.data)].join(), box: this.Multi.bounds(l) };
+				}
+				ctx.save();
+				ctx.lineWidth = 1 / scale;
+				ctx.strokeStyle = '#3c8cff';
+				ctx.strokeRect(c.box.x, c.box.y, c.box.width, c.box.height);
+				ctx.restore();
+			},
+		});
 		//the startup document opens at the largest CS6 zoom step that fits
 		setTimeout(() => {
 			if (app.State.action_history.length == 0) app.GUI.GUI_preview.zoom_auto(true);
@@ -993,6 +1008,8 @@ class Ps_workspace_class {
 			case 'extras': return this.extras;
 			case 'grid': return app.GUI.grid == true;
 			case 'pixel_grid': return this.pixel_grid !== false;
+			case 'layer_edges': return this.layer_edges === true;
+			case 'target_path': return this.target_path !== false;
 			case 'show_notes': return this.show_notes !== false;
 			case 'guides': return config.guides_enabled == true;
 			case 'rulers': return config.ruler_active == true;
