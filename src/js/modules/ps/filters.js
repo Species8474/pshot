@@ -489,6 +489,241 @@ class Ps_filters_class {
 		});
 	}
 
+	// ---------- one-step filters (no dialog in CS6) ----------
+
+	/**
+	 * 3x3 convolution with edge clamping
+	 */
+	convolve(src, dst, w, h, k, div, bias) {
+		for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+			var o = (y * w + x) * 4;
+			for (var c = 0; c < 3; c++) {
+				var v = 0, n = 0;
+				for (var j = -1; j <= 1; j++) for (var i = -1; i <= 1; i++) {
+					var sx = Math.max(0, Math.min(w - 1, x + i)), sy = Math.max(0, Math.min(h - 1, y + j));
+					v += src[(sy * w + sx) * 4 + c] * k[n++];
+				}
+				dst[o + c] = v / div + (bias || 0);
+			}
+		}
+	}
+
+	blur() { this.direct('blur', 'Blur', (src, dst, w, h) => this.convolve(src, dst, w, h, [1, 2, 1, 2, 4, 2, 1, 2, 1], 16)); }
+	blur_more() { this.direct('blur_more', 'Blur More', (src, dst, w, h) => dst.set(gaussian(src, w, h, 1.6))); }
+	sharpen() { this.direct('sharpen', 'Sharpen', (src, dst, w, h) => this.convolve(src, dst, w, h, [0, -1, 0, -1, 8, -1, 0, -1, 0], 4)); }
+	sharpen_more() { this.direct('sharpen_more', 'Sharpen More', (src, dst, w, h) => this.convolve(src, dst, w, h, [-1, -1, -1, -1, 12, -1, -1, -1, -1], 4)); }
+	despeckle() {
+		this.direct('despeckle', 'Despeckle', (src, dst, w, h) => {
+			//median except on edges (edge-preserving)
+			var med = new Uint8ClampedArray(src.length);
+			rank_filter(src, med, w, h, 1, 0.5);
+			var blur = gaussian(src, w, h, 1);
+			for (var i = 0; i < src.length; i += 4) for (var c = 0; c < 3; c++) {
+				var edge = Math.abs(src[i + c] - blur[i + c]) > 18;
+				dst[i + c] = edge ? src[i + c] : med[i + c];
+			}
+		});
+	}
+	find_edges() {
+		this.direct('find_edges', 'Find Edges', (src, dst, w, h) => {
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var o = (y * w + x) * 4;
+				for (var c = 0; c < 3; c++) {
+					var g = (xx, yy) => src[(Math.max(0, Math.min(h - 1, yy)) * w + Math.max(0, Math.min(w - 1, xx))) * 4 + c];
+					var gx = g(x + 1, y - 1) + 2 * g(x + 1, y) + g(x + 1, y + 1) - g(x - 1, y - 1) - 2 * g(x - 1, y) - g(x - 1, y + 1);
+					var gy = g(x - 1, y + 1) + 2 * g(x, y + 1) + g(x + 1, y + 1) - g(x - 1, y - 1) - 2 * g(x, y - 1) - g(x + 1, y - 1);
+					dst[o + c] = 255 - Math.min(255, Math.hypot(gx, gy) / 2);
+				}
+			}
+		});
+	}
+	solarize() {
+		this.direct('solarize', 'Solarize', (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) for (var c = 0; c < 3; c++) dst[i + c] = src[i + c] > 127 ? 255 - src[i + c] : src[i + c];
+		});
+	}
+
+	// ---------- dialog filters ----------
+
+	box_blur() {
+		this.dialog('box_blur', 'Box Blur', [{ key: 'radius', label: 'Radius:', min: 1, max: 999, value: 5, unit: 'Pixels' }], (s) => (src, dst, w, h) => {
+			var r = Math.round(s.radius);
+			dst.set(filtered(canvas_of(src, w, h), w, h, (o, big) => {
+				//two passes of a running box average = box blur
+				var bw = big.width, bh = big.height;
+				var d = big.getContext('2d').getImageData(0, 0, bw, bh).data, t = new Float32Array(d.length);
+				for (var y = 0; y < bh; y++) {
+					var acc = [0, 0, 0, 0];
+					for (var x = -r; x <= r; x++) { var xi = Math.max(0, Math.min(bw - 1, x)); for (var c = 0; c < 4; c++) acc[c] += d[(y * bw + xi) * 4 + c]; }
+					for (var x2 = 0; x2 < bw; x2++) {
+						for (var c2 = 0; c2 < 4; c2++) t[(y * bw + x2) * 4 + c2] = acc[c2] / (2 * r + 1);
+						var xo = Math.max(0, x2 - r), xn = Math.min(bw - 1, x2 + r + 1);
+						for (var c3 = 0; c3 < 4; c3++) acc[c3] += d[(y * bw + xn) * 4 + c3] - d[(y * bw + xo) * 4 + c3];
+					}
+				}
+				var out = o.createImageData(bw, bh), od = out.data;
+				for (var x3 = 0; x3 < bw; x3++) {
+					var acc2 = [0, 0, 0, 0];
+					for (var y3 = -r; y3 <= r; y3++) { var yi = Math.max(0, Math.min(bh - 1, y3)); for (var c4 = 0; c4 < 4; c4++) acc2[c4] += t[(yi * bw + x3) * 4 + c4]; }
+					for (var y4 = 0; y4 < bh; y4++) {
+						for (var c5 = 0; c5 < 4; c5++) od[(y4 * bw + x3) * 4 + c5] = acc2[c5] / (2 * r + 1);
+						var yo = Math.max(0, y4 - r), yn = Math.min(bh - 1, y4 + r + 1);
+						for (var c6 = 0; c6 < 4; c6++) acc2[c6] += t[(yn * bw + x3) * 4 + c6] - t[(yo * bw + x3) * 4 + c6];
+					}
+				}
+				o.putImageData(out, 0, 0);
+			}, r));
+		});
+	}
+
+	radial_blur() {
+		this.dialog('radial_blur', 'Radial Blur', [
+			{ key: 'amount', label: 'Amount:', min: 1, max: 100, value: 10 },
+			{ key: 'method', label: 'Blur Method:', type: 'radio', values: ['Spin', 'Zoom'], value: 'Spin' },
+			{ key: 'quality', label: 'Quality:', type: 'radio', values: ['Draft', 'Good', 'Best'], value: 'Good' },
+		], (s) => (src, dst, w, h) => {
+			var cx = w / 2, cy = h / 2;
+			var n = { Draft: 6, Good: 12, Best: 24 }[s.quality];
+			var acc = new Float32Array(src.length);
+			for (var k = 0; k < n; k++) {
+				var t = (k / (n - 1) - 0.5);
+				for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+					var dx = x - cx, dy = y - cy, sx, sy;
+					if (s.method == 'Spin') {
+						var a = t * s.amount / 100 * 0.6, cos = Math.cos(a), sin = Math.sin(a);
+						sx = cx + dx * cos - dy * sin; sy = cy + dx * sin + dy * cos;
+					}
+					else {
+						var f = 1 + t * s.amount / 100 * 0.5;
+						sx = cx + dx * f; sy = cy + dy * f;
+					}
+					var ix = Math.max(0, Math.min(w - 1, Math.round(sx))), iy = Math.max(0, Math.min(h - 1, Math.round(sy)));
+					var i = (iy * w + ix) * 4, o = (y * w + x) * 4;
+					for (var c = 0; c < 4; c++) acc[o + c] += src[i + c];
+				}
+			}
+			for (var j = 0; j < dst.length; j++) dst[j] = acc[j] / n;
+		});
+	}
+
+	reduce_noise() {
+		this.dialog('reduce_noise', 'Reduce Noise', [
+			{ key: 'strength', label: 'Strength:', min: 0, max: 10, value: 6 },
+			{ key: 'details', label: 'Preserve Details:', min: 0, max: 100, value: 60, unit: '%' },
+			{ key: 'color', label: 'Reduce Color Noise:', min: 0, max: 100, value: 45, unit: '%' },
+			{ key: 'sharpen', label: 'Sharpen Details:', min: 0, max: 100, value: 25, unit: '%' },
+		], (s) => (src, dst, w, h) => {
+			var r = s.strength / 3;
+			var blur = gaussian(src, w, h, Math.max(0.3, r));
+			var cblur = gaussian(src, w, h, Math.max(0.3, s.color / 100 * 4));
+			var t = 8 + (100 - s.details) / 100 * 40;
+			for (var i = 0; i < src.length; i += 4) {
+				//luminance: smooth where the change is small (noise), keep edges
+				var l0 = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+				var l1 = blur[i] * 0.299 + blur[i + 1] * 0.587 + blur[i + 2] * 0.114;
+				var d = l0 - l1, k = Math.abs(d) < t ? 1 : 0.2;
+				var nl = l0 - d * k * (s.strength / 10) + (Math.abs(d) >= t ? d * s.sharpen / 100 : 0);
+				//color noise: chroma from the more blurred copy
+				var cl = cblur[i] * 0.299 + cblur[i + 1] * 0.587 + cblur[i + 2] * 0.114;
+				var mix = s.color / 100;
+				for (var c = 0; c < 3; c++) {
+					var chroma = (src[i + c] - l0) * (1 - mix) + (cblur[i + c] - cl) * mix;
+					dst[i + c] = nl + chroma;
+				}
+			}
+		});
+	}
+
+	mosaic() {
+		this.dialog('mosaic', 'Mosaic', [{ key: 'size', label: 'Cell Size:', min: 2, max: 200, value: 10, unit: 'square' }], (s) => (src, dst, w, h) => {
+			var n = Math.round(s.size);
+			for (var by = 0; by < h; by += n) for (var bx = 0; bx < w; bx += n) {
+				var sum = [0, 0, 0, 0], k = 0;
+				for (var y = by; y < Math.min(h, by + n); y++) for (var x = bx; x < Math.min(w, bx + n); x++) { var i = (y * w + x) * 4; for (var c = 0; c < 4; c++) sum[c] += src[i + c]; k++; }
+				for (var y2 = by; y2 < Math.min(h, by + n); y2++) for (var x2 = bx; x2 < Math.min(w, bx + n); x2++) { var o = (y2 * w + x2) * 4; for (var c2 = 0; c2 < 4; c2++) dst[o + c2] = sum[c2] / k; }
+			}
+		});
+	}
+
+	emboss() {
+		this.dialog('emboss', 'Emboss', [
+			{ key: 'angle', label: 'Angle:', min: -180, max: 180, value: 135, unit: '°' },
+			{ key: 'height', label: 'Height:', min: 1, max: 100, value: 3, unit: 'Pixels' },
+			{ key: 'amount', label: 'Amount:', min: 1, max: 500, value: 100, unit: '%' },
+		], (s) => (src, dst, w, h) => {
+			var a = s.angle * Math.PI / 180, dx = Math.cos(a) * s.height, dy = -Math.sin(a) * s.height, k = s.amount / 100;
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var o = (y * w + x) * 4;
+				var ax = Math.max(0, Math.min(w - 1, Math.round(x + dx))), ay = Math.max(0, Math.min(h - 1, Math.round(y + dy)));
+				var bx = Math.max(0, Math.min(w - 1, Math.round(x - dx))), by = Math.max(0, Math.min(h - 1, Math.round(y - dy)));
+				var la = (ay * w + ax) * 4, lb = (by * w + bx) * 4;
+				var lum = (i) => src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+				var v = 128 + (lum(la) - lum(lb)) * k;
+				dst[o] = dst[o + 1] = dst[o + 2] = v;
+			}
+		});
+	}
+
+	color_halftone() {
+		this.dialog('color_halftone', 'Color Halftone', [
+			{ key: 'radius', label: 'Max. Radius:', min: 4, max: 127, value: 8, unit: '(Pixels)' },
+			{ key: 'c1', label: 'Channel 1:', min: 0, max: 360, value: 108 },
+			{ key: 'c2', label: 'Channel 2:', min: 0, max: 360, value: 162 },
+			{ key: 'c3', label: 'Channel 3:', min: 0, max: 360, value: 90 },
+		], (s) => (src, dst, w, h) => {
+			var r = s.radius, cell = r * 2;
+			[s.c1, s.c2, s.c3].forEach((angle, c) => {
+				var a = angle * Math.PI / 180, cos = Math.cos(a), sin = Math.sin(a);
+				for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+					//rotated grid cell center
+					var u = x * cos + y * sin, v = -x * sin + y * cos;
+					var cu = (Math.floor(u / cell) + 0.5) * cell, cv = (Math.floor(v / cell) + 0.5) * cell;
+					var cx = cu * cos - cv * sin, cy = cu * sin + cv * cos;
+					var sx = Math.max(0, Math.min(w - 1, Math.round(cx))), sy = Math.max(0, Math.min(h - 1, Math.round(cy)));
+					var level = src[(sy * w + sx) * 4 + c] / 255;
+					var dot = Math.sqrt(1 - level) * r;
+					var d = Math.hypot(u - cu, v - cv);
+					dst[(y * w + x) * 4 + c] = d < dot ? 0 : 255;
+				}
+			});
+		});
+	}
+
+	oil_paint() {
+		this.dialog('oil_paint', 'Oil Paint', [
+			{ key: 'stylization', label: 'Stylization:', min: 0.1, max: 10, step: 0.1, value: 4 },
+			{ key: 'cleanliness', label: 'Cleanliness:', min: 0, max: 10, step: 0.1, value: 6 },
+			{ key: 'scale', label: 'Scale:', min: 0.1, max: 10, step: 0.1, value: 0.5 },
+			{ key: 'bristle', label: 'Bristle Detail:', min: 0, max: 10, step: 0.1, value: 2 },
+		], (s) => (src, dst, w, h) => {
+			//Kuwahara-style: each pixel takes the mean of its least-varied quadrant, then a light emboss for bristles
+			var r = Math.max(1, Math.round(s.stylization * 0.8 + s.scale));
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var best = null, bv = Infinity;
+				for (var [qx, qy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+					var sum = [0, 0, 0], sq = 0, n = 0;
+					for (var j = 0; j <= r; j += Math.max(1, r >> 2)) for (var i = 0; i <= r; i += Math.max(1, r >> 2)) {
+						var sx = Math.max(0, Math.min(w - 1, x + i * qx)), sy = Math.max(0, Math.min(h - 1, y + j * qy)), k = (sy * w + sx) * 4;
+						var l = src[k] + src[k + 1] + src[k + 2];
+						sum[0] += src[k]; sum[1] += src[k + 1]; sum[2] += src[k + 2]; sq += l * l; n++;
+					}
+					var mean = (sum[0] + sum[1] + sum[2]) / n, variance = sq / n - mean * mean;
+					if (variance < bv) { bv = variance; best = [sum[0] / n, sum[1] / n, sum[2] / n]; }
+				}
+				var o = (y * w + x) * 4;
+				dst[o] = best[0]; dst[o + 1] = best[1]; dst[o + 2] = best[2];
+			}
+			if (s.bristle > 0) {
+				var copy = new Uint8ClampedArray(dst);
+				for (var y2 = 1; y2 < h - 1; y2++) for (var x2 = 1; x2 < w - 1; x2++) {
+					var o2 = (y2 * w + x2) * 4, a = ((y2 - 1) * w + x2 - 1) * 4, b = ((y2 + 1) * w + x2 + 1) * 4;
+					var e = ((copy[a] + copy[a + 1] + copy[a + 2]) - (copy[b] + copy[b + 1] + copy[b + 2])) / 3 * s.bristle / 10;
+					for (var c = 0; c < 3; c++) dst[o2 + c] = copy[o2 + c] + e;
+				}
+			}
+		});
+	}
+
 	// ---------- more Blur / Sharpen ----------
 
 	surface_blur() {

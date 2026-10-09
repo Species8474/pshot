@@ -700,6 +700,59 @@ class Ps_adjust_class {
 	}
 
 	/**
+	 * Image > Auto Tone (per channel), Auto Contrast (all channels together),
+	 * Auto Color (per channel, then neutral midtones); 0.1% clipping
+	 */
+	auto(kind) {
+		var titles = { tone: 'Auto Tone', contrast: 'Auto Contrast', color: 'Auto Color' };
+		var job = this.begin(titles[kind]);
+		if (!job) return;
+		var d = job.original.data, n = 0;
+		var hist = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+		for (var i = 0; i < d.length; i += 4) {
+			if (d[i + 3] == 0) continue;
+			hist[0][d[i]]++; hist[1][d[i + 1]]++; hist[2][d[i + 2]]++; n++;
+		}
+		if (!n) return;
+		var clip = n * 0.001;
+		var range = (h) => {
+			var lo = 0, hi = 255, acc = 0;
+			for (lo = 0; lo < 255; lo++) { acc += h[lo]; if (acc > clip) break; }
+			acc = 0;
+			for (hi = 255; hi > 0; hi--) { acc += h[hi]; if (acc > clip) break; }
+			return [lo, Math.max(lo + 1, hi)];
+		};
+		var r = hist.map(range);
+		if (kind == 'contrast') {
+			var lo = Math.min(r[0][0], r[1][0], r[2][0]), hi = Math.max(r[0][1], r[1][1], r[2][1]);
+			r = [[lo, hi], [lo, hi], [lo, hi]];
+		}
+		var luts = r.map(([lo, hi]) => {
+			var lut = new Float32Array(256);
+			for (var v = 0; v < 256; v++) lut[v] = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+			return lut;
+		});
+		if (kind == 'color') {
+			//neutralize the midtones: equal channel means after the stretch
+			var means = [0, 0, 0];
+			for (var c = 0; c < 3; c++) {
+				var sum = 0;
+				for (var v2 = 0; v2 < 256; v2++) sum += hist[c][v2] * luts[c][v2];
+				means[c] = Math.min(0.99, Math.max(0.01, sum / n));
+			}
+			var target = (means[0] + means[1] + means[2]) / 3;
+			for (var c2 = 0; c2 < 3; c2++) {
+				var g = Math.log(target) / Math.log(means[c2]);
+				for (var v3 = 0; v3 < 256; v3++) luts[c2][v3] = Math.pow(luts[c2][v3], g);
+			}
+		}
+		var bytes = luts.map(l => { var b = new Uint8ClampedArray(256); for (var v = 0; v < 256; v++) b[v] = l[v] * 255; return b; });
+		this.finish(job, (src, dst) => {
+			for (var j = 0; j < src.length; j += 4) { dst[j] = bytes[0][src[j]]; dst[j + 1] = bytes[1][src[j + 1]]; dst[j + 2] = bytes[2][src[j + 2]]; }
+		}, titles[kind]);
+	}
+
+	/**
 	 * CS6 Black & White: six color sliders and an optional Tint
 	 */
 	black_white() {
