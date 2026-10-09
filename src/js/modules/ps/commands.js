@@ -741,6 +741,9 @@ class Ps_commands_class {
 	transform_distort() { app.GUI.Ps_workspace.Transform.start_mode('distort'); }
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
+	layer_content_options() {
+		if (!app.GUI.Ps_workspace.Shapes.edit_fill()) alertify.error('Layer Content Options works on fill and shape layers.');
+	}
 	vmask_reveal_all() { app.GUI.Ps_workspace.Vector_mask.reveal_all(); }
 	vmask_hide_all() { app.GUI.Ps_workspace.Vector_mask.hide_all(); }
 	vmask_current_path() { app.GUI.Ps_workspace.Vector_mask.current_path(); }

@@ -414,6 +414,20 @@ class GUI_layers_class {
 	draw_thumbnail(canvas, layer) {
 		var ctx = canvas.getContext('2d');
 		var size = canvas.width;
+		if (layer.type == 'ps_shape') {
+			//CS6: the fill color swatch with the shape icon
+			var sh = layer.ps_shape || {};
+			ctx.clearRect(0, 0, size, size);
+			ctx.fillStyle = sh.fill || '#ffffff';
+			ctx.fillRect(0, 0, size, size);
+			ctx.fillStyle = 'rgba(255,255,255,0.85)';
+			ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+			ctx.beginPath();
+			ctx.moveTo(size * 0.55, size * 0.62); ctx.lineTo(size * 0.95, size * 0.62); ctx.lineTo(size * 0.95, size * 0.95); ctx.lineTo(size * 0.55, size * 0.95); ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+			return;
+		}
 		if (layer.type == 'ps_adjust') {
 			//CS6 shows the adjustment's icon instead of pixels
 			ctx.clearRect(0, 0, size, size);
@@ -531,6 +545,10 @@ class GUI_layers_class {
 					html += '<span class="ps_mask_wrap' + (value.ps_mask_disabled ? ' disabled' : '') + '">'
 						+ '<canvas class="ps_mask_thumb' + (editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="mask_thumb" title="Layer mask (Shift+click to disable)"></canvas></span>';
 				}
+				if (value.type == 'ps_shape') {
+					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
+					html += '<span class="ps_mask_wrap"><canvas class="ps_shape_mask_thumb" width="32" height="32" data-id="' + value.id + '" title="Vector mask"></canvas></span>';
+				}
 				if (value.ps_vmask) {
 					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
 					html += '<span class="ps_mask_wrap"><canvas class="ps_vmask_thumb" width="32" height="32" data-id="' + value.id + '" data-action="vmask_thumb" title="Vector mask (Shift+click to disable)"></canvas></span>';
@@ -583,6 +601,12 @@ class GUI_layers_class {
 			var layer = this.Base_layers.get_layer(canvas.dataset.id);
 			if (layer && layer.ps_mask) {
 				app.GUI.Ps_workspace.Mask.thumbnail(canvas, layer);
+			}
+		});
+		target.querySelectorAll('canvas.ps_shape_mask_thumb').forEach((canvas) => {
+			var layer = this.Base_layers.get_layer(canvas.dataset.id);
+			if (layer && layer.ps_shape) {
+				app.GUI.Ps_workspace.Shapes.thumb(canvas, layer);
 			}
 		});
 		target.querySelectorAll('canvas.ps_vmask_thumb').forEach((canvas) => {

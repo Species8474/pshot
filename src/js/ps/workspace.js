@@ -31,6 +31,7 @@ import Ps_puppet_warp_class from './puppet-warp.js';
 import Ps_filter_gallery_class from './filter-gallery.js';
 import Ps_lighting_effects_class from './lighting-effects.js';
 import Ps_vector_mask_class from './vector-mask.js';
+import Ps_shape_layers_class from './shape-layers.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
@@ -106,6 +107,7 @@ class Ps_workspace_class {
 		this.Filter_gallery = new Ps_filter_gallery_class();
 		this.Lighting = new Ps_lighting_effects_class();
 		this.Vector_mask = new Ps_vector_mask_class();
+		this.Shapes = new Ps_shape_layers_class();
 		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();

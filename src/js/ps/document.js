@@ -264,6 +264,21 @@ async function file_to_layers(file) {
 						continue;
 					}
 				}
+				//shape layers stay shapes
+				var shape_settings = app.GUI.Ps_workspace.Shapes.from_psd(child);
+				if (shape_settings) {
+					Object.assign(shape_settings, {
+						opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
+						visible: !child.hidden,
+						composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
+						_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+						_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
+						_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
+						_parent_key: parent_key,
+					});
+					layers.push(shape_settings);
+					continue;
+				}
 				//type layers stay editable
 				var type_settings = child.text ? text_from_psd(child) : null;
 				if (type_settings) {
@@ -636,7 +651,9 @@ function psd_node(layer) {
 		left = 0;
 		top = 0;
 	}
+	const shape = layer.type == 'ps_shape' ? app.GUI.Ps_workspace.Shapes.to_psd(layer) : {};
 	return {
+		...shape,
 		name: layer.name,
 		left: left,
 		top: top,
@@ -646,7 +663,7 @@ function psd_node(layer) {
 		blendMode: TO_PSD_BLEND[layer.composition] || 'normal',
 		clipping: layer.composition == 'source-atop',
 		mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
-		vectorMask: app.GUI.Ps_workspace.Vector_mask.to_psd(layer),
+		vectorMask: shape.vectorMask || app.GUI.Ps_workspace.Vector_mask.to_psd(layer),
 		effects: styles_to_effects(layer.ps_styles),
 		fillOpacity: layer.ps_fill == null ? undefined : layer.ps_fill / 100,
 		text: layer.type == 'text' ? text_to_psd(layer) : undefined,

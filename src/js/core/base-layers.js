@@ -453,6 +453,12 @@ class Base_layers_class {
 			return;
 		}
 
+		//pshot: shape layers (fill and stroke through a path)
+		if (object.type == "ps_shape") {
+			if (this.Base_gui.Ps_workspace) this.Base_gui.Ps_workspace.Shapes.render(ctx, object);
+			return;
+		}
+
 		//pshot: warped text (Type > Warp Text)
 		if (object.type == "text" && object.ps_warp && !object._ps_warping && this.Base_gui.Ps_workspace && this.Base_gui.Ps_workspace.Warp_text.active(object)) {
 			this.Base_gui.Ps_workspace.Warp_text.render(ctx, object);
