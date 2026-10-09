@@ -123,7 +123,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Image and Canvas Size, rotation, crop, Perspective Crop tool (`tools/ps_pcrop.js`: every layer and mask rectified; type/shape layers are rasterized), trim, Reveal All, Duplicate (new tab, optionally merged). File > Revert (back to the opened state, undoable).
 - **Filters**: Liquify (Shift+Ctrl+X: Forward Warp, Reconstruct, Pucker, Bloat, Push Left; size/density/pressure; Restore All; Show Backdrop; `ps/liquify.js`), Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse, Surface Blur, Smart Blur, Sharpen Edges, Wave, ZigZag, Shear, Crystallize, Pointillize, Facet, Fragment, Mezzotint, Fibers, Lens Flare, Tiles, Trace Contour, Wind, Extrude, Custom. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
-  - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Again. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
+  - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Warp/Again. Warp is a 4x4 Bezier patch (drag points/handles or the surface), previewed as a mesh and committed by Newton-inverting the patch per pixel. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
   - Guides from the rulers. Pixel Grid at 500%+ (View > Show > Pixel Grid).
   - Type > Create Work Path (traces the glyphs).
   - Hand, Zoom and Space-to-pan.
@@ -132,7 +132,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
+- Warp presets (Arc, Bulge, Flag...). Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart filters, and PSD placed layers (smart objects save as pixels).
 - Brush panel sections other than Tip Shape / Shape Dynamics (size jitter) / Scattering / Transfer; Brush Presets.

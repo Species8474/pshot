@@ -160,6 +160,134 @@ function draw_quad_exact(ctx, img, q) {
 	ctx.drawImage(tmp, minx, miny);
 }
 
+// ---------- Warp: cubic Bezier patch (4x4 control points, row-major) ----------
+
+function bern(t) {
+	var u = 1 - t;
+	return [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+}
+
+function bern_d(t) {
+	var u = 1 - t;
+	return [-3 * u * u, 3 * u * u - 6 * u * t, 6 * u * t - 3 * t * t, 3 * t * t];
+}
+
+function patch_at(g, u, v) {
+	var bu = bern(u), bv = bern(v), x = 0, y = 0;
+	for (var j = 0; j < 4; j++) for (var i = 0; i < 4; i++) {
+		var w = bu[i] * bv[j], p = g[j * 4 + i];
+		x += p.x * w; y += p.y * w;
+	}
+	return { x: x, y: y };
+}
+
+/**
+ * preview: the patch as a mesh of affine triangles (same technique as draw_quad)
+ */
+function draw_patch(ctx, img, g) {
+	var n = 16, W = img.width, H = img.height;
+	var pts = [];
+	for (var j = 0; j <= n; j++) for (var i = 0; i <= n; i++) pts.push(patch_at(g, i / n, j / n));
+	var tri = (s0, s1, s2, d0, d1, d2) => {
+		var cx = (d0.x + d1.x + d2.x) / 3, cy = (d0.y + d1.y + d2.y) / 3;
+		var grow = (p) => { var dx = p.x - cx, dy = p.y - cy, l = Math.hypot(dx, dy) || 1; return { x: p.x + dx / l * 0.6, y: p.y + dy / l * 0.6 }; };
+		var g0 = grow(d0), g1 = grow(d1), g2 = grow(d2);
+		ctx.save();
+		ctx.beginPath();
+		ctx.moveTo(g0.x, g0.y); ctx.lineTo(g1.x, g1.y); ctx.lineTo(g2.x, g2.y);
+		ctx.closePath();
+		ctx.clip();
+		var den = (s1.x - s0.x) * (s2.y - s0.y) - (s2.x - s0.x) * (s1.y - s0.y);
+		if (Math.abs(den) < 1e-9) { ctx.restore(); return; }
+		var a = ((d1.x - d0.x) * (s2.y - s0.y) - (d2.x - d0.x) * (s1.y - s0.y)) / den;
+		var b = ((d1.y - d0.y) * (s2.y - s0.y) - (d2.y - d0.y) * (s1.y - s0.y)) / den;
+		var c = ((d2.x - d0.x) * (s1.x - s0.x) - (d1.x - d0.x) * (s2.x - s0.x)) / den;
+		var d = ((d2.y - d0.y) * (s1.x - s0.x) - (d1.y - d0.y) * (s2.x - s0.x)) / den;
+		ctx.transform(a, b, c, d, d0.x - a * s0.x - c * s0.y, d0.y - b * s0.x - d * s0.y);
+		ctx.drawImage(img, 0, 0);
+		ctx.restore();
+	};
+	for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+		var k = y * (n + 1) + x;
+		var s00 = { x: x / n * W, y: y / n * H }, s10 = { x: (x + 1) / n * W, y: y / n * H }, s01 = { x: x / n * W, y: (y + 1) / n * H }, s11 = { x: (x + 1) / n * W, y: (y + 1) / n * H };
+		tri(s00, s10, s11, pts[k], pts[k + 1], pts[k + n + 2]);
+		tri(s00, s11, s01, pts[k], pts[k + n + 2], pts[k + n + 1]);
+	}
+}
+
+/**
+ * commit: every destination pixel is solved back to (u, v) with Newton steps
+ * from a coarse lookup, then sampled bilinearly
+ */
+function draw_patch_exact(ctx, img, g) {
+	var W = img.width, H = img.height;
+	var N = 48, lut = [];
+	for (var j = 0; j <= N; j++) for (var i = 0; i <= N; i++) { var q = patch_at(g, i / N, j / N); lut.push({ x: q.x, y: q.y, u: i / N, v: j / N }); }
+	var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+	for (var q2 of lut) { minx = Math.min(minx, q2.x); miny = Math.min(miny, q2.y); maxx = Math.max(maxx, q2.x); maxy = Math.max(maxy, q2.y); }
+	minx = Math.max(0, Math.floor(minx)); miny = Math.max(0, Math.floor(miny));
+	maxx = Math.min(ctx.canvas.width, Math.ceil(maxx)); maxy = Math.min(ctx.canvas.height, Math.ceil(maxy));
+	var w = maxx - minx, h = maxy - miny;
+	if (w <= 0 || h <= 0) return;
+	//spatial buckets for the initial guess
+	var cell = 8, bw = Math.ceil(w / cell) + 1, buckets = new Map();
+	for (var q3 of lut) {
+		var key = Math.floor((q3.y - miny) / cell) * bw + Math.floor((q3.x - minx) / cell);
+		if (!buckets.has(key)) buckets.set(key, []);
+		buckets.get(key).push(q3);
+	}
+	var src = img.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+	var out = new ImageData(w, h), o = out.data;
+	var prev = null;
+	for (var py = 0; py < h; py++) {
+		for (var px = 0; px < w; px++) {
+			var X = minx + px + 0.5, Y = miny + py + 0.5;
+			var u, v;
+			if (prev && px > 0) { u = prev.u; v = prev.v; }
+			else {
+				var best = null, bd = Infinity, bx = Math.floor((X - minx) / cell), by = Math.floor((Y - miny) / cell);
+				for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) {
+					var list = buckets.get((by + dy) * bw + bx + dx);
+					if (!list) continue;
+					for (var c of list) { var dd = (c.x - X) * (c.x - X) + (c.y - Y) * (c.y - Y); if (dd < bd) { bd = dd; best = c; } }
+				}
+				if (!best) { prev = null; continue; }
+				u = best.u; v = best.v;
+			}
+			var ok = false;
+			for (var it = 0; it < 8; it++) {
+				var bu = bern(u), bv = bern(v), du = bern_d(u), dv = bern_d(v);
+				var fx = 0, fy = 0, xu = 0, yu = 0, xv = 0, yv = 0;
+				for (var jj = 0; jj < 4; jj++) for (var ii = 0; ii < 4; ii++) {
+					var p = g[jj * 4 + ii];
+					fx += p.x * bu[ii] * bv[jj]; fy += p.y * bu[ii] * bv[jj];
+					xu += p.x * du[ii] * bv[jj]; yu += p.y * du[ii] * bv[jj];
+					xv += p.x * bu[ii] * dv[jj]; yv += p.y * bu[ii] * dv[jj];
+				}
+				var ex = fx - X, ey = fy - Y;
+				if (ex * ex + ey * ey < 0.0025) { ok = true; break; }
+				var det = xu * yv - xv * yu;
+				if (Math.abs(det) < 1e-9) break;
+				u -= (ex * yv - ey * xv) / det;
+				v -= (ey * xu - ex * yu) / det;
+			}
+			if (!ok || u < -0.001 || v < -0.001 || u > 1.001 || v > 1.001) { prev = null; continue; }
+			prev = { u: u, v: v };
+			var sx = Math.min(W - 1.001, Math.max(0, u * W - 0.5)), sy = Math.min(H - 1.001, Math.max(0, v * H - 0.5));
+			var ix = sx | 0, iy = sy | 0, tx = sx - ix, ty = sy - iy, k = (py * w + px) * 4;
+			var a00 = (iy * W + ix) * 4, a10 = a00 + 4, a01 = a00 + W * 4, a11 = a01 + 4;
+			for (var ch = 0; ch < 4; ch++) {
+				o[k + ch] = (src[a00 + ch] * (1 - tx) + src[a10 + ch] * tx) * (1 - ty) + (src[a01 + ch] * (1 - tx) + src[a11 + ch] * tx) * ty;
+			}
+		}
+	}
+	var tmp = document.createElement('canvas');
+	tmp.width = w;
+	tmp.height = h;
+	tmp.getContext('2d').putImageData(out, 0, 0);
+	ctx.drawImage(tmp, minx, miny);
+}
+
 function point_in_quad(p, q) {
 	var inside = false;
 	for (var i = 0, j = 3; i < 4; j = i++) {
@@ -223,7 +351,10 @@ class Ps_transform_class {
 		var dx = layer.x - smart.lx, dy = layer.y - smart.ly;
 		var out = doc_canvas();
 		var ctx = out.getContext('2d');
-		if (smart.quad) {
+		if (smart.warp) {
+			draw_patch_exact(ctx, source, smart.warp.map(c => ({ x: c.x + dx, y: c.y + dy })));
+		}
+		else if (smart.quad) {
 			draw_quad_exact(ctx, source, smart.quad.map(c => ({ x: c.x + dx, y: c.y + dy })));
 		}
 		else {
@@ -257,6 +388,7 @@ class Ps_transform_class {
 			geometry: { x: layer.x, y: layer.y, width: layer.width, height: layer.height, width_original: layer.width_original, height_original: layer.height_original },
 			box: box,
 			quad: smart.quad ? smart.quad.map(c => ({ x: c.x + dx, y: c.y + dy })) : null,
+			warp: smart.warp ? smart.warp.map(c => ({ x: c.x + dx, y: c.y + dy })) : null,
 			w0: smart.source.width,
 			h0: smart.source.height,
 		};
@@ -357,6 +489,14 @@ class Ps_transform_class {
 	// ---------- rendering ----------
 
 	draw_piece(ctx, piece, exact) {
+		if (this.job.warp) {
+			ctx.save();
+			ctx.imageSmoothingQuality = 'high';
+			if (exact) draw_patch_exact(ctx, piece, this.job.warp);
+			else draw_patch(ctx, piece, this.job.warp);
+			ctx.restore();
+			return;
+		}
 		if (this.job.quad) {
 			ctx.save();
 			ctx.imageSmoothingQuality = 'high';
@@ -424,6 +564,37 @@ class Ps_transform_class {
 
 	draw_box(ctx, scale) {
 		if (!this.job) {
+			return;
+		}
+		if (this.job.warp) {
+			var g = this.job.warp;
+			ctx.save();
+			ctx.lineWidth = 1 / scale;
+			ctx.strokeStyle = '#000';
+			for (var t = 0; t <= 3; t++) {
+				ctx.beginPath();
+				for (var k = 0; k <= 24; k++) { var a = patch_at(g, k / 24, t / 3); k == 0 ? ctx.moveTo(a.x, a.y) : ctx.lineTo(a.x, a.y); }
+				ctx.stroke();
+				ctx.beginPath();
+				for (var k2 = 0; k2 <= 24; k2++) { var b = patch_at(g, t / 3, k2 / 24); k2 == 0 ? ctx.moveTo(b.x, b.y) : ctx.lineTo(b.x, b.y); }
+				ctx.stroke();
+			}
+			//control handles: lines from each corner to its two handles
+			ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+			ctx.beginPath();
+			for (var [c0, h1, h2] of [[0, 1, 4], [3, 2, 7], [12, 13, 8], [15, 14, 11]]) {
+				ctx.moveTo(g[h1].x, g[h1].y); ctx.lineTo(g[c0].x, g[c0].y); ctx.lineTo(g[h2].x, g[h2].y);
+			}
+			ctx.stroke();
+			var s = 6 / scale;
+			g.forEach((p, i) => {
+				ctx.fillStyle = [0, 3, 12, 15].includes(i) ? '#fff' : '#ddd';
+				ctx.strokeStyle = '#000';
+				if ([5, 6, 9, 10].includes(i)) { ctx.beginPath(); ctx.arc(p.x, p.y, s / 2.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); return; }
+				ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+				ctx.strokeRect(p.x - s / 2, p.y - s / 2, s, s);
+			});
+			ctx.restore();
 			return;
 		}
 		var pts = this.corners();
@@ -494,6 +665,12 @@ class Ps_transform_class {
 			e.stopImmediatePropagation();
 			e.preventDefault();
 			var p = this.world(e);
+			if (this.job.warp) {
+				var tol = 8 / zoomView.getScale();
+				var wi = this.job.warp.findIndex(c => Math.abs(c.x - p.x) <= tol && Math.abs(c.y - p.y) <= tol);
+				this.drag = { mode: 'warp', index: wi, start: p, warp: this.job.warp.map(c => ({ x: c.x, y: c.y })) };
+				return;
+			}
 			var h = this.hit(p);
 			//Ctrl = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective (pixels only)
 			var ctrl = e.ctrlKey || e.metaKey;
@@ -614,6 +791,20 @@ class Ps_transform_class {
 
 	apply_drag(p, e) {
 		var d = this.drag;
+		if (d.mode == 'warp') {
+			var dx = p.x - d.start.x, dy = p.y - d.start.y, g = this.job.warp;
+			if (d.index < 0) {
+				//dragging the surface moves the whole mesh
+				g.forEach((c, i) => { c.x = d.warp[i].x + dx; c.y = d.warp[i].y + dy; });
+				return;
+			}
+			g[d.index].x = d.warp[d.index].x + dx;
+			g[d.index].y = d.warp[d.index].y + dy;
+			//a corner carries its handles
+			var carry = { 0: [1, 4, 5], 3: [2, 7, 6], 12: [13, 8, 9], 15: [14, 11, 10] }[d.index];
+			if (carry) carry.forEach(i => { g[i].x = d.warp[i].x + dx; g[i].y = d.warp[i].y + dy; });
+			return;
+		}
 		if (this.job.quad) {
 			return this.apply_quad_drag(p, e);
 		}
@@ -781,6 +972,25 @@ class Ps_transform_class {
 	 */
 	start_mode(mode) {
 		var layer = config.layer;
+		if (mode == 'warp') {
+			this.start();
+			if (!this.job || this.job.kind == 'vector') {
+				if (this.job) this.cancel();
+				alertify.error('Could not complete the Warp command because the layer is not a pixel layer.');
+				return;
+			}
+			var c = this.corners(), q = [c[0], c[2], c[4], c[6]];
+			var lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+			var grid = [];
+			for (var j = 0; j < 4; j++) {
+				var left = lerp(q[0], q[3], j / 3), right = lerp(q[1], q[2], j / 3);
+				for (var i = 0; i < 4; i++) grid.push(lerp(left, right, i / 3));
+			}
+			this.job.warp = grid;
+			this.job.quad = null;
+			this.preview();
+			return;
+		}
 		if (layer && layer.type != 'image' && layer.type != null) {
 			alertify.error('Could not complete the ' + mode[0].toUpperCase() + mode.slice(1) + ' command because the layer is not a pixel layer.');
 			return;
@@ -812,7 +1022,8 @@ class Ps_transform_class {
 			actions.push(new app.Actions.Update_layer_image_action(result, job.layer.id));
 			if (job.smart) {
 				actions.push(new app.Actions.Update_layer_action(job.layer.id, { ps_smart: {
-					source: job.piece, box: Object.assign({}, job.box), quad: job.quad ? job.quad.map(c => ({ x: c.x, y: c.y })) : null, lx: 0, ly: 0,
+					source: job.piece, box: Object.assign({}, job.box), quad: job.quad ? job.quad.map(c => ({ x: c.x, y: c.y })) : null,
+					warp: job.warp ? job.warp.map(c => ({ x: c.x, y: c.y })) : null, lx: 0, ly: 0,
 				} }));
 			}
 			if (job.mask_piece) {
@@ -829,7 +1040,7 @@ class Ps_transform_class {
 		}
 		this.remember(job);
 		this.cleanup();
-		app.State.do_action(new app.Actions.Bundle_action('free_transform', 'Free Transform', actions));
+		app.State.do_action(new app.Actions.Bundle_action('free_transform', job.warp ? 'Warp' : 'Free Transform', actions));
 	}
 }
 

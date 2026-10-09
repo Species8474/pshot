@@ -727,6 +727,7 @@ class Ps_commands_class {
 	transform_skew() { app.GUI.Ps_workspace.Transform.start_mode('skew'); }
 	transform_distort() { app.GUI.Ps_workspace.Transform.start_mode('distort'); }
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
+	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
 	transform_again() { app.GUI.Ps_workspace.Transform.again(); }
 
 	rotate_layer_180() {
