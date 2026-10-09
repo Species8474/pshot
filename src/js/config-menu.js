@@ -185,7 +185,7 @@ const M = [
 		'-',
 		'Merge Down|Ctrl+E|ps/commands.merge_down',
 		'Merge Visible|Shift+Ctrl+E|ps/commands.merge_visible',
-		'Flatten Image|layer/flatten.flatten',
+		'Flatten Image|ps/commands.flatten_image',
 		'-',
 		['Matting', ['Defringe...', 'Remove Black Matte', 'Remove White Matte']],
 	]],

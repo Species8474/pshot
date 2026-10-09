@@ -68,7 +68,88 @@ class Ps_commands_class {
 		if (app.GUI.Ps_workspace.Multi.multiple()) {
 			return app.GUI.Ps_workspace.Multi.merge();
 		}
-		app.GUI.modules['layer/merge'].merge();
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var upper = config.layer;
+		var list = Groups.ordered();
+		var lower = list[list.indexOf(upper) + 1];
+		if (!upper || !lower || Groups.is_group(upper) || Groups.is_group(lower) || lower.ps_parent != upper.ps_parent || lower.type == 'ps_adjust') {
+			alertify.error('Could not complete the Merge Down command because the layer below is not a pixel layer in the same group.');
+			return;
+		}
+		if (upper.visible === false || lower.visible === false) {
+			alertify.error('Could not complete the Merge Down command because the target layer is hidden.');
+			return;
+		}
+		//CS6: the upper layer is blended into the lower one, which keeps its name, opacity and blend mode
+		var canvas = document.createElement('canvas');
+		canvas.width = config.WIDTH;
+		canvas.height = config.HEIGHT;
+		var ctx = canvas.getContext('2d');
+		var render = (layer, alpha, op) => {
+			ctx.save();
+			ctx.globalAlpha = alpha;
+			ctx.globalCompositeOperation = op;
+			layer._ps_ignore_groups = true;
+			this.Base_layers.render_object(ctx, layer);
+			delete layer._ps_ignore_groups;
+			ctx.restore();
+		};
+		render(lower, 1, 'source-over');
+		if (upper.type == 'ps_adjust') {
+			app.GUI.Ps_workspace.Adjustment_layers.apply(ctx, upper, (upper.opacity == null ? 100 : upper.opacity) / 100);
+		}
+		else {
+			render(upper, (upper.opacity == null ? 100 : upper.opacity) / 100, upper.composition || 'source-over');
+		}
+		app.State.do_action(new app.Actions.Bundle_action('merge_layers', 'Merge Down', [
+			new app.Actions.Insert_layer_action({
+				type: 'image', name: lower.name, order: lower.order, ps_parent: lower.ps_parent || null,
+				opacity: lower.opacity, composition: lower.composition,
+				x: 0, y: 0, width: canvas.width, height: canvas.height, width_original: canvas.width, height_original: canvas.height,
+				data: canvas.toDataURL('image/png'),
+			}, false),
+			new app.Actions.Delete_layer_action(upper.id, true),
+			new app.Actions.Delete_layer_action(lower.id, true),
+		])).then(() => Groups.after_change());
+	}
+
+	/**
+	 * the visible layers composited (groups, adjustment layers and blend modes included)
+	 */
+	composite_visible() {
+		var canvas = document.createElement('canvas');
+		canvas.width = config.WIDTH;
+		canvas.height = config.HEIGHT;
+		this.Base_layers.convert_layers_to_canvas(canvas.getContext('2d'), null, false);
+		return canvas;
+	}
+
+	/**
+	 * Layer > Flatten Image: one Background layer; hidden layers are discarded (CS6 asks first)
+	 */
+	async flatten_image() {
+		if (config.layers.some(l => l.visible === false && l.type != 'ps_group') && !window.confirm('Discard hidden layers?')) {
+			return;
+		}
+		var flat = this.composite_visible();
+		var canvas = document.createElement('canvas');
+		canvas.width = flat.width;
+		canvas.height = flat.height;
+		var ctx = canvas.getContext('2d');
+		ctx.fillStyle = '#ffffff';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.drawImage(flat, 0, 0);
+		var actions = [new app.Actions.Insert_layer_action({
+			type: 'image', name: 'Background', order: 0, ps_parent: null,
+			x: 0, y: 0, width: canvas.width, height: canvas.height, width_original: canvas.width, height_original: canvas.height,
+			data: canvas.toDataURL('image/png'),
+		}, false)];
+		for (var l of config.layers.slice()) {
+			actions.push(new app.Actions.Delete_layer_action(l.id, true));
+		}
+		app.GUI.Ps_workspace.Multi.clear();
+		await app.State.do_action(new app.Actions.Bundle_action('flatten_image', 'Flatten Image', actions));
+		app.GUI.Ps_workspace.Groups.after_change();
 	}
 	ungroup_layers() { app.GUI.Ps_workspace.Groups.ungroup(); }
 	new_group() { app.GUI.Ps_workspace.Groups.new_group(); }
@@ -646,13 +727,38 @@ class Ps_commands_class {
 	distribute_hcenter() { this.distribute('hcenter'); }
 	distribute_right() { this.distribute('right'); }
 
-	merge_visible() {
-		var hidden = config.layers.filter(l => l.visible == false);
-		if (hidden.length == 0) {
-			app.GUI.modules['layer/flatten'].flatten();
+	/**
+	 * Layer > Merge Visible (Shift+Ctrl+E): visible layers merge into one; hidden layers stay
+	 */
+	async merge_visible() {
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var shown = config.layers.filter(l => l.type != 'ps_group' && l.type != null && Groups.effectively_visible(l));
+		if (shown.length < 2) {
 			return;
 		}
-		alertify.error('Merge Visible with hidden layers is not supported yet. Delete or show the hidden layers first.');
+		var canvas = this.composite_visible();
+		var ordered = Groups.ordered().filter(l => shown.includes(l));
+		var bottom = ordered[ordered.length - 1];
+		//CS6: merging into the Background keeps it the Background; otherwise the active layer's name
+		var bg = bottom.name == 'Background' && Groups.ordered().slice(-1)[0] === bottom;
+		var name = bg ? 'Background' : (shown.includes(config.layer) ? config.layer.name : ordered[0].name);
+		var actions = [new app.Actions.Insert_layer_action({
+			type: 'image', name: name, order: bottom.order, ps_parent: null,
+			x: 0, y: 0, width: canvas.width, height: canvas.height, width_original: canvas.width, height_original: canvas.height,
+			data: canvas.toDataURL('image/png'),
+		}, false)];
+		for (var l of shown) {
+			actions.push(new app.Actions.Delete_layer_action(l.id, true));
+		}
+		//groups left without members go too
+		for (var g of config.layers.filter(x => x.type == 'ps_group')) {
+			if (Groups.descendants(g).every(m => m.type == 'ps_group' || shown.includes(m))) {
+				actions.push(new app.Actions.Delete_layer_action(g.id, true));
+			}
+		}
+		app.GUI.Ps_workspace.Multi.clear();
+		await app.State.do_action(new app.Actions.Bundle_action('merge_visible', 'Merge Visible', actions));
+		Groups.after_change();
 	}
 
 	// ---------- Select ----------
