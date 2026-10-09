@@ -97,6 +97,52 @@ function lut(g, reverse) {
 }
 
 /**
+ * the gradient drawn into a w x h canvas: type linear / radial / angle /
+ * reflected / diamond from (x1, y1) to (x2, y2) in that canvas' pixels
+ */
+function render(w, h, g, type, x1, y1, x2, y2, opts) {
+	opts = opts || {};
+	var canvas = document.createElement('canvas');
+	canvas.width = w;
+	canvas.height = h;
+	var L = lut(g, !!opts.reverse);
+	var dx = x2 - x1, dy = y2 - y1;
+	var len2 = dx * dx + dy * dy || 1, len = Math.sqrt(len2);
+	var ux = dx / len, uy = dy / len;
+	var a0 = Math.atan2(dy, dx);
+	var transparency = opts.transparency !== false, dither = !!opts.dither;
+	var ctx = canvas.getContext('2d');
+	var img = ctx.createImageData(w, h), d = img.data;
+	for (var y = 0; y < h; y++) {
+		var py = y + 0.5 - y1;
+		for (var x = 0; x < w; x++) {
+			var px = x + 0.5 - x1, t;
+			if (type == 'radial') t = Math.sqrt(px * px + py * py) / len;
+			else if (type == 'angle') {
+				t = (a0 - Math.atan2(py, px)) / (Math.PI * 2);
+				t -= Math.floor(t);
+			}
+			else if (type == 'diamond') t = (Math.abs(px * ux + py * uy) + Math.abs(-px * uy + py * ux)) / len;
+			else {
+				t = (px * dx + py * dy) / len2;
+				if (type == 'reflected') t = Math.abs(t);
+			}
+			t = t < 0 ? 0 : (t > 1 ? 1 : t);
+			var idx = t * 255;
+			if (dither) idx += Math.random() - 0.5;
+			idx = idx < 0 ? 0 : (idx > 255 ? 255 : Math.round(idx));
+			var o = (y * w + x) * 4, li = idx * 4;
+			d[o] = L[li];
+			d[o + 1] = L[li + 1];
+			d[o + 2] = L[li + 2];
+			d[o + 3] = transparency ? L[li + 3] : 255;
+		}
+	}
+	ctx.putImageData(img, 0, 0);
+	return canvas;
+}
+
+/**
  * CSS preview (over a checkerboard where there is transparency)
  */
 function css(g) {
@@ -259,4 +305,4 @@ function editor(initial, on_ok, on_preview) {
 	return root;
 }
 
-export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color };
+export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color, render };

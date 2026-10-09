@@ -11,7 +11,7 @@ import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 import Helper_class from './../libs/helpers.js';
-import { lut } from './../ps/gradients.js';
+import { render as render_gradient, two_color } from './../ps/gradients.js';
 
 class Gradient_class extends Base_tools_class {
 
@@ -140,47 +140,11 @@ class Gradient_class extends Base_tools_class {
 	build(layer, k) {
 		var params = layer.params;
 		var W = config.WIDTH, H = config.HEIGHT;
-		var w = Math.max(1, Math.round(W * k)), h = Math.max(1, Math.round(H * k));
-		var canvas = document.createElement('canvas');
-		canvas.width = w;
-		canvas.height = h;
-		var g = params.gradient || { stops: [{ pos: 0, color: params.color_1 || config.COLOR }, { pos: 1, color: params.color_2 || config.BG_COLOR }], alphas: [{ pos: 0, a: 1 }, { pos: 1, a: 1 }] };
-		var L = lut(g, !!params.reverse);
+		var g = params.gradient || two_color(params.color_1 || config.COLOR, params.color_2 || config.BG_COLOR);
 		var type = params.type || (params.radial ? 'radial' : 'linear');
-		var sx = layer.x * k, sy = layer.y * k, dx = layer.width * k, dy = layer.height * k;
-		var len2 = dx * dx + dy * dy, len = Math.sqrt(len2) || 1;
-		var ux = dx / len, uy = dy / len;
-		var a0 = Math.atan2(dy, dx);
-		var transparency = params.transparency !== false, dither = params.dither !== false;
-		var ctx = canvas.getContext('2d');
-		var img = ctx.createImageData(w, h), d = img.data;
-		for (var y = 0; y < h; y++) {
-			var py = y + 0.5 - sy;
-			for (var x = 0; x < w; x++) {
-				var px = x + 0.5 - sx, t;
-				if (type == 'radial') t = Math.sqrt(px * px + py * py) / len;
-				else if (type == 'angle') {
-					t = (a0 - Math.atan2(py, px)) / (Math.PI * 2);
-					t -= Math.floor(t);
-				}
-				else if (type == 'diamond') t = (Math.abs(px * ux + py * uy) + Math.abs(-px * uy + py * ux)) / len;
-				else {
-					t = (px * dx + py * dy) / len2;
-					if (type == 'reflected') t = Math.abs(t);
-				}
-				t = t < 0 ? 0 : (t > 1 ? 1 : t);
-				var idx = t * 255;
-				if (dither) idx += Math.random() - 0.5;
-				idx = idx < 0 ? 0 : (idx > 255 ? 255 : Math.round(idx));
-				var o = (y * w + x) * 4, li = idx * 4;
-				d[o] = L[li];
-				d[o + 1] = L[li + 1];
-				d[o + 2] = L[li + 2];
-				d[o + 3] = transparency ? L[li + 3] : 255;
-			}
-		}
-		ctx.putImageData(img, 0, 0);
-		return canvas;
+		return render_gradient(Math.max(1, Math.round(W * k)), Math.max(1, Math.round(H * k)), g, type,
+			layer.x * k, layer.y * k, (layer.x + layer.width) * k, (layer.y + layer.height) * k,
+			{ reverse: params.reverse, dither: params.dither !== false, transparency: params.transparency !== false });
 	}
 
 }

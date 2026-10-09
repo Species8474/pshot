@@ -225,7 +225,33 @@ class GUI_layers_class {
 			}
 		});
 
+		//pshot: a click on a thumbnail re-renders the rows, so the browser's dblclick
+		//can land on a detached element: two quick presses on the same layer
+		//thumbnail count as a double-click
+		var thumb_press = null;
+		base.addEventListener('mousedown', function (event) {
+			var thumb = event.target.closest('[data-action="layer_thumb"]');
+			if (!thumb || event.button != 0) {
+				thumb_press = null;
+				return;
+			}
+			var now = Date.now();
+			if (thumb_press && thumb_press.id == thumb.dataset.id && now - thumb_press.time < 450) {
+				thumb_press = null;
+				var layer = _this.Base_layers.get_layer(thumb.dataset.id);
+				_this.thumb_double_handled = now;
+				if (layer && layer.type == 'ps_fill') setTimeout(() => app.GUI.Ps_workspace.Fill_layers.edit(layer), 0);
+				else if (layer && layer.type == 'ps_adjust') setTimeout(() => app.GUI.Ps_workspace.Adjustment_layers.edit(layer), 0);
+				else _this.thumb_double_handled = 0;
+				return;
+			}
+			thumb_press = { id: thumb.dataset.id, time: now };
+		}, true);
+
 		base.addEventListener('dblclick', function (event) {
+			if (_this.thumb_double_handled && Date.now() - _this.thumb_double_handled < 600 && event.target.closest('[data-action="layer_thumb"]')) {
+				return;
+			}
 			var name = event.target.closest('.ps_layer_name');
 			if (name) {
 				_this.start_rename(name);
@@ -236,6 +262,11 @@ class GUI_layers_class {
 				return;
 			}
 			var row_layer = row ? _this.Base_layers.get_layer(row.dataset.id) : null;
+			if (row_layer && row_layer.type == 'ps_fill' && event.target.closest('[data-action="layer_thumb"]')) {
+				//CS6: double-click the fill layer thumbnail edits the fill
+				app.GUI.Ps_workspace.Fill_layers.edit(row_layer);
+				return;
+			}
 			if (row_layer && row_layer.type == 'ps_adjust' && event.target.closest('[data-action="layer_thumb"]')) {
 				//CS6: double-click the adjustment thumbnail edits the adjustment
 				app.GUI.Ps_workspace.Adjustment_layers.edit(row_layer);
@@ -419,6 +450,10 @@ class GUI_layers_class {
 	draw_thumbnail(canvas, layer) {
 		var ctx = canvas.getContext('2d');
 		var size = canvas.width;
+		if (layer.type == 'ps_fill' && layer.ps_fill_layer && app.GUI.Ps_workspace) {
+			app.GUI.Ps_workspace.Fill_layers.thumb(canvas, layer);
+			return;
+		}
 		if (layer.type == 'ps_shape') {
 			//CS6: the fill color swatch with the shape icon
 			var sh = layer.ps_shape || {};

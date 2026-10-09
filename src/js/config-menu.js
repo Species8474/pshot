@@ -167,7 +167,7 @@ const M = [
 		'-',
 		['Smart Objects', ['Convert to Smart Object|ps/commands.convert_to_smart_object', 'New Smart Object via Copy|ps/commands.new_smart_object_via_copy', 'Edit Contents|ps/commands.edit_smart_contents', 'Export Contents...|ps/commands.export_smart_contents', 'Replace Contents...|ps/commands.replace_smart_contents', ['Stack Mode', ['None']], 'Rasterize|ps/commands.rasterize_smart_object']],
 		['Video Layers', ['New Video Layer from File...', 'New Blank Video Layer', '-', 'Insert Blank Frame', 'Duplicate Frame', 'Delete Frame', 'Replace Footage...', '-', 'Interpret Footage...', '-', 'Restore Frame', 'Restore All Frames', '-', 'Reload Frame', 'Rasterize']],
-		['Rasterize', ['Type|layer/raster.raster', 'Shape|layer/raster.raster', 'Fill Content', 'Vector Mask|ps/commands.vmask_rasterize', 'Smart Object|ps/commands.rasterize_smart_object', 'Video', '3D', '-', 'Layer|layer/raster.raster', 'All Layers|ps/commands.rasterize_all']],
+		['Rasterize', ['Type|layer/raster.raster', 'Shape|layer/raster.raster', 'Fill Content|ps/commands.rasterize_fill', 'Vector Mask|ps/commands.vmask_rasterize', 'Smart Object|ps/commands.rasterize_smart_object', 'Video', '3D', '-', 'Layer|layer/raster.raster', 'All Layers|ps/commands.rasterize_all']],
 		'-',
 		'New Layer Based Slice',
 		'-',

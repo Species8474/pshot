@@ -12,7 +12,7 @@ import Dialog_class from './../libs/popup.js';
 const PIXEL_TOOLS = ['fill', 'erase', 'magic_erase', 'blur', 'sharpen', 'desaturate', 'clone', 'selection', 'pick_color', 'dodge_burn', 'retouch', 'ps_patch'];
 // tools that need a pixel layer but handle an empty layer themselves
 const PAINT_TOOLS = ['brush', 'pencil', 'gradient', 'fill', 'erase', 'magic_erase', 'blur', 'sharpen', 'desaturate', 'clone', 'dodge_burn', 'retouch'];
-const KIND = { text: 'type', rectangle: 'shape', ellipse: 'shape', line: 'shape', pentagon: 'shape', bezier_curve: 'shape' };
+const KIND = { text: 'type', rectangle: 'shape', ellipse: 'shape', line: 'shape', pentagon: 'shape', bezier_curve: 'shape', ps_fill: 'fill' };
 
 function make_pixel_layer(layer) {
 	var canvas = document.createElement('canvas');
@@ -47,7 +47,8 @@ function ask_rasterize(kind) {
 	var POP = new Dialog_class();
 	var message = kind == 'type'
 		? 'This type layer must be rasterized before proceeding. Its text will no longer be editable. Rasterize the type?'
-		: 'This ' + kind + ' layer must be rasterized before proceeding. It will no longer be a vector ' + kind + '. Rasterize the ' + kind + '?';
+		: (kind == 'fill' ? 'This fill layer must be rasterized before proceeding. Its fill will no longer be editable. Rasterize the layer?'
+			: 'This ' + kind + ' layer must be rasterized before proceeding. It will no longer be a vector ' + kind + '. Rasterize the ' + kind + '?');
 	POP.show({
 		title: 'Adobe Photoshop',
 		params: [{ html: '<p class="ps_alert_text">' + message + '</p>' }],

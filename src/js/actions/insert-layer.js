@@ -122,6 +122,7 @@ export class Insert_layer_action extends Base_action {
 			ps_aa: null,
 			ps_vmask: null,
 			ps_shape: null,
+			ps_fill_layer: null,
 		};
 
 		// Build data

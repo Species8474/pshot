@@ -477,6 +477,12 @@ class Base_layers_class {
 			return;
 		}
 
+		//pshot: fill layers (Solid Color, Gradient, Pattern)
+		if (object.type == "ps_fill") {
+			if (this.Base_gui.Ps_workspace) this.Base_gui.Ps_workspace.Fill_layers.render(ctx, object);
+			return;
+		}
+
 		//pshot: Type > Anti-Alias (None / Crisp / Strong / Smooth; Sharp is the plain render)
 		if (object.type == "text" && object.ps_aa && object.ps_aa != "sharp" && !object._ps_aa && this.Base_gui.Ps_workspace) {
 			object._ps_aa = true;

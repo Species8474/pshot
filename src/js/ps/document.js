@@ -264,6 +264,21 @@ async function file_to_layers(file) {
 						continue;
 					}
 				}
+				//fill layers stay fill layers
+				var fill_settings = app.GUI.Ps_workspace.Fill_layers.from_psd(child, psd.width, psd.height);
+				if (fill_settings) {
+					Object.assign(fill_settings, {
+						opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
+						visible: !child.hidden,
+						composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
+						_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+						_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
+						_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
+						_parent_key: parent_key,
+					});
+					layers.push(fill_settings);
+					continue;
+				}
 				//shape layers stay shapes
 				var shape_settings = app.GUI.Ps_workspace.Shapes.from_psd(child);
 				if (shape_settings) {
@@ -652,7 +667,7 @@ function psd_node(layer) {
 		left = 0;
 		top = 0;
 	}
-	const shape = layer.type == 'ps_shape' ? app.GUI.Ps_workspace.Shapes.to_psd(layer) : {};
+	const shape = layer.type == 'ps_shape' ? app.GUI.Ps_workspace.Shapes.to_psd(layer) : (layer.type == 'ps_fill' && layer.ps_fill_layer ? app.GUI.Ps_workspace.Fill_layers.to_psd(layer) : {});
 	return {
 		...shape,
 		name: layer.name,
