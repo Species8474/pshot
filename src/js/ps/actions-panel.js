@@ -156,6 +156,9 @@ class Ps_actions_panel_class {
 		if (!a || this.playing) return;
 		this.playing = true;
 		this.render();
+		//commands' confirmation prompts don't stop an action (CS6)
+		var confirm = window.confirm;
+		window.confirm = () => true;
 		try {
 			for (var step of a.steps) {
 				if (step.target.indexOf('ps/filters.') === 0 && step.settings) {
@@ -174,6 +177,7 @@ class Ps_actions_panel_class {
 				await this.idle();
 			}
 		} finally {
+			window.confirm = confirm;
 			this.playing = false;
 			this.render();
 		}
