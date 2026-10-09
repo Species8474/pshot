@@ -9,6 +9,7 @@ import Base_gui_class from "./base-gui.js";
 import Base_selection_class from "./base-selection.js";
 import Image_trim_class from "./../modules/image/trim.js";
 import View_ruler_class from "./../modules/view/ruler.js";
+import { CUSTOM as CUSTOM_BLENDS, is_custom as is_custom_blend, composite as blend_composite } from './../ps/blend.js';
 import zoomView from "./../libs/zoomView.js";
 import Helper_class from "./../libs/helpers.js";
 import alertify from "./../../../node_modules/alertifyjs/build/alertify.min.js";
@@ -381,6 +382,9 @@ class Base_layers_class {
 					tempCtx.globalCompositeOperation = null;
 					tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
 				}
+			} else if (is_custom_blend(layer.composition)) {
+				//pshot: blend modes canvas lacks (Dissolve, Linear Burn, Vivid Light...) are composited per pixel
+				this.render_custom_blend(ctx, layer);
 			} else {
 				ctx.globalAlpha = layer.opacity / 100;
 				ctx.globalCompositeOperation = layer.composition;
@@ -388,6 +392,24 @@ class Base_layers_class {
 			}
 		}
 
+	}
+
+	/**
+	 * pshot: the layer rendered alone, then blended into what is below it pixel by pixel
+	 */
+	render_custom_blend(ctx, layer) {
+		if (layer.visible == false) return;
+		var W = ctx.canvas.width, H = ctx.canvas.height;
+		var temp = document.createElement("canvas");
+		temp.width = W;
+		temp.height = H;
+		var tctx = temp.getContext("2d");
+		tctx.setTransform(ctx.getTransform());
+		this.render_object(tctx, layer);
+		var src = tctx.getImageData(0, 0, W, H).data;
+		var backdrop = ctx.getImageData(0, 0, W, H);
+		blend_composite(backdrop.data, src, CUSTOM_BLENDS[layer.composition], layer.opacity / 100, W);
+		ctx.putImageData(backdrop, 0, 0);
 	}
 
 	render_preview(layers) {

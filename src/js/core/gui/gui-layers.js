@@ -15,16 +15,16 @@ import { show_popup_menu } from './../../ps/popup-menu.js';
 import { adjustment_items, layer_style_items } from './../../ps/adjustments-def.js';
 
 /**
- * CS6 blend modes in menu order. op = canvas globalCompositeOperation, null = not supported yet.
- * Canvas has no Dissolve, Linear Burn/Dodge-as-blend, Darker/Lighter Color, Vivid/Linear/Pin Light,
- * Hard Mix, Subtract or Divide.
+ * CS6 blend modes in menu order. op = canvas globalCompositeOperation; the 'ps-' ones are
+ * composited per pixel (ps/blend.js) because canvas has no Dissolve, Linear Burn, Darker /
+ * Lighter Color, Vivid / Linear / Pin Light, Hard Mix, Subtract or Divide.
  */
 const BLEND_MODES = [
-	['Normal', 'source-over'], ['Dissolve', null], '-',
-	['Darken', 'darken'], ['Multiply', 'multiply'], ['Color Burn', 'color-burn'], ['Linear Burn', null], ['Darker Color', null], '-',
-	['Lighten', 'lighten'], ['Screen', 'screen'], ['Color Dodge', 'color-dodge'], ['Linear Dodge (Add)', 'lighter'], ['Lighter Color', null], '-',
-	['Overlay', 'overlay'], ['Soft Light', 'soft-light'], ['Hard Light', 'hard-light'], ['Vivid Light', null], ['Linear Light', null], ['Pin Light', null], ['Hard Mix', null], '-',
-	['Difference', 'difference'], ['Exclusion', 'exclusion'], ['Subtract', null], ['Divide', null], '-',
+	['Normal', 'source-over'], ['Dissolve', 'ps-dissolve'], '-',
+	['Darken', 'darken'], ['Multiply', 'multiply'], ['Color Burn', 'color-burn'], ['Linear Burn', 'ps-linear-burn'], ['Darker Color', 'ps-darker-color'], '-',
+	['Lighten', 'lighten'], ['Screen', 'screen'], ['Color Dodge', 'color-dodge'], ['Linear Dodge (Add)', 'lighter'], ['Lighter Color', 'ps-lighter-color'], '-',
+	['Overlay', 'overlay'], ['Soft Light', 'soft-light'], ['Hard Light', 'hard-light'], ['Vivid Light', 'ps-vivid-light'], ['Linear Light', 'ps-linear-light'], ['Pin Light', 'ps-pin-light'], ['Hard Mix', 'ps-hard-mix'], '-',
+	['Difference', 'difference'], ['Exclusion', 'exclusion'], ['Subtract', 'ps-subtract'], ['Divide', 'ps-divide'], '-',
 	['Hue', 'hue'], ['Saturation', 'saturation'], ['Color', 'color'], ['Luminosity', 'luminosity'],
 ];
 

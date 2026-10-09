@@ -19,6 +19,9 @@ const TO_PSD_BLEND = {
 	'darken': 'darken', 'lighten': 'lighten', 'color-dodge': 'color dodge', 'color-burn': 'color burn',
 	'hard-light': 'hard light', 'soft-light': 'soft light', 'difference': 'difference', 'exclusion': 'exclusion',
 	'hue': 'hue', 'saturation': 'saturation', 'color': 'color', 'luminosity': 'luminosity', 'lighter': 'linear dodge',
+	'ps-dissolve': 'dissolve', 'ps-linear-burn': 'linear burn', 'ps-darker-color': 'darker color', 'ps-lighter-color': 'lighter color',
+	'ps-vivid-light': 'vivid light', 'ps-linear-light': 'linear light', 'ps-pin-light': 'pin light', 'ps-hard-mix': 'hard mix',
+	'ps-subtract': 'subtract', 'ps-divide': 'divide',
 };
 const FROM_PSD_BLEND = {};
 for (const key in TO_PSD_BLEND) {
