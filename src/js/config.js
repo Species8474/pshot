@@ -187,6 +187,7 @@ config.TOOLS = [
 			width: 10,
 			contrast: 10,
 			frequency: 57,
+			sample_size: 'Point Sample',
 			style: 'Normal',
 			ratio_w: 1,
 			ratio_h: 1,
@@ -264,6 +265,9 @@ config.TOOLS = [
 		name: 'pick_color',
 		attributes: {
 			global: false,
+			sample: 'Current Layer',
+			sample_size: 'Point Sample',
+			show_ring: true,
 		},
 	},
 	{

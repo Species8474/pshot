@@ -219,7 +219,7 @@ class Ps_selection_class {
 	/**
 	 * pixels similar to (px,py) as a 0/255 mask array; limit = {x0,y0,x1,y1} optional
 	 */
-	flood(src, px, py, tolerance, contiguous, limit, out) {
+	flood(src, px, py, tolerance, contiguous, limit, out, seed) {
 		var w = config.WIDTH, h = config.HEIGHT;
 		px = Math.floor(px);
 		py = Math.floor(py);
@@ -230,6 +230,8 @@ class Ps_selection_class {
 		var x1 = limit ? Math.min(w - 1, limit.x1) : w - 1, y1 = limit ? Math.min(h - 1, limit.y1) : h - 1;
 		var i0 = (py * w + px) * 4;
 		var r0 = src[i0], g0 = src[i0 + 1], b0 = src[i0 + 2], a0 = src[i0 + 3];
+		//Magic Wand Sample Size: the averaged color around the click
+		if (seed) { r0 = seed[0]; g0 = seed[1]; b0 = seed[2]; a0 = seed[3]; }
 		var match = (i) => Math.abs(src[i] - r0) <= tolerance && Math.abs(src[i + 1] - g0) <= tolerance
 			&& Math.abs(src[i + 2] - b0) <= tolerance && Math.abs(src[i + 3] - a0) <= tolerance;
 		out = out || new Uint8Array(w * h);
@@ -279,9 +281,21 @@ class Ps_selection_class {
 	/**
 	 * Magic Wand: flood/global color match on the active layer (or all layers)
 	 */
-	select_color(px, py, tolerance, contiguous, sample_all, op, description) {
+	select_color(px, py, tolerance, contiguous, sample_all, op, description, sample_size) {
 		var src = this.sample_source(sample_all);
-		var arr = this.flood(src, px, py, tolerance, contiguous, null, null);
+		var seed = null, n = parseInt(sample_size) || 1;
+		if (n > 1) {
+			var w = config.WIDTH, h = config.HEIGHT, half = Math.floor(n / 2), sum = [0, 0, 0, 0], cnt = 0;
+			for (var y = Math.max(0, Math.floor(py) - half); y <= Math.min(h - 1, Math.floor(py) + half); y++) {
+				for (var x = Math.max(0, Math.floor(px) - half); x <= Math.min(w - 1, Math.floor(px) + half); x++) {
+					var o = (y * w + x) * 4;
+					for (var c = 0; c < 4; c++) sum[c] += src[o + c];
+					cnt++;
+				}
+			}
+			if (cnt) seed = sum.map(v => v / cnt);
+		}
+		var arr = this.flood(src, px, py, tolerance, contiguous, null, null, seed);
 		return this.commit(this.combine(this.array_to_mask(arr), op), description);
 	}
 

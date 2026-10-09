@@ -131,7 +131,7 @@ class Ps_select_class extends Base_tools_class {
 		}
 		if (mode == 'wand') {
 			var a = this.attrs();
-			this.selection().select_color(p.x, p.y, a.tolerance, a.contiguous, a.sample_all, op, NAMES.wand);
+			this.selection().select_color(p.x, p.y, a.tolerance, a.contiguous, a.sample_all, op, NAMES.wand, a.sample_size);
 			return;
 		}
 		if (mode == 'magnetic') {

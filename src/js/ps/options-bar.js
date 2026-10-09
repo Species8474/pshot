@@ -105,6 +105,9 @@ const SELECTION_OPS = { type: 'icons', items: [
 	{ icon: IC.sel_sub, title: 'Subtract from selection', bind: 'op', bind_value: 'subtract' },
 	{ icon: IC.sel_int, title: 'Intersect with selection', bind: 'op', bind_value: 'intersect' },
 ] };
+const SAMPLE_SIZES = ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'];
+const EYEDROPPER_SAMPLES = ['Current Layer', 'Current & Below', 'All Layers', 'All Layers No Adjustments', 'Current & Below No Adjustments'];
+
 //Marquee Style: Normal, Fixed Ratio (Width:Height), Fixed Size (px); the fields follow the style
 var marquee_style = () => (config.TOOL.attributes.style || 'Normal');
 const MARQUEE_STYLE = [
@@ -239,7 +242,7 @@ const LAYOUTS = {
 	magic_wand: [
 		SELECTION_OPS,
 		{ type: 'sep' },
-		{ type: 'select', label: 'Sample Size:', values: ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'], value: 'Point Sample' },
+		{ type: 'select', label: 'Sample Size:', values: SAMPLE_SIZES, bind: 'sample_size', map: Object.fromEntries(SAMPLE_SIZES.map(v => [v, v])) },
 		{ type: 'num', label: 'Tolerance:', bind: 'tolerance', width: 40 },
 		{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
 		{ type: 'check', label: 'Contiguous', bind: 'contiguous' },
@@ -266,10 +269,9 @@ const LAYOUTS = {
 		] },
 	],
 	eyedropper: [
-		{ type: 'select', label: 'Sample Size:', values: ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'], value: 'Point Sample' },
-		{ type: 'select', label: 'Sample:', values: ['Current Layer', 'Current & Below', 'All Layers', 'All Layers No Adjustments', 'Current & Below No Adjustments'],
-			bind: 'global', map: { 'Current Layer': false, 'All Layers': true } },
-		{ type: 'check', label: 'Show Sampling Ring', value: true, always_disabled: true },
+		{ type: 'select', label: 'Sample Size:', values: SAMPLE_SIZES, bind: 'sample_size', map: Object.fromEntries(SAMPLE_SIZES.map(v => [v, v])) },
+		{ type: 'select', label: 'Sample:', values: EYEDROPPER_SAMPLES, bind: 'sample', map: Object.fromEntries(EYEDROPPER_SAMPLES.map(v => [v, v])) },
+		{ type: 'check', label: 'Show Sampling Ring', bind: 'show_ring' },
 	],
 	brush: BRUSH_COMMON,
 	pencil: [...BRUSH_COMMON.slice(0, 5), BRUSH_COMMON[8], { type: 'sep' }, { type: 'check', label: 'Auto Erase', value: false }],
