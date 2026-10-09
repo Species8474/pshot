@@ -151,8 +151,8 @@ const groups = [
 		{ id: 'smudge', name: 'Smudge Tool', key: '', tool: null, icon: I.smudge },
 	]},
 	{ members: [
-		{ id: 'dodge', name: 'Dodge Tool', key: 'O', tool: null, icon: I.dodge },
-		{ id: 'burn', name: 'Burn Tool', key: 'O', tool: null, icon: I.burn },
+		{ id: 'dodge', name: 'Dodge Tool', key: 'O', tool: 'dodge_burn', preset: { mode: 'dodge' }, icon: I.dodge },
+		{ id: 'burn', name: 'Burn Tool', key: 'O', tool: 'dodge_burn', preset: { mode: 'burn' }, icon: I.burn },
 		{ id: 'sponge', name: 'Sponge Tool', key: 'O', tool: 'desaturate', icon: I.sponge },
 	]},
 	{ separator: true, members: [

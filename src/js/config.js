@@ -83,6 +83,16 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'dodge_burn',
+		title: 'Dodge / Burn',
+		attributes: {
+			size: 50,
+			mode: 'dodge',
+			range: 'Midtones',
+			exposure: 50,
+		},
+	},
+	{
 		name: 'ps_select',
 		title: 'Selection Tools',
 		on_activate: 'on_activate',

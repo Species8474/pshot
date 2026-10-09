@@ -1333,3 +1333,5 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 
 /* rulers (CS6: light gray with dark ticks) */
 body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { cursor: default; }
+
+.ps_app > .ps_options { height: 34px; box-sizing: border-box; }
