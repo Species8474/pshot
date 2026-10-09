@@ -50,6 +50,7 @@ pshot keeps miniPaint's engine: layers in `config.layers`, actions and undo in `
 | Guides from rulers | `src/js/ps/guides.js` |
 | Multiple layer selection | `src/js/ps/multi-select.js` |
 | Paths, Pen, Path/Direct Selection | `src/js/ps/paths.js`, `src/js/tools/ps_pen.js`, `src/js/tools/ps_path_select.js` |
+| CS6 filters (dialogs with live preview; Ctrl+F repeats) | `src/js/modules/ps/filters.js` (targets `ps/filters.*`) |
 | Hand and Zoom tools | `src/js/tools/hand.js`, `src/js/tools/zoom.js` |
 
 Layer properties pshot adds (all changed through `Update_layer_action`, so they're undoable):
@@ -102,6 +103,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Image**
   - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Shadows/Highlights and Equalize (destructive here, as in CS6).
   - Image and Canvas Size, rotation, crop, trim.
+- **Filters**: Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
   - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key).
   - Guides from the rulers.

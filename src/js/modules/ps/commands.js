@@ -809,13 +809,17 @@ class Ps_commands_class {
 	// ---------- Filter ----------
 
 	remember_filter(target) {
-		if (target.indexOf('effects/') === 0) {
+		if (target.indexOf('effects/') === 0 || target.indexOf('ps/filters.') === 0) {
 			this.last_filter_target = target;
 		}
 	}
 
 	last_filter() {
 		if (this.last_filter_target == null) {
+			return;
+		}
+		//pshot filters repeat with the same settings, without the dialog (CS6)
+		if (this.last_filter_target.indexOf('ps/filters.') === 0 && app.GUI.modules['ps/filters'].repeat()) {
 			return;
 		}
 		var parts = this.last_filter_target.split('.');

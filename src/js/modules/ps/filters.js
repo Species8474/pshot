@@ -1,0 +1,512 @@
+/*
+ * pshot - CS6 filters with their CS6 dialogs (live preview on the canvas,
+ * selection respected). Ctrl+F repeats the last one with the same settings.
+ *
+ * Each filter is a pixel function (src, dst, w, h) over RGBA arrays, run
+ * through the adjustment dialog machinery in ps/adjust.js.
+ */
+
+import app from './../../app.js';
+import config from './../../config.js';
+
+function canvas_of(src, w, h) {
+	var c = document.createElement('canvas');
+	c.width = w;
+	c.height = h;
+	c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(src), w, h), 0, 0);
+	return c;
+}
+
+/**
+ * draw `src` (canvas) through a canvas filter with its edge pixels extended,
+ * so edges don't fade to transparent (Photoshop repeats edge pixels)
+ */
+function filtered(src, w, h, filter, pad) {
+	pad = Math.ceil(pad);
+	var big = document.createElement('canvas');
+	big.width = w + pad * 2;
+	big.height = h + pad * 2;
+	var b = big.getContext('2d');
+	b.drawImage(src, pad, pad);
+	if (pad > 0) {
+		b.drawImage(src, 0, 0, w, 1, pad, 0, w, pad);
+		b.drawImage(src, 0, h - 1, w, 1, pad, h + pad, w, pad);
+		b.drawImage(big, pad, 0, 1, h + pad * 2, 0, 0, pad, h + pad * 2);
+		b.drawImage(big, w + pad - 1, 0, 1, h + pad * 2, w + pad, 0, pad, h + pad * 2);
+	}
+	var out = document.createElement('canvas');
+	out.width = big.width;
+	out.height = big.height;
+	var o = out.getContext('2d', { willReadFrequently: true });
+	if (typeof filter == 'function') filter(o, big);
+	else {
+		o.filter = filter;
+		o.drawImage(big, 0, 0);
+	}
+	return o.getImageData(pad, pad, w, h).data;
+}
+
+function gaussian(src, w, h, radius) {
+	if (radius <= 0) return new Uint8ClampedArray(src);
+	return filtered(canvas_of(src, w, h), w, h, 'blur(' + radius + 'px)', radius * 3);
+}
+
+function gauss_random() {
+	var u = 1 - Math.random(), v = Math.random();
+	return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function sample(src, w, h, x, y, out, o) {
+	//bilinear, edge clamped
+	x = Math.max(0, Math.min(w - 1.001, x));
+	y = Math.max(0, Math.min(h - 1.001, y));
+	var x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0;
+	var i00 = (y0 * w + x0) * 4, i10 = i00 + 4, i01 = i00 + w * 4, i11 = i01 + 4;
+	for (var c = 0; c < 4; c++) {
+		var top = src[i00 + c] + (src[i10 + c] - src[i00 + c]) * fx;
+		var bot = src[i01 + c] + (src[i11 + c] - src[i01 + c]) * fx;
+		out[o + c] = top + (bot - top) * fy;
+	}
+}
+
+/**
+ * radial distortion around the center: fn(r_norm, angle) -> [r_norm, angle] source
+ */
+function distort(src, dst, w, h, fn) {
+	var cx = w / 2, cy = h / 2, R = Math.min(cx, cy);
+	for (var y = 0; y < h; y++) {
+		for (var x = 0; x < w; x++) {
+			var dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+			var r = Math.hypot(dx, dy) / R, a = Math.atan2(dy, dx);
+			var o = (y * w + x) * 4;
+			if (r >= 1) continue;
+			var s = fn(r, a);
+			sample(src, w, h, cx + Math.cos(s[1]) * s[0] * R - 0.5, cy + Math.sin(s[1]) * s[0] * R - 0.5, dst, o);
+		}
+	}
+}
+
+/**
+ * per-channel rank filter in a (2r+1)^2 window with a sliding histogram
+ * rank: 0 = minimum, 0.5 = median, 1 = maximum
+ */
+function rank_filter(src, dst, w, h, r, rank) {
+	r = Math.max(1, Math.round(r));
+	var hist = new Uint32Array(256);
+	for (var c = 0; c < 4; c++) {
+		if (c == 3 && rank == 0.5) {
+			for (var i = 3; i < src.length; i += 4) dst[i] = src[i];
+			continue;
+		}
+		for (var y = 0; y < h; y++) {
+			hist.fill(0);
+			var n = 0;
+			var y0 = Math.max(0, y - r), y1 = Math.min(h - 1, y + r);
+			for (var yy = y0; yy <= y1; yy++) {
+				for (var xx = 0; xx <= Math.min(w - 1, r); xx++) { hist[src[(yy * w + xx) * 4 + c]]++; n++; }
+			}
+			for (var x = 0; x < w; x++) {
+				if (x > 0) {
+					var xo = x - r - 1, xi = x + r;
+					for (var y2 = y0; y2 <= y1; y2++) {
+						if (xo >= 0) { hist[src[(y2 * w + xo) * 4 + c]]--; n--; }
+						if (xi < w) { hist[src[(y2 * w + xi) * 4 + c]]++; n++; }
+					}
+				}
+				var target = Math.min(n - 1, Math.floor((n - 1) * rank)), acc = 0, v = 0;
+				for (v = 0; v < 256; v++) { acc += hist[v]; if (acc > target) break; }
+				dst[(y * w + x) * 4 + c] = v;
+			}
+		}
+	}
+}
+
+//value noise fBm in 0..1 (Clouds)
+function clouds(w, h, seed) {
+	var rnd = (i, j) => {
+		var n = Math.sin(i * 127.1 + j * 311.7 + seed * 74.7) * 43758.5453;
+		return n - Math.floor(n);
+	};
+	var smooth = (t) => t * t * (3 - 2 * t);
+	var noise = (x, y) => {
+		var i = Math.floor(x), j = Math.floor(y), fx = smooth(x - i), fy = smooth(y - j);
+		var a = rnd(i, j), b = rnd(i + 1, j), c = rnd(i, j + 1), d = rnd(i + 1, j + 1);
+		return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+	};
+	var out = new Float32Array(w * h);
+	var base = 128;
+	for (var y = 0; y < h; y++) {
+		for (var x = 0; x < w; x++) {
+			var v = 0, amp = 0.5, f = 1 / base;
+			for (var o = 0; o < 6; o++) { v += noise(x * f, y * f) * amp; amp /= 2; f *= 2; }
+			out[y * w + x] = v / 0.984;
+		}
+	}
+	return out;
+}
+
+function hex(c) {
+	return [parseInt(c.substr(1, 2), 16), parseInt(c.substr(3, 2), 16), parseInt(c.substr(5, 2), 16)];
+}
+
+class Ps_filters_class {
+
+	constructor() {
+		this.last = null;
+	}
+
+	adjust() {
+		return app.GUI.modules['ps/commands'].Adjust;
+	}
+
+	/**
+	 * fields: [{ key, label, min, max, step, value, unit }] or { key, label, type: 'select'|'check'|'radio', values, value }
+	 */
+	dialog(key, title, fields, build) {
+		var defaults = {};
+		fields.forEach(f => { defaults[f.key] = f.value; });
+		var saved = (this.saved = this.saved || {})[key];
+		var html = fields.map((f) => {
+			if (f.type == 'select') {
+				return '<div class="ps_adj_row"><span>' + f.label + '</span><select data-key="' + f.key + '">' + f.values.map(v => '<option>' + v + '</option>').join('') + '</select></div>';
+			}
+			if (f.type == 'radio') {
+				return '<div class="ps_adj_row ps_adj_radios"><span>' + f.label + '</span>' + f.values.map(v => '<label class="ps_adj_check"><input type="radio" name="flt_' + f.key + '" data-key="' + f.key + '" value="' + v + '"> ' + v + '</label>').join('') + '</div>';
+			}
+			if (f.type == 'check') {
+				return '<label class="ps_adj_check"><input type="checkbox" data-key="' + f.key + '"> ' + f.label + '</label>';
+			}
+			return '<div class="ps_adj_slider"><span>' + f.label + '</span><input type="number" data-num="' + f.key + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '">'
+				+ (f.unit ? '<span class="ps_adj_unit">' + f.unit + '</span>' : '')
+				+ '<input type="range" data-range="' + f.key + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '"></div>';
+		}).join('');
+		var adjust = this.adjust();
+		adjust.show(title, html, (root, state, update) => {
+			Object.assign(state, defaults, saved || {});
+			fields.forEach((f) => {
+				if (f.type == 'select') {
+					var sel = root.querySelector('[data-key="' + f.key + '"]');
+					sel.value = state[f.key];
+					sel.addEventListener('change', () => { state[f.key] = sel.value; update(); });
+				}
+				else if (f.type == 'radio') {
+					root.querySelectorAll('[data-key="' + f.key + '"]').forEach((r) => {
+						r.checked = r.value == state[f.key];
+						r.addEventListener('change', () => { if (r.checked) { state[f.key] = r.value; update(); } });
+					});
+				}
+				else if (f.type == 'check') {
+					var cb = root.querySelector('[data-key="' + f.key + '"]');
+					cb.checked = !!state[f.key];
+					cb.addEventListener('change', () => { state[f.key] = cb.checked; update(); });
+				}
+				else {
+					var num = root.querySelector('[data-num="' + f.key + '"]'), range = root.querySelector('[data-range="' + f.key + '"]');
+					num.value = range.value = state[f.key];
+					var set = (v) => { if (isNaN(v)) return; state[f.key] = Math.max(f.min, Math.min(f.max, v)); range.value = num.value = state[f.key]; update(); };
+					range.addEventListener('input', () => set(parseFloat(range.value)));
+					num.addEventListener('change', () => set(parseFloat(num.value)));
+				}
+			});
+		}, (state) => {
+			this.saved[key] = Object.assign({}, state);
+			this.last = { key: key, title: title, build: build };
+			return build(state);
+		}, key);
+	}
+
+	/**
+	 * Ctrl+F: the last filter again, same settings, no dialog
+	 */
+	repeat() {
+		if (!this.last) return false;
+		var adjust = this.adjust();
+		var job = adjust.begin(this.last.title);
+		if (!job) return true;
+		adjust.finish(job, this.last.build(this.saved[this.last.key]), this.last.title);
+		return true;
+	}
+
+	/**
+	 * filters without a dialog (Average, Clouds, ...)
+	 */
+	direct(key, title, fn) {
+		var adjust = this.adjust();
+		var job = adjust.begin(title);
+		if (!job) return;
+		this.last = { key: key, title: title, build: () => fn };
+		this.saved = this.saved || {};
+		adjust.finish(job, fn, title);
+	}
+
+	// ---------- Blur ----------
+
+	gaussian_blur() {
+		this.dialog('gaussian_blur', 'Gaussian Blur', [{ key: 'radius', label: 'Radius:', min: 0.1, max: 250, step: 0.1, value: 1, unit: 'Pixels' }],
+			(s) => (src, dst, w, h) => dst.set(gaussian(src, w, h, s.radius)));
+	}
+
+	motion_blur() {
+		this.dialog('motion_blur', 'Motion Blur', [
+			{ key: 'angle', label: 'Angle:', min: -360, max: 360, value: 0, unit: '°' },
+			{ key: 'distance', label: 'Distance:', min: 1, max: 999, value: 10, unit: 'Pixels' },
+		], (s) => (src, dst, w, h) => {
+			var a = s.angle * Math.PI / 180, d = s.distance;
+			var n = Math.max(2, Math.min(64, Math.round(d)));
+			dst.set(filtered(canvas_of(src, w, h), w, h, (o, big) => {
+				o.globalCompositeOperation = 'lighter';
+				o.globalAlpha = 1 / n;
+				for (var i = 0; i < n; i++) {
+					var t = (i / (n - 1) - 0.5) * d;
+					o.drawImage(big, Math.cos(a) * t, -Math.sin(a) * t);
+				}
+			}, d));
+		});
+	}
+
+	average() {
+		this.direct('average', 'Average', (src, dst) => {
+			var sum = [0, 0, 0], n = 0;
+			for (var i = 0; i < src.length; i += 4) {
+				if (src[i + 3] == 0) continue;
+				sum[0] += src[i]; sum[1] += src[i + 1]; sum[2] += src[i + 2]; n++;
+			}
+			if (!n) return;
+			for (var j = 0; j < dst.length; j += 4) {
+				if (src[j + 3] == 0) continue;
+				dst[j] = sum[0] / n; dst[j + 1] = sum[1] / n; dst[j + 2] = sum[2] / n;
+			}
+		});
+	}
+
+	// ---------- Sharpen ----------
+
+	unsharp_mask() {
+		this.dialog('unsharp_mask', 'Unsharp Mask', [
+			{ key: 'amount', label: 'Amount:', min: 1, max: 500, value: 50, unit: '%' },
+			{ key: 'radius', label: 'Radius:', min: 0.1, max: 1000, step: 0.1, value: 1, unit: 'Pixels' },
+			{ key: 'threshold', label: 'Threshold:', min: 0, max: 255, value: 0, unit: 'levels' },
+		], (s) => (src, dst, w, h) => {
+			var blur = gaussian(src, w, h, s.radius), k = s.amount / 100;
+			for (var i = 0; i < src.length; i += 4) {
+				for (var c = 0; c < 3; c++) {
+					var diff = src[i + c] - blur[i + c];
+					if (Math.abs(diff) >= s.threshold) dst[i + c] = src[i + c] + diff * k;
+				}
+			}
+		});
+	}
+
+	smart_sharpen() {
+		this.dialog('smart_sharpen', 'Smart Sharpen', [
+			{ key: 'amount', label: 'Amount:', min: 1, max: 500, value: 100, unit: '%' },
+			{ key: 'radius', label: 'Radius:', min: 0.1, max: 64, step: 0.1, value: 1, unit: 'px' },
+			{ key: 'remove', label: 'Remove:', type: 'select', values: ['Gaussian Blur', 'Lens Blur', 'Motion Blur'], value: 'Gaussian Blur' },
+		], (s) => (src, dst, w, h) => {
+			//sharpen the luminosity only (avoids color fringes)
+			var blur = gaussian(src, w, h, s.radius), k = s.amount / 100;
+			for (var i = 0; i < src.length; i += 4) {
+				var l0 = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+				var l1 = blur[i] * 0.299 + blur[i + 1] * 0.587 + blur[i + 2] * 0.114;
+				var d = (l0 - l1) * k;
+				dst[i] = src[i] + d; dst[i + 1] = src[i + 1] + d; dst[i + 2] = src[i + 2] + d;
+			}
+		});
+	}
+
+	// ---------- Noise ----------
+
+	add_noise() {
+		this.dialog('add_noise', 'Add Noise', [
+			{ key: 'amount', label: 'Amount:', min: 0.1, max: 400, step: 0.1, value: 12.5, unit: '%' },
+			{ key: 'distribution', label: 'Distribution:', type: 'radio', values: ['Uniform', 'Gaussian'], value: 'Uniform' },
+			{ key: 'mono', label: 'Monochromatic', type: 'check', value: false },
+		], (s) => {
+			var amp = s.amount / 100 * 255;
+			var noise = s.distribution == 'Gaussian' ? () => gauss_random() * amp * 0.5 : () => (Math.random() * 2 - 1) * amp * 0.5;
+			return (src, dst) => {
+				for (var i = 0; i < src.length; i += 4) {
+					if (s.mono) {
+						var n = noise();
+						dst[i] = src[i] + n; dst[i + 1] = src[i + 1] + n; dst[i + 2] = src[i + 2] + n;
+					}
+					else {
+						dst[i] = src[i] + noise(); dst[i + 1] = src[i + 1] + noise(); dst[i + 2] = src[i + 2] + noise();
+					}
+				}
+			};
+		});
+	}
+
+	median() {
+		this.dialog('median', 'Median', [{ key: 'radius', label: 'Radius:', min: 1, max: 100, value: 1, unit: 'Pixels' }],
+			(s) => (src, dst, w, h) => rank_filter(src, dst, w, h, s.radius, 0.5));
+	}
+
+	dust_scratches() {
+		this.dialog('dust_scratches', 'Dust & Scratches', [
+			{ key: 'radius', label: 'Radius:', min: 1, max: 100, value: 1, unit: 'Pixels' },
+			{ key: 'threshold', label: 'Threshold:', min: 0, max: 255, value: 0, unit: 'levels' },
+		], (s) => (src, dst, w, h) => {
+			var med = new Uint8ClampedArray(src.length);
+			rank_filter(src, med, w, h, s.radius, 0.5);
+			for (var i = 0; i < src.length; i += 4) {
+				for (var c = 0; c < 3; c++) {
+					dst[i + c] = Math.abs(src[i + c] - med[i + c]) > s.threshold ? med[i + c] : src[i + c];
+				}
+			}
+		});
+	}
+
+	// ---------- Other ----------
+
+	high_pass() {
+		this.dialog('high_pass', 'High Pass', [{ key: 'radius', label: 'Radius:', min: 0.1, max: 1000, step: 0.1, value: 10, unit: 'Pixels' }],
+			(s) => (src, dst, w, h) => {
+				var blur = gaussian(src, w, h, s.radius);
+				for (var i = 0; i < src.length; i += 4) {
+					for (var c = 0; c < 3; c++) dst[i + c] = 128 + src[i + c] - blur[i + c];
+				}
+			});
+	}
+
+	minimum() {
+		this.dialog('minimum', 'Minimum', [{ key: 'radius', label: 'Radius:', min: 1, max: 100, value: 1, unit: 'Pixels' }],
+			(s) => (src, dst, w, h) => rank_filter(src, dst, w, h, s.radius, 0));
+	}
+
+	maximum() {
+		this.dialog('maximum', 'Maximum', [{ key: 'radius', label: 'Radius:', min: 1, max: 100, value: 1, unit: 'Pixels' }],
+			(s) => (src, dst, w, h) => rank_filter(src, dst, w, h, s.radius, 1));
+	}
+
+	offset() {
+		this.dialog('offset', 'Offset', [
+			{ key: 'h', label: 'Horizontal:', min: -30000, max: 30000, value: 0, unit: 'pixels right' },
+			{ key: 'v', label: 'Vertical:', min: -30000, max: 30000, value: 0, unit: 'pixels down' },
+			{ key: 'edge', label: 'Undefined Areas:', type: 'radio', values: ['Set to Transparent', 'Repeat Edge Pixels', 'Wrap Around'], value: 'Wrap Around' },
+		], (s) => (src, dst, w, h) => {
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var sx = x - s.h, sy = y - s.v, o = (y * w + x) * 4;
+					if (s.edge == 'Wrap Around') { sx = ((sx % w) + w) % w; sy = ((sy % h) + h) % h; }
+					else if (s.edge == 'Repeat Edge Pixels') { sx = Math.max(0, Math.min(w - 1, sx)); sy = Math.max(0, Math.min(h - 1, sy)); }
+					else if (sx < 0 || sy < 0 || sx >= w || sy >= h) { dst[o] = dst[o + 1] = dst[o + 2] = dst[o + 3] = 0; continue; }
+					var i = (sy * w + sx) * 4;
+					dst[o] = src[i]; dst[o + 1] = src[i + 1]; dst[o + 2] = src[i + 2]; dst[o + 3] = src[i + 3];
+				}
+			}
+		});
+	}
+
+	// ---------- Distort ----------
+
+	twirl() {
+		this.dialog('twirl', 'Twirl', [{ key: 'angle', label: 'Angle:', min: -999, max: 999, value: 50, unit: '°' }],
+			(s) => (src, dst, w, h) => distort(src, dst, w, h, (r, a) => [r, a - s.angle * Math.PI / 180 * (1 - r) * (1 - r)]));
+	}
+
+	pinch() {
+		this.dialog('pinch', 'Pinch', [{ key: 'amount', label: 'Amount:', min: -100, max: 100, value: 50, unit: '%' }],
+			(s) => (src, dst, w, h) => {
+				var k = s.amount / 100;
+				distort(src, dst, w, h, (r, a) => [Math.pow(r, k >= 0 ? 1 - k * 0.5 * (1 - r) : 1 / (1 + -k * 0.5 * (1 - r))) , a]);
+			});
+	}
+
+	spherize() {
+		this.dialog('spherize', 'Spherize', [{ key: 'amount', label: 'Amount:', min: -100, max: 100, value: 100, unit: '%' }],
+			(s) => (src, dst, w, h) => {
+				var k = s.amount / 100;
+				distort(src, dst, w, h, (r, a) => {
+					var sph = Math.asin(r) / (Math.PI / 2);
+					return [r + (sph - r) * k, a];
+				});
+			});
+	}
+
+	polar_coordinates() {
+		this.dialog('polar_coordinates', 'Polar Coordinates', [
+			{ key: 'mode', label: '', type: 'radio', values: ['Rectangular to Polar', 'Polar to Rectangular'], value: 'Rectangular to Polar' },
+		], (s) => (src, dst, w, h) => {
+			var cx = w / 2, cy = h / 2;
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var o = (y * w + x) * 4, sx, sy;
+					if (s.mode == 'Rectangular to Polar') {
+						var dx = x - cx, dy = y - cy;
+						var a = Math.atan2(dx, -dy);
+						if (a < 0) a += Math.PI * 2;
+						sx = a / (Math.PI * 2) * w;
+						sy = Math.hypot(dx / cx, dy / cy) * h;
+					}
+					else {
+						var ang = x / w * Math.PI * 2, rad = y / h;
+						sx = cx + Math.sin(ang) * rad * cx;
+						sy = cy - Math.cos(ang) * rad * cy;
+					}
+					if (sy >= h || sy < 0) { dst[o + 3] = 0; continue; }
+					sample(src, w, h, sx, sy, dst, o);
+				}
+			}
+		});
+	}
+
+	ripple() {
+		this.dialog('ripple', 'Ripple', [
+			{ key: 'amount', label: 'Amount:', min: -999, max: 999, value: 100, unit: '%' },
+			{ key: 'size', label: 'Size:', type: 'select', values: ['Small', 'Medium', 'Large'], value: 'Medium' },
+		], (s) => (src, dst, w, h) => {
+			var wl = { Small: 6, Medium: 12, Large: 24 }[s.size], amp = s.amount / 100 * 3;
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					sample(src, w, h, x + Math.sin(y / wl * Math.PI * 2) * amp, y + Math.sin(x / wl * Math.PI * 2) * amp, dst, (y * w + x) * 4);
+				}
+			}
+		});
+	}
+
+	// ---------- Render ----------
+
+	clouds() {
+		var fg = hex(config.COLOR), bg = hex(config.BG_COLOR), seed = Math.random() * 1000;
+		this.direct('clouds', 'Clouds', (src, dst, w, h) => {
+			var n = clouds(w, h, seed);
+			for (var i = 0; i < n.length; i++) {
+				for (var c = 0; c < 3; c++) dst[i * 4 + c] = fg[c] + (bg[c] - fg[c]) * n[i];
+				dst[i * 4 + 3] = 255;
+			}
+		});
+	}
+
+	difference_clouds() {
+		var fg = hex(config.COLOR), bg = hex(config.BG_COLOR), seed = Math.random() * 1000;
+		this.direct('difference_clouds', 'Difference Clouds', (src, dst, w, h) => {
+			var n = clouds(w, h, seed);
+			for (var i = 0; i < n.length; i++) {
+				for (var c = 0; c < 3; c++) dst[i * 4 + c] = Math.abs(src[i * 4 + c] - (fg[c] + (bg[c] - fg[c]) * n[i]));
+			}
+		});
+	}
+
+	// ---------- Stylize ----------
+
+	diffuse() {
+		this.dialog('diffuse', 'Diffuse', [
+			{ key: 'mode', label: 'Mode:', type: 'radio', values: ['Normal', 'Darken Only', 'Lighten Only'], value: 'Normal' },
+		], (s) => (src, dst, w, h) => {
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var sx = Math.max(0, Math.min(w - 1, x + Math.round(Math.random() * 2 - 1)));
+					var sy = Math.max(0, Math.min(h - 1, y + Math.round(Math.random() * 2 - 1)));
+					var o = (y * w + x) * 4, i = (sy * w + sx) * 4;
+					var lo = src[o] + src[o + 1] + src[o + 2], li = src[i] + src[i + 1] + src[i + 2];
+					if ((s.mode == 'Darken Only' && li > lo) || (s.mode == 'Lighten Only' && li < lo)) continue;
+					dst[o] = src[i]; dst[o + 1] = src[i + 1]; dst[o + 2] = src[i + 2]; dst[o + 3] = src[i + 3];
+				}
+			}
+		});
+	}
+}
+
+export default Ps_filters_class;
