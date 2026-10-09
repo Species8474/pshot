@@ -2823,6 +2823,10 @@ class Ps_commands_class {
 	toggle_options_bar() { app.GUI.Ps_workspace.toggle_area('options'); }
 	toggle_toolbox() { app.GUI.Ps_workspace.toggle_area('toolbox'); }
 	reset_workspace() { app.GUI.Ps_workspace.reset_workspace(); }
+	new_workspace() { app.GUI.Ps_workspace.new_workspace(); }
+	delete_workspace() { app.GUI.Ps_workspace.delete_workspace(); }
+	reset_current_workspace() { var ws = app.GUI.Ps_workspace; ws.apply_workspace(ws.workspace_name || 'Essentials'); }
+	workspace_reset_label() { return 'Reset ' + (app.GUI.Ps_workspace.workspace_name || 'Essentials'); }
 
 	// ---------- File ----------
 

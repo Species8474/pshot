@@ -7,6 +7,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Helper_class from './../libs/helpers.js';
 import Dialog_class from './../libs/popup.js';
+import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 import GUI_colors_class from './../core/gui/gui-colors.js';
 import { groups } from './tools-def.js';
 import { ADJUSTMENTS, run_target } from './adjustments-def.js';
@@ -619,10 +620,17 @@ class Ps_workspace_class {
 				{ name: 'Painting', checked: ws == 'Painting', action: () => this.apply_workspace('Painting') },
 				{ name: 'Photography', checked: ws == 'Photography', action: () => this.apply_workspace('Photography') },
 				{ name: 'Typography', checked: ws == 'Typography', action: () => this.apply_workspace('Typography') },
-				{ divider: true },
-				{ name: 'Reset ' + ws, action: () => this.apply_workspace(ws) },
-				{ name: 'New Workspace...' }, { name: 'Delete Workspace...' },
 			];
+			var user = Object.keys(this.user_workspaces());
+			if (user.length) {
+				items.push({ divider: true });
+				user.forEach(n => items.push({ name: this.Helper.escapeHtml(n), checked: ws == n, action: () => this.apply_workspace(n) }));
+			}
+			items.push(
+				{ divider: true },
+				{ name: 'Reset ' + this.Helper.escapeHtml(ws), action: () => this.apply_workspace(ws) },
+				{ name: 'New Workspace...', action: () => this.new_workspace() }, { name: 'Delete Workspace...', action: () => this.delete_workspace() },
+			);
 			show_popup_menu(button, items, {placement: 'below'});
 		});
 	}
@@ -977,7 +985,7 @@ class Ps_workspace_class {
 			Photography: { strip: ['history', 'properties', 'info'], tabs: { color: 'color', adjustments: 'adjustments', layers: 'layers' }, closed: [] },
 			Typography: { strip: ['character', 'paragraph', 'history'], tabs: { color: 'swatches', layers: 'layers' }, closed: ['adjustments'] },
 		};
-		var p = presets[name] || presets.Essentials;
+		var p = presets[name] || this.user_workspaces()[name] || presets.Essentials;
 		this.reset_workspace();
 		this.workspace_name = name;
 		this.strip_panels = p.strip.slice();
@@ -993,6 +1001,68 @@ class Ps_workspace_class {
 		var button = document.getElementById('ps_workspace_button');
 		if (button) button.innerHTML = this.Helper.escapeHtml(name) + ' <span class="ps_caret">&#9662;</span>';
 		this.relayout();
+	}
+
+	/**
+	 * Window > Workspace > New Workspace: saved panel arrangements (browser storage)
+	 */
+	user_workspaces() {
+		try { return JSON.parse(localStorage.getItem('pshot_workspaces_v1') || '{}'); } catch (e) { return {}; }
+	}
+
+	save_user_workspaces(list) {
+		try { localStorage.setItem('pshot_workspaces_v1', JSON.stringify(list)); } catch (e) { /* storage blocked */ }
+	}
+
+	capture_workspace() {
+		var tabs = {}, closed = [];
+		document.querySelectorAll('#ps_dock .ps_panelgroup').forEach((group) => {
+			var first = group.querySelector('.ps_tab').dataset.panel;
+			var active = group.querySelector('.ps_tab.active');
+			tabs[first] = active ? active.dataset.panel : first;
+			if (group.classList.contains('closed')) closed.push(first);
+		});
+		return { strip: this.strip_panels.slice(), tabs: tabs, closed: closed };
+	}
+
+	new_workspace() {
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'New Workspace',
+			params: [
+				{ name: 'name', title: 'Name:', value: 'Workspace ' + (Object.keys(this.user_workspaces()).length + 1) },
+				{ title: '', html: '<span class="ps_dialog_note">Panel locations are saved into this workspace. Keyboard Shortcuts and Menus are kept separately (Edit > Keyboard Shortcuts).</span>' },
+			],
+			on_finish: (p) => {
+				var name = String(p.name || '').trim();
+				if (!name || ['Essentials', 'Painting', 'Photography', 'Typography', '3D', 'Motion'].includes(name)) {
+					alertify.error('Please choose a different name for the workspace.');
+					return;
+				}
+				var list = this.user_workspaces();
+				list[name] = this.capture_workspace();
+				this.save_user_workspaces(list);
+				this.apply_workspace(name);
+			},
+		});
+	}
+
+	delete_workspace() {
+		var names = Object.keys(this.user_workspaces()).filter(n => n != this.workspace_name);
+		if (!names.length) {
+			alertify.error('There are no workspaces to delete (the current workspace cannot be deleted).');
+			return;
+		}
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Delete Workspace',
+			params: [{ name: 'name', title: 'Workspace:', values: names, value: names[0], type: 'select' }],
+			on_finish: (p) => {
+				var list = this.user_workspaces();
+				delete list[p.name];
+				this.save_user_workspaces(list);
+			},
+		});
 	}
 
 	reset_workspace() {
@@ -1016,6 +1086,9 @@ class Ps_workspace_class {
 				return !group.classList.contains('closed') && group.querySelector('.ps_tab[data-panel="' + panel + '"]').classList.contains('active');
 			}
 			return this.open_popout == panel;
+		}
+		if (key.indexOf('workspace:') === 0) {
+			return this.workspace_name == key.substr(10);
 		}
 		if (key.indexOf('proof:') === 0) {
 			return this.Proof.setup == key.substr(6);

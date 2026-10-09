@@ -366,15 +366,28 @@ const M = [
 	]],
 	['Window', [
 		['Arrange', ['Tile All Vertically', 'Tile All Horizontally', '2-up Horizontal', '2-up Vertical', '3-up Horizontal', '3-up Vertical', '3-up Stacked', '4-up', '6-up', 'Consolidate All to Tabs', '-', 'Cascade', 'Tile', 'Float in Window', 'Float All in Windows', '-', 'Match Zoom', 'Match Location', 'Match Rotation', 'Match All', '-', 'New Window for Untitled-1']],
-		['Workspace', [
-			{ name: 'Essentials (Default)', checked: 'workspace_essentials', target: 'ps/commands.workspace', parameter: 'Essentials' },
-			'3D', 'Motion',
-			{ name: 'Painting', checked: 'workspace_painting', target: 'ps/commands.workspace', parameter: 'Painting' },
-			{ name: 'Photography', checked: 'workspace_photography', target: 'ps/commands.workspace', parameter: 'Photography' },
-			{ name: 'Typography', checked: 'workspace_typography', target: 'ps/commands.workspace', parameter: 'Typography' }, '-',
-			'Reset Essentials|ps/commands.reset_workspace', 'New Workspace...', 'Delete Workspace...', '-',
-			'Keyboard Shortcuts & Menus...|ps/commands.keyboard_shortcuts',
-		]],
+		{
+			name: 'Workspace',
+			//user workspaces (New Workspace) are listed after the CS6 ones
+			get children() {
+				var user = [];
+				try { user = Object.keys(JSON.parse(localStorage.getItem('pshot_workspaces_v1') || '{}')); } catch (e) { user = []; }
+				return [
+					{ name: 'Essentials (Default)', checked: 'workspace_essentials', target: 'ps/commands.workspace', parameter: 'Essentials' },
+					{ name: '3D' }, { name: 'Motion' },
+					{ name: 'Painting', checked: 'workspace_painting', target: 'ps/commands.workspace', parameter: 'Painting' },
+					{ name: 'Photography', checked: 'workspace_photography', target: 'ps/commands.workspace', parameter: 'Photography' },
+					{ name: 'Typography', checked: 'workspace_typography', target: 'ps/commands.workspace', parameter: 'Typography' },
+				].concat(user.length ? [{ divider: true }] : [], user.map(n => ({ name: n.replace(/</g, '&lt;'), checked: 'workspace:' + n, target: 'ps/commands.workspace', parameter: n })), [
+					{ divider: true },
+					{ name: 'Reset Essentials', target: 'ps/commands.reset_current_workspace', dynamic_name: 'workspace_reset_label' },
+					{ name: 'New Workspace...', target: 'ps/commands.new_workspace' },
+					{ name: 'Delete Workspace...', target: 'ps/commands.delete_workspace' },
+					{ divider: true },
+					{ name: 'Keyboard Shortcuts & Menus...', target: 'ps/commands.keyboard_shortcuts' },
+				]);
+			},
+		},
 		'-',
 		['Extensions', ['Adobe Exchange', 'Kuler', 'Mini Bridge']],
 		'-',
