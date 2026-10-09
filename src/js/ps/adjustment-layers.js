@@ -30,6 +30,7 @@ const KINDS = {
 	photo_filter: { title: 'Photo Filter', dialog: 'photo_filter' },
 	channel_mixer: { title: 'Channel Mixer', dialog: 'channel_mixer' },
 	gradient_map: { title: 'Gradient Map', dialog: 'gradient_map' },
+	selective_color: { title: 'Selective Color', dialog: 'selective_color' },
 	invert: { title: 'Invert' },
 	posterize: { title: 'Posterize', state: { levels: 4 } },
 	threshold: { title: 'Threshold', state: { level: 128 } },
@@ -61,6 +62,7 @@ class Ps_adjustment_layers_class {
 			case 'photo_filter': return this.adjust().build_photo_filter(state);
 			case 'channel_mixer': return this.adjust().build_channel_mixer(state);
 			case 'gradient_map': return this.adjust().build_gradient_map(state);
+			case 'selective_color': return this.adjust().build_selective_color(state);
 			case 'invert': return (src, dst) => {
 				for (var i = 0; i < src.length; i += 4) { dst[i] = 255 - src[i]; dst[i + 1] = 255 - src[i + 1]; dst[i + 2] = 255 - src[i + 2]; }
 			};
@@ -234,6 +236,12 @@ class Ps_adjustment_layers_class {
 			case 'gradient_map': return { type: 'gradient map', gradientType: 'solid', name: 'Custom', reverse: !!s.reverse,
 				colorStops: [{ color: hex_rgb(s.c1 || '#000000'), location: 0, midpoint: 50 }, { color: hex_rgb(s.c2 || '#ffffff'), location: 4096, midpoint: 50 }],
 				opacityStops: [{ opacity: 1, location: 0, midpoint: 50 }, { opacity: 1, location: 4096, midpoint: 50 }] };
+			case 'selective_color': {
+				var sv = s.values || {};
+				var cmyk = (c) => { var v = sv[c] || [0, 0, 0, 0]; return { c: v[0], m: v[1], y: v[2], k: v[3] }; };
+				return { type: 'selective color', mode: s.method == 'absolute' ? 'absolute' : 'relative', reds: cmyk('Reds'), yellows: cmyk('Yellows'), greens: cmyk('Greens'),
+					cyans: cmyk('Cyans'), blues: cmyk('Blues'), magentas: cmyk('Magentas'), whites: cmyk('Whites'), neutrals: cmyk('Neutrals'), blacks: cmyk('Blacks') };
+			}
 			case 'levels': {
 				if (!s.values) return { type: 'levels' };
 				var ch = (v) => ({ shadowInput: v.ib, highlightInput: v.iw, shadowOutput: v.ob, highlightOutput: v.ow, midtoneInput: v.g });
@@ -274,6 +282,14 @@ class Ps_adjustment_layers_class {
 			case 'gradient map': {
 				var stops = a.colorStops || [];
 				return { kind: 'gradient_map', state: { c1: rgb_hex(stops[0] && stops[0].color), c2: rgb_hex(stops[stops.length - 1] && stops[stops.length - 1].color), reverse: !!a.reverse } };
+			}
+			case 'selective color': {
+				var vals = {};
+				for (var [name, key] of [['Reds', 'reds'], ['Yellows', 'yellows'], ['Greens', 'greens'], ['Cyans', 'cyans'], ['Blues', 'blues'], ['Magentas', 'magentas'], ['Whites', 'whites'], ['Neutrals', 'neutrals'], ['Blacks', 'blacks']]) {
+					var cv = a[key] || {};
+					vals[name] = [cv.c || 0, cv.m || 0, cv.y || 0, cv.k || 0];
+				}
+				return { kind: 'selective_color', state: { values: vals, method: a.mode == 'absolute' ? 'absolute' : 'relative' } };
 			}
 			case 'levels': {
 				var ch = (c) => c ? { ib: c.shadowInput, g: c.midtoneInput || 1, iw: c.highlightInput, ob: c.shadowOutput, ow: c.highlightOutput } : { ib: 0, g: 1, iw: 255, ob: 0, ow: 255 };

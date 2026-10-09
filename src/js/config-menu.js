@@ -105,9 +105,9 @@ const M = [
 		['Adjustments', [
 			'Brightness/Contrast...|ps/commands.brightness_contrast', 'Levels...|Ctrl+L|ps/commands.levels', 'Curves...|Ctrl+M|ps/commands.curves', 'Exposure...|ps/commands.exposure', '-',
 			'Vibrance...|ps/commands.vibrance', 'Hue/Saturation...|Ctrl+U|ps/commands.hue_saturation', 'Color Balance...|Ctrl+B|ps/commands.color_balance', 'Black & White...|Alt+Shift+Ctrl+B|effects/black_and_white.black_and_white', 'Photo Filter...|ps/commands.photo_filter', 'Channel Mixer...|ps/commands.channel_mixer', 'Color Lookup...', '-',
-			'Invert|Ctrl+I|effects/common/invert.invert', 'Posterize...|image/decrease_colors.decrease_colors', 'Threshold...|effects/black_and_white.black_and_white', 'Gradient Map...|ps/commands.gradient_map', 'Selective Color...', '-',
-			'Shadows/Highlights...', 'HDR Toning...', 'Variations...', '-',
-			'Desaturate|Shift+Ctrl+U|effects/common/grayscale.grayscale', 'Match Color...', 'Replace Color...|tools/replace_color.replace_color', 'Equalize',
+			'Invert|Ctrl+I|effects/common/invert.invert', 'Posterize...|image/decrease_colors.decrease_colors', 'Threshold...|effects/black_and_white.black_and_white', 'Gradient Map...|ps/commands.gradient_map', 'Selective Color...|ps/commands.selective_color', '-',
+			'Shadows/Highlights...|ps/commands.shadows_highlights', 'HDR Toning...', 'Variations...', '-',
+			'Desaturate|Shift+Ctrl+U|effects/common/grayscale.grayscale', 'Match Color...', 'Replace Color...|tools/replace_color.replace_color', 'Equalize|ps/commands.equalize',
 		]],
 		'-',
 		'Auto Tone|Shift+Ctrl+L|image/auto_adjust.auto_adjust',

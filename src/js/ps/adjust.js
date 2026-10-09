@@ -123,7 +123,7 @@ class Ps_adjust_class {
 	 */
 	render(job, fn) {
 		var out = new ImageData(new Uint8ClampedArray(job.original.data), job.w, job.h);
-		fn(job.original.data, out.data);
+		fn(job.original.data, out.data, job.w, job.h);
 		var canvas = document.createElement('canvas');
 		canvas.width = job.w;
 		canvas.height = job.h;
@@ -698,7 +698,151 @@ class Ps_adjust_class {
 		}, (state) => this.build_gradient_map(state), 'gradient_map');
 	}
 
+	selective_color() {
+		var colors = ['Reds', 'Yellows', 'Greens', 'Cyans', 'Blues', 'Magentas', 'Whites', 'Neutrals', 'Blacks'];
+		var extra = '<div class="ps_adj_row"><span>Colors:</span><select id="sc_color">' + colors.map(c => '<option>' + c + '</option>').join('') + '</select></div>';
+		var method = '<div class="ps_adj_row"><span>Method:</span><label class="ps_adj_check"><input type="radio" name="sc_method" value="relative"> Relative</label>'
+			+ '<label class="ps_adj_check"><input type="radio" name="sc_method" value="absolute"> Absolute</label></div>';
+		this.sliders('Selective Color', 'selective_color', [
+			{ key: 'c', label: 'Cyan:', min: -100, max: 100, value: 0 },
+			{ key: 'm', label: 'Magenta:', min: -100, max: 100, value: 0 },
+			{ key: 'y', label: 'Yellow:', min: -100, max: 100, value: 0 },
+			{ key: 'k', label: 'Black:', min: -100, max: 100, value: 0 },
+		], extra, (root, state, update) => {
+			root.insertAdjacentHTML('beforeend', method);
+			//keep Preview last
+			root.appendChild(root.querySelector('.ps_adj_preview'));
+			state.values = state.values || {};
+			colors.forEach(c => { state.values[c] = state.values[c] || [0, 0, 0, 0]; });
+			state.color = state.color || 'Reds';
+			state.method = state.method || 'relative';
+			var keys = ['c', 'm', 'y', 'k'];
+			var load = () => keys.forEach((k, i) => {
+				state[k] = state.values[state.color][i];
+				root.querySelector('#adj_' + k).value = root.querySelector('#adj_' + k + '_n').value = state[k];
+			});
+			keys.forEach((k, i) => {
+				var sync = () => { state.values[state.color][i] = state[k]; update(); };
+				root.querySelector('#adj_' + k).addEventListener('input', sync);
+				root.querySelector('#adj_' + k + '_n').addEventListener('input', sync);
+			});
+			root.querySelector('#sc_color').value = state.color;
+			root.querySelector('#sc_color').addEventListener('change', (e) => { state.color = e.target.value; load(); });
+			root.querySelectorAll('input[name="sc_method"]').forEach((r) => {
+				r.checked = r.value == state.method;
+				r.addEventListener('change', () => { if (r.checked) { state.method = r.value; update(); } });
+			});
+			load();
+		});
+	}
+
+	shadows_highlights() {
+		this.sliders('Shadows/Highlights', 'shadows_highlights', [
+			{ key: 'shadows', label: 'Shadows Amount:', min: 0, max: 100, value: 35 },
+			{ key: 'highlights', label: 'Highlights Amount:', min: 0, max: 100, value: 0 },
+		]);
+	}
+
+	/**
+	 * Equalize: redistributes brightness so the composite histogram is flat (no dialog)
+	 */
+	equalize() {
+		var job = this.begin('Equalize');
+		if (!job) {
+			return;
+		}
+		var d = job.original.data;
+		var hist = new Float64Array(256), n = 0;
+		for (var i = 0; i < d.length; i += 4) {
+			if (d[i + 3] == 0) continue;
+			hist[d[i]]++; hist[d[i + 1]]++; hist[d[i + 2]]++;
+			n += 3;
+		}
+		var lut = new Uint8ClampedArray(256), acc = 0;
+		for (var v = 0; v < 256; v++) {
+			acc += hist[v];
+			lut[v] = n ? Math.round(acc / n * 255) : v;
+		}
+		this.finish(job, (src, dst) => {
+			for (var j = 0; j < src.length; j += 4) { dst[j] = lut[src[j]]; dst[j + 1] = lut[src[j + 1]]; dst[j + 2] = lut[src[j + 2]]; }
+		}, 'Equalize');
+	}
+
 	// ---------- pixel functions for the slider adjustments ----------
+
+	build_selective_color(state) {
+		var v = state.values || {};
+		var get = (c) => (v[c] || [0, 0, 0, 0]).map(x => x / 100);
+		var T = { Reds: get('Reds'), Yellows: get('Yellows'), Greens: get('Greens'), Cyans: get('Cyans'), Blues: get('Blues'), Magentas: get('Magentas'), Whites: get('Whites'), Neutrals: get('Neutrals'), Blacks: get('Blacks') };
+		var relative = state.method != 'absolute';
+		//channel value x (0..1), ink adjustment a, black adjustment k
+		var change = (x, a, k) => {
+			var dx = (-1 - a) * k - a;
+			if (relative) dx *= 1 - x;
+			return dx;
+		};
+		return (src, dst) => {
+			var w = [];
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i] / 255, g = src[i + 1] / 255, b = src[i + 2] / 255;
+				var max = Math.max(r, g, b), min = Math.min(r, g, b), mid = r + g + b - max - min;
+				w.length = 0;
+				if (r == max) w.push([T.Reds, max - mid]);
+				if (b == min) w.push([T.Yellows, mid - min]);
+				if (g == max) w.push([T.Greens, max - mid]);
+				if (r == min) w.push([T.Cyans, mid - min]);
+				if (b == max) w.push([T.Blues, max - mid]);
+				if (g == min) w.push([T.Magentas, mid - min]);
+				if (min > 0.5) w.push([T.Whites, (min - 0.5) * 2]);
+				if (max < 0.5) w.push([T.Blacks, (0.5 - max) * 2]);
+				if (max > 0 && min < 1) w.push([T.Neutrals, 1 - (Math.abs(max - 0.5) + Math.abs(min - 0.5))]);
+				var nr = r, ng = g, nb = b;
+				for (var [t, amount] of w) {
+					if (amount <= 0 || (!t[0] && !t[1] && !t[2] && !t[3])) continue;
+					nr += change(r, t[0], t[3]) * amount;
+					ng += change(g, t[1], t[3]) * amount;
+					nb += change(b, t[2], t[3]) * amount;
+				}
+				dst[i] = nr * 255; dst[i + 1] = ng * 255; dst[i + 2] = nb * 255;
+			}
+		};
+	}
+
+	build_shadows_highlights(state) {
+		var sa = (state.shadows == null ? 35 : state.shadows) / 100, ha = (state.highlights || 0) / 100;
+		return (src, dst, w, h) => {
+			//local brightness: blurred luminance (CS6 radius 30 px)
+			var lum = document.createElement('canvas');
+			lum.width = w;
+			lum.height = h;
+			var lctx = lum.getContext('2d', { willReadFrequently: true });
+			var img = lctx.createImageData(w, h);
+			for (var i = 0; i < src.length; i += 4) {
+				var l = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+				img.data[i] = img.data[i + 1] = img.data[i + 2] = l;
+				img.data[i + 3] = 255;
+			}
+			lctx.putImageData(img, 0, 0);
+			var blur = document.createElement('canvas');
+			blur.width = w;
+			blur.height = h;
+			var bctx = blur.getContext('2d', { willReadFrequently: true });
+			bctx.filter = 'blur(30px)';
+			bctx.drawImage(lum, 0, 0);
+			var B = bctx.getImageData(0, 0, w, h).data;
+			for (var j = 0; j < src.length; j += 4) {
+				var lb = B[j] / 255;
+				var ws = Math.max(0, 1 - lb * 2), wh = Math.max(0, lb * 2 - 1);
+				var gs = 1 / (1 + sa * ws * 2.5), gh = 1 / (1 + ha * wh * 2.5);
+				for (var c = 0; c < 3; c++) {
+					var x = src[j + c] / 255;
+					if (ws > 0 && sa > 0) x = Math.pow(x, gs);
+					if (wh > 0 && ha > 0) x = 1 - Math.pow(1 - x, gh);
+					dst[j + c] = x * 255;
+				}
+			}
+		};
+	}
 
 	build_exposure(state) {
 		var lut = new Uint8ClampedArray(256);

@@ -35,7 +35,7 @@ const ADJUSTMENTS = [
 	['Posterize', 'image/decrease_colors.decrease_colors', `<path d="M2 16h3.5v-4H9V8h3.5V4H16" ${S}/>`, 'posterize'],
 	['Threshold', 'effects/black_and_white.black_and_white', `<path d="M2 14h6V4h8" ${S}/><path d="M8 4v10h8V4z" fill="currentColor"/>`, 'threshold'],
 	['Gradient Map', 'ps/commands.gradient_map', `<defs><linearGradient id="psgm" x1="0" x2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".1"/><stop offset="1" stop-color="currentColor"/></linearGradient></defs><rect x="2" y="4" width="14" height="10" fill="url(#psgm)" stroke="currentColor" stroke-width="1"/>`, 'gradient_map'],
-	['Selective Color', null, `<circle cx="9" cy="9" r="7" ${S}/><path d="M9 2a7 7 0 0 1 6 3.5L9 9z" fill="currentColor"/><path d="M9 9l-6 3.5A7 7 0 0 0 9 16z" fill="currentColor"/>`, null],
+	['Selective Color', 'ps/commands.selective_color', `<circle cx="9" cy="9" r="7" ${S}/><path d="M9 2a7 7 0 0 1 6 3.5L9 9z" fill="currentColor"/><path d="M9 9l-6 3.5A7 7 0 0 0 9 16z" fill="currentColor"/>`, 'selective_color'],
 ];
 
 const ADJUSTMENT_SEPARATORS_AFTER = ['Exposure', 'Color Lookup'];

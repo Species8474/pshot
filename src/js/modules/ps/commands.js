@@ -44,6 +44,9 @@ class Ps_commands_class {
 	photo_filter() { this.Adjust.photo_filter(); }
 	channel_mixer() { this.Adjust.channel_mixer(); }
 	gradient_map() { this.Adjust.gradient_map(); }
+	selective_color() { this.Adjust.selective_color(); }
+	shadows_highlights() { this.Adjust.shadows_highlights(); }
+	equalize() { this.Adjust.equalize(); }
 
 	new_adjustment_layer(kind) { app.GUI.Ps_workspace.Adjustment_layers.create(kind); }
 
