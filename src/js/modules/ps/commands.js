@@ -763,6 +763,7 @@ class Ps_commands_class {
 	record_measurements() { app.GUI.Ps_workspace.Measure_log.record(); }
 	measurement_scale(kind) { app.GUI.Ps_workspace.Measure_log.set_scale(kind); }
 	data_points(kind) { app.GUI.Ps_workspace.Measure_log.select_points(kind); }
+	place_scale_marker() { app.GUI.Ps_workspace.Measure_log.place_scale_marker(); }
 	toggle_measure_log() { app.GUI.Ps_workspace.Measure_log.toggle(); }
 	analysis_tool(id) { app.GUI.Ps_workspace.Extras.select_tool(id || 'ruler'); }
 	batch() { app.GUI.Ps_workspace.Batch.batch(); }

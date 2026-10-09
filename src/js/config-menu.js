@@ -133,7 +133,7 @@ const M = [
 		['Analysis', [
 			['Set Measurement Scale', [{ name: 'Default', target: 'ps/commands.measurement_scale', parameter: 'default' }, { name: 'Custom...', target: 'ps/commands.measurement_scale', parameter: 'custom' }]],
 			['Select Data Points', [{ name: 'Default', target: 'ps/commands.data_points', parameter: 'default' }, { name: 'Custom...', target: 'ps/commands.data_points', parameter: 'custom' }]],
-			'Record Measurements|Shift+Ctrl+M|ps/commands.record_measurements', '-', { name: 'Ruler Tool', target: 'ps/commands.analysis_tool', parameter: 'ruler' }, { name: 'Count Tool', target: 'ps/commands.analysis_tool', parameter: 'count' }, '-', 'Place Scale Marker...']],
+			'Record Measurements|Shift+Ctrl+M|ps/commands.record_measurements', '-', { name: 'Ruler Tool', target: 'ps/commands.analysis_tool', parameter: 'ruler' }, { name: 'Count Tool', target: 'ps/commands.analysis_tool', parameter: 'count' }, '-', 'Place Scale Marker...|ps/commands.place_scale_marker']],
 	]],
 	['Layer', [
 		['New', ['Layer...|Shift+Ctrl+N|ps/commands.new_layer_dialog', 'Background from Layer|ps/commands.background_from_layer', 'Group...|ps/commands.new_group', 'Group from Layers...|ps/commands.group_layers', '-', 'Layer via Copy|Ctrl+J|ps/commands.layer_via_copy', 'Layer via Cut|Shift+Ctrl+J|ps/commands.layer_via_cut']],

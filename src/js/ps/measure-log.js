@@ -172,6 +172,59 @@ class Ps_measure_log_class {
 		});
 	}
 
+	/**
+	 * Image > Analysis > Place Scale Marker: a group with a bar of the given
+	 * logical length and its label, at the bottom left of the document
+	 */
+	place_scale_marker() {
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Measurement Scale Marker',
+			params: [
+				{ name: 'length', title: 'Length:', value: Math.round(this.scale.length * 100) / 100 },
+				{ name: 'size', title: 'Font Size (pt):', value: 12 },
+				{ name: 'text', title: 'Display Text', value: true },
+				{ name: 'position', title: 'Text Position:', values: ['Bottom', 'Top'], value: 'Bottom' },
+				{ name: 'color', title: 'Color:', values: ['Black', 'White'], value: 'Black' },
+			],
+			on_finish: (p) => this.make_marker(parseFloat(p.length), parseFloat(p.size) || 12, p.text, p.position, p.color),
+		});
+	}
+
+	async make_marker(length, size, show_text, position, color_name) {
+		var f = this.scale.length / this.scale.pixels;
+		if (!(length > 0)) return;
+		var px = Math.max(2, Math.round(length / f));
+		var color = color_name == 'White' ? '#ffffff' : '#000000';
+		var bar_h = Math.max(2, Math.round(size / 3));
+		var margin = Math.round(size);
+		var text_h = Math.round(size * 1.4);
+		var x = margin, bar_y = config.HEIGHT - margin - bar_h - (show_text && position == 'Bottom' ? text_h : 0);
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var gid = app.Layers.auto_increment;
+		var pt = (a, b) => ({ x: a, y: b, ix: a, iy: b, ox: a, oy: b });
+		var bar = [{ closed: true, pts: [pt(x, bar_y), pt(x + px, bar_y), pt(x + px, bar_y + bar_h), pt(x, bar_y + bar_h)] }];
+		var actions = [
+			new app.Actions.Insert_layer_action({ type: 'ps_group', name: 'Measurement Scale Marker', ps_parent: null }, false),
+			new app.Actions.Insert_layer_action({
+				name: 'Scale Line', type: 'ps_shape', x: x, y: bar_y, width: px, height: bar_h, rotate: 0, is_vector: true, ps_parent: gid,
+				ps_shape: { subpaths: bar, bx: x, by: bar_y, bw: px, bh: bar_h, fill: color, stroke: null },
+			}, false),
+		];
+		if (show_text) {
+			var label = (Math.round(length * 1000) / 1000) + ' ' + this.scale.units;
+			var ty = position == 'Bottom' ? bar_y + bar_h + 2 : bar_y - text_h - 2;
+			actions.push(new app.Actions.Insert_layer_action({
+				type: 'text', name: label, x: x, y: ty, width: px, height: text_h, ps_parent: gid,
+				params: { boundary: 'box', kerning: 'metrics', text_direction: 'ltr', wrap_direction: 'ttb', halign: 'center', valign: 'top', wrap: 'word' },
+				render_function: ['text', 'render'], is_vector: true,
+				data: [[{ text: label, meta: { size: size, family: 'Arial', fill_color: color } }]],
+			}, false));
+		}
+		await app.State.do_action(new app.Actions.Bundle_action('scale_marker', 'Place Scale Marker', actions));
+		Groups.after_change();
+	}
+
 	// ---------- panel (bottom dock) ----------
 
 	toggle() {
