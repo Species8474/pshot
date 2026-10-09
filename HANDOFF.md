@@ -79,9 +79,11 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Retouching: Spot Healing Brush, Healing Brush (Alt+click source), Patch, Content-Aware Move and Red Eye (`tools/retouch.js`, `tools/ps_patch.js`, `ps/inpaint.js`).
   - All of them respect the selection, layer locks and mask targeting.
   - Patterns (`ps/patterns.js`): Edit > Define Pattern, Edit > Fill > Pattern, Pattern Stamp Tool (S), Pattern Overlay style, Pattern fill layers. Six built-in patterns; shared by all documents.
+  - Background Eraser (E): sampling, limits, tolerance, Protect Foreground Color; erasing the Background turns it into Layer 0.
   - Color Replacement Tool (B): Hue/Saturation/Color/Luminosity, Continuous/Once/Background Swatch sampling, Contiguous/Discontiguous, Tolerance.
   - History Brush (Y): paints back the document's opening snapshot, which is captured just before the first edit (`Documents.before_action`, hooked in `base-state.js`).
   - Quick Mask (Q): painting edits the selection, shown as a red overlay.
+- **Measuring** (`tools/ps_measure.js`): Ruler (X/Y/W/H/A/L1 in the options bar, Shift constrains, Straighten Layer), Color Sampler (up to 4, Info panel readouts, Alt+click deletes, sample size), Count tool. Markers are not History states.
 - **Paths** (`ps/paths.js`, tools `ps_pen.js`, `ps_path_select.js`)
   - Pen (P): click for corners, drag for smooth points, click the first point to close, Enter/Esc to end; Auto Add/Delete. Add/Delete Anchor Point and Convert Point tools.
   - Path Selection and Direct Selection (A): drag subpaths, anchors and handles (smooth points stay smooth; Alt breaks them); Delete removes an anchor or subpath.

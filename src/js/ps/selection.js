@@ -634,7 +634,8 @@ class Ps_selection_class {
 		ctx.clearRect(0, 0, overlay.width, overlay.height);
 		var Paths = app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Paths : null;
 		var show_path = Paths && Paths.active();
-		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview && !this.quick_mask && !show_path && !this.type_mask_layer) {
+		var extras = (this.overlays || []).filter(o => o.active());
+		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview && !this.quick_mask && !show_path && !this.type_mask_layer && !extras.length) {
 			return;
 		}
 		var m = zoomView.matrix;
@@ -688,6 +689,10 @@ class Ps_selection_class {
 		if (show_path) {
 			ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
 			Paths.draw(ctx, m[0]);
+		}
+		for (var extra of extras) {
+			ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+			extra.draw(ctx, m[0]);
 		}
 	}
 

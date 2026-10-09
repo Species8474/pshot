@@ -920,7 +920,7 @@ class Ps_workspace_class {
 			+ '<div class="ps_info_cell"><span class="ps_info_icon">&#8857;</span><div><div>C: <b id="pi_c"></b></div><div>M: <b id="pi_m"></b></div><div>Y: <b id="pi_y"></b></div><div>K: <b id="pi_k"></b></div></div></div>'
 			+ '<div class="ps_info_cell"><span class="ps_info_icon">+</span><div><div>X: <b id="pi_x"></b></div><div>Y: <b id="pi_yy"></b></div></div></div>'
 			+ '<div class="ps_info_cell"><span class="ps_info_icon">&#9633;</span><div><div>W: <b id="pi_w"></b></div><div>H: <b id="pi_h"></b></div></div></div>'
-			+ '</div><div class="ps_info_doc" id="pi_doc"></div><div class="ps_info_hint" id="pi_hint"></div>';
+			+ '</div><div class="ps_info_samplers" id="pi_samplers"></div><div class="ps_info_doc" id="pi_doc"></div><div class="ps_info_hint" id="pi_hint"></div>';
 		host.insertBefore(block, host.firstChild);
 		document.getElementById('toggle_info').style.display = 'none';
 		var set = (id, v) => { var el = document.getElementById(id); if (el) el.textContent = v; };
@@ -945,6 +945,16 @@ class Ps_workspace_class {
 			set('pi_doc', 'Doc: ' + this.format_bytes(config.WIDTH * config.HEIGHT * 3));
 			set('pi_hint', this.active_member ? 'Click and drag to use the ' + this.active_member.name.replace(/ Tool$/, '').toLowerCase() + ' tool.' : '');
 		});
+	}
+
+	/**
+	 * Info panel: Color Sampler readouts (#1 .. #4)
+	 */
+	render_samplers(values) {
+		var el = document.getElementById('pi_samplers');
+		if (!el) return;
+		el.innerHTML = (values || []).map((v, i) => '<div class="ps_info_cell"><span class="ps_info_icon">#' + (i + 1) + '</span><div><div>R: <b>' + v[0] + '</b></div><div>G: <b>' + v[1] + '</b></div><div>B: <b>' + v[2] + '</b></div></div></div>').join('');
+		el.style.display = values && values.length ? 'grid' : 'none';
 	}
 
 	// =================================================================

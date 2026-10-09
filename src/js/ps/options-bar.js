@@ -12,6 +12,19 @@ import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 import Patterns from './patterns.js';
 
+function measure_tool() {
+	return app.GUI.GUI_tools.tools_modules.ps_measure.object;
+}
+
+function measure_text(key) {
+	var m = measure_tool().measure();
+	var labels = { x: 'X:', y: 'Y:', w: 'W:', h: 'H:', a: 'A:', l: 'L1:' };
+	if (!m) return labels[key];
+	if (key == 'a') return 'A: ' + m.a.toFixed(1) + '°';
+	if (key == 'l') return 'L1: ' + m.l.toFixed(2);
+	return labels[key] + ' ' + m[key];
+}
+
 function paths() {
 	return app.GUI.Ps_workspace.Paths;
 }
@@ -324,6 +337,30 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Sample All Layers', value: false },
 		{ type: 'check', label: 'Finger Painting', value: false },
 	],
+	ruler: [
+		{ type: 'readout', text: () => measure_text('x') },
+		{ type: 'readout', text: () => measure_text('y') },
+		{ type: 'readout', text: () => measure_text('w') },
+		{ type: 'readout', text: () => measure_text('h') },
+		{ type: 'readout', text: () => measure_text('a') },
+		{ type: 'readout', text: () => measure_text('l') },
+		{ type: 'readout', text: () => 'L2:' },
+		{ type: 'check', label: 'Use Measurement Scale', value: false },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Straighten Layer', action: () => measure_tool().straighten() },
+		{ type: 'button', text: 'Clear', action: () => measure_tool().clear() },
+	],
+	color_sampler: [
+		{ type: 'select', label: 'Sample Size:', values: ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'], bind: 'sample_size',
+			map: { 'Point Sample': '1', '3 by 3 Average': '3', '5 by 5 Average': '5', '11 by 11 Average': '11', '31 by 31 Average': '31', '51 by 51 Average': '51', '101 by 101 Average': '101' } },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Clear', action: () => measure_tool().clear() },
+	],
+	count: [
+		{ type: 'readout', text: () => 'Count: ' + measure_tool().counts.length },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Clear', action: () => measure_tool().clear() },
+	],
 	pattern_stamp: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
@@ -551,6 +588,13 @@ class Ps_options_bar_class {
 	/**
 	 * @returns {boolean} true when a CS6 layout was rendered
 	 */
+	/**
+	 * live values (Ruler measurements) without rebuilding the bar
+	 */
+	update_readouts() {
+		document.querySelectorAll('#action_attributes .ps_opt_readout').forEach((el) => { if (el._text) el.textContent = el._text(); });
+	}
+
 	render() {
 		var member = this.workspace.active_member;
 		if (!member || member.tool != config.TOOL.name) {
@@ -591,6 +635,14 @@ class Ps_options_bar_class {
 		wrap.className = 'ps_opt';
 		var label = c.label ? '<span class="ps_opt_label">' + c.label + '</span>' : '';
 
+		if (c.type == 'readout') {
+			var ro = document.createElement('span');
+			ro.className = 'ps_opt_readout';
+			ro.textContent = c.text();
+			ro._text = c.text;
+			wrap.appendChild(ro);
+			return wrap;
+		}
 		if (c.type == 'label') {
 			wrap.innerHTML = '<span class="ps_opt_label' + (c.disabled ? ' disabled' : '') + '">' + c.text + '</span>';
 			return wrap;

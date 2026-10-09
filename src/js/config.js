@@ -83,6 +83,15 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'ps_measure',
+		title: 'Measure',
+		on_activate: 'on_activate',
+		attributes: {
+			mode: 'ruler',
+			sample_size: 'Point Sample',
+		},
+	},
+	{
 		name: 'ps_pen',
 		title: 'Pen',
 		on_activate: 'on_activate',

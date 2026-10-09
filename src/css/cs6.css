@@ -1407,3 +1407,5 @@ body.theme-cs6 #popups .popup.ps_liquify { width: auto; max-width: none; max-hei
 .ps_lq_side legend { color: #d8d8d8; padding: 0 4px; }
 .ps_lq_field { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .ps_lq_field input { width: 64px; }
+.ps_opt_readout { color: #e0e0e0; min-width: 56px; white-space: nowrap; }
+.ps_info_samplers { display: none; grid-template-columns: 1fr 1fr; gap: 8px 12px; border-bottom: 1px solid #444; padding: 8px 0; }

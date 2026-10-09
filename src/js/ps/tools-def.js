@@ -109,10 +109,10 @@ const groups = [
 	{ members: [
 		{ id: 'eyedropper', name: 'Eyedropper Tool', key: 'I', tool: 'pick_color', icon: I.eyedropper },
 		{ id: 'material_eyedropper', name: '3D Material Eyedropper Tool', key: 'I', tool: null, icon: I.material_eyedropper },
-		{ id: 'color_sampler', name: 'Color Sampler Tool', key: 'I', tool: null, icon: I.color_sampler },
-		{ id: 'ruler', name: 'Ruler Tool', key: 'I', tool: null, icon: I.ruler },
+		{ id: 'color_sampler', name: 'Color Sampler Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'sampler' }, icon: I.color_sampler },
+		{ id: 'ruler', name: 'Ruler Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'ruler' }, icon: I.ruler },
 		{ id: 'note', name: 'Note Tool', key: 'I', tool: null, icon: I.note },
-		{ id: 'count', name: 'Count Tool', key: 'I', tool: null, icon: I.count },
+		{ id: 'count', name: 'Count Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'count' }, icon: I.count },
 	]},
 	{ separator: true, members: [
 		{ id: 'spot_healing', name: 'Spot Healing Brush Tool', key: 'J', tool: 'retouch', preset: { mode: 'spot_healing' }, icon: I.spot_healing },
