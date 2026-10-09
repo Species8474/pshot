@@ -201,7 +201,7 @@ const M = [
 		'Convert to Shape|ps/commands.type_to_shape',
 		'-',
 		'Rasterize Type Layer|layer/raster.raster',
-		'Convert to Paragraph Text',
+		{ name: 'Convert to Paragraph Text', target: 'ps/commands.toggle_paragraph', dynamic_name: 'paragraph_label' },
 		'Warp Text...|ps/commands.warp_text',
 		'-',
 		['Font Preview Size', ['None', 'Small', 'Medium', 'Large', 'Extra Large', 'Huge']],

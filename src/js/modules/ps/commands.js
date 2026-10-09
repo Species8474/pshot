@@ -1610,6 +1610,23 @@ class Ps_commands_class {
 		app.GUI.Ps_workspace.Paths.from_selection(0.75, mask);
 	}
 
+	paragraph_label() {
+		var layer = config.layer;
+		return layer && layer.type == 'text' && layer.params.boundary != 'dynamic' ? 'Convert to Point Text' : 'Convert to Paragraph Text';
+	}
+
+	/**
+	 * Type > Convert to Paragraph Text / Convert to Point Text: a bounding box that wraps, or none
+	 */
+	async toggle_paragraph() {
+		var layer = config.layer;
+		if (!layer || layer.type != 'text') return;
+		var to_box = layer.params.boundary == 'dynamic';
+		await app.State.do_action(new app.Actions.Bundle_action('convert_text', to_box ? 'Convert to Paragraph Text' : 'Convert to Point Text', [
+			new app.Actions.Update_layer_action(layer.id, { params: Object.assign({}, layer.params, { boundary: to_box ? 'box' : 'dynamic' }) }),
+		]));
+	}
+
 	/**
 	 * Type > Convert to Shape: the text outline becomes a shape layer filled with the text color
 	 */
