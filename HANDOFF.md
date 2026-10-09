@@ -94,7 +94,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - `config.ps_paths` is per document and every change is an undoable `Update_config_action`.
 - **Type**: Horizontal and Vertical Type (vertical columns run right to left; miniPaint's vertical layout bugs fixed in `tools/text.js`); Horizontal/Vertical Type Mask tools type over a 50% red overlay and turn the text into a selection when editing ends (History shows only "Type Mask"). Character and Paragraph panels.
 - **Selections**
-  - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso, Magnetic Lasso (snaps to the strongest edge within Width; Contrast threshold; Frequency sets anchor spacing; Backspace removes back to the last anchor); Quick Selection; Magic Wand.
+  - Rect, Ellipse, Row and Column marquees (Space while dragging moves the marquee); Lasso, Polygonal Lasso, Magnetic Lasso (snaps to the strongest edge within Width; Contrast threshold; Frequency sets anchor spacing; Backspace removes back to the last anchor); Quick Selection; Magic Wand.
   - Quick Mask mode.
   - Color Range (Sampled Colors with Fuzziness, color families, Highlights/Midtones/Shadows; click the preview to sample), Grow, Similar, Modify > Smooth, Transform Selection (all Free Transform modes), Save/Load Selection with alpha channels in the Channels panel (`ps/alpha-channels.js`; Ctrl+click a channel thumbnail loads it).
   - Select > All Layers / Deselect Layers / Similar Layers.

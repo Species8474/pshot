@@ -217,6 +217,11 @@ class Ps_select_class extends Base_tools_class {
 			return;
 		}
 		var p = this.world(event);
+		//CS6: holding Space while dragging a marquee moves it
+		if (config.space_hand && this.drag.last && (this.attrs().mode == 'rect' || this.attrs().mode == 'ellipse')) {
+			this.drag.start = { x: this.drag.start.x + p.x - this.drag.last.x, y: this.drag.start.y + p.y - this.drag.last.y };
+		}
+		this.drag.last = p;
 		this.drag.moved = true;
 		var mode = this.attrs().mode;
 		if (mode == 'lasso') {
