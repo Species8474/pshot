@@ -9,6 +9,7 @@ import app from './../app.js';
 import config from './../config.js';
 import { readPsd, writePsd } from 'ag-psd';
 import { inject_paths, read_paths } from './psd-paths.js';
+import Patterns from './patterns.js';
 import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
@@ -91,6 +92,27 @@ function px(v) {
 	return { units: 'Pixels', value: v || 0 };
 }
 
+//patterns used by Pattern Overlay styles while building a PSD
+var used_patterns = [];
+
+/**
+ * a stable UUID-shaped id for a pattern name (PSD patterns are referenced by id)
+ */
+function pattern_id(name) {
+	var h = [0x811c9dc5, 0x01000193, 0x9e3779b9, 0x7f4a7c15];
+	for (var i = 0; i < name.length; i++) {
+		for (var j = 0; j < 4; j++) h[j] = Math.imul(h[j] ^ name.charCodeAt(i), 16777619 + j * 2);
+	}
+	var hex = h.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
+	return hex.substr(0, 8) + '-' + hex.substr(8, 4) + '-' + hex.substr(12, 4) + '-' + hex.substr(16, 4) + '-' + hex.substr(20, 12);
+}
+
+function pattern_info(name) {
+	var c = Patterns.get(name);
+	var data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+	return { name: name, id: pattern_id(name), x: 0, y: 0, bounds: { x: 0, y: 0, w: c.width, h: c.height }, data: new Uint8Array(data.buffer.slice(0)) };
+}
+
 function styles_to_effects(styles) {
 	if (!styles) return undefined;
 	var fx = {};
@@ -113,6 +135,10 @@ function styles_to_effects(styles) {
 			shadowBlendMode: blend_to_psd(e.shadow_blend), shadowColor: hex_to_rgb(e.shadow_color), shadowOpacity: e.shadow_opacity / 100,
 		};
 		if (key == 'satin') fx.satin = { enabled: true, blendMode: blend_to_psd(e.blend), color: hex_to_rgb(e.color), opacity: e.opacity / 100, angle: e.angle, distance: px(e.distance), size: px(e.size), invert: !!e.invert };
+		if (key == 'pattern_overlay') {
+			if (!used_patterns.includes(e.pattern)) used_patterns.push(e.pattern);
+			fx.patternOverlay = { enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, scale: e.scale || 100, pattern: { name: e.pattern, id: pattern_id(e.pattern) } };
+		}
 		if (key == 'color_overlay') fx.solidFill = [{ enabled: true, color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 }];
 		if (key == 'gradient_overlay') fx.gradientOverlay = [{
 			enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, angle: e.angle, reverse: !!e.reverse, type: 'linear', scale: 100,
@@ -148,6 +174,10 @@ function effects_to_styles(fx) {
 	if (fx.satin) {
 		var sa = fx.satin;
 		styles.satin = { enabled: sa.enabled !== false, blend: blend_from_psd(sa.blendMode || 'multiply'), color: rgb_to_hex(sa.color), opacity: Math.round((sa.opacity == null ? 0.5 : sa.opacity) * 100), angle: sa.angle == null ? 19 : sa.angle, distance: val(sa.distance), size: val(sa.size), invert: !!sa.invert };
+	}
+	if (fx.patternOverlay) {
+		var po = fx.patternOverlay, pname = po.pattern && po.pattern.name ? po.pattern.name.replace(/\0+$/, '') : 'Checkerboard';
+		styles.pattern_overlay = { enabled: po.enabled !== false, blend: blend_from_psd(po.blendMode), opacity: Math.round((po.opacity === undefined ? 1 : po.opacity) * 100), scale: po.scale || 100, pattern: pname };
 	}
 	var fill = first(fx.solidFill);
 	if (fill) styles.color_overlay = { enabled: fill.enabled !== false, blend: blend_from_psd(fill.blendMode), color: rgb_to_hex(fill.color), opacity: Math.round((fill.opacity === undefined ? 1 : fill.opacity) * 100) };
@@ -190,6 +220,15 @@ async function file_to_layers(file) {
 	if (is_psd(file)) {
 		const buffer = await read_file(file, 'buffer');
 		const psd = readPsd(buffer, { skipThumbnail: true });
+		//patterns in the file (Pattern Overlay) join the pattern list
+		for (const pat of psd.patterns || []) {
+			if (!pat.data || !pat.bounds) continue;
+			const pc = document.createElement('canvas');
+			pc.width = pat.bounds.w;
+			pc.height = pat.bounds.h;
+			pc.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(pat.data), pat.bounds.w, pat.bounds.h), 0, 0);
+			Patterns.add((pat.name || 'Pattern').replace(/\0+$/, ''), pc);
+		}
 		const layers = [];
 		let group_key = 0;
 		const walk = (children, parent_key) => {
@@ -650,7 +689,10 @@ function build_psd() {
 	composite.width = config.WIDTH;
 	composite.height = config.HEIGHT;
 	app.Layers.convert_layers_to_canvas(composite.getContext('2d'), null, false);
-	return { width: config.WIDTH, height: config.HEIGHT, children: build(null), canvas: composite, annotations: app.GUI.Ps_workspace.Notes.to_psd() };
+	used_patterns = [];
+	const children = build(null);
+	const patterns = used_patterns.map(pattern_info);
+	return { width: config.WIDTH, height: config.HEIGHT, children: children, canvas: composite, annotations: app.GUI.Ps_workspace.Notes.to_psd(), patterns: patterns.length ? patterns : undefined };
 }
 
 function save_psd(file_name) {
