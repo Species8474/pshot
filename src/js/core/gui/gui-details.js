@@ -709,7 +709,8 @@ class GUI_details_class {
 				item_row.appendChild($colorInput[0]);
 			}
 			else {
-				alertify.error('Error: unsupported attribute type:' + typeof item + ', ' + k);
+				//pshot: plain string params (e.g. blend mode) have no editor here
+				item_row.remove();
 			}
 		}
 	}

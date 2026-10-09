@@ -9,6 +9,7 @@ import Base_layers_class from './../../core/base-layers.js';
 import Dialog_class from './../../libs/popup.js';
 import { ensure_pixel_layer } from './../../ps/pixel-layer.js';
 import { open_document, place, save_psd } from './../../ps/document.js';
+import Ps_adjust_class from './../../ps/adjust.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -27,10 +28,16 @@ class Ps_commands_class {
 		this.undo_toggle_index = null;
 		this.last_selection = null;
 		this.last_filter_target = null;
+		this.Adjust = new Ps_adjust_class();
 	}
 
 	noop() {
 	}
+
+	levels() { this.Adjust.levels(); }
+	curves() { this.Adjust.curves(); }
+	hue_saturation() { this.Adjust.hue_saturation(); }
+	brightness_contrast() { this.Adjust.brightness_contrast(); }
 
 	/**
 	 * the active selection's bounding box in document pixels, or null

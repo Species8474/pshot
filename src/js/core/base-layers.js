@@ -132,6 +132,26 @@ class Base_layers_class {
 			config.need_render = true;
 			return;
 		}
+		//pshot: an exception must not stop the render loop
+		try {
+			this.render_frame();
+		} catch (error) {
+			console.error(error);
+			config.need_render = false;
+			try {
+				this.ctx.restore();
+				zoomView.canvasDefault();
+			} catch (e) {
+				//ignore
+			}
+		}
+		requestAnimationFrame(function () {
+			_this.render(force);
+		});
+	}
+
+	render_frame() {
+		var _this = this;
 
 		if (
 			this.stable_dimensions[0] != config.WIDTH ||
@@ -214,9 +234,6 @@ class Base_layers_class {
 			}
 		}
 
-		requestAnimationFrame(function () {
-			_this.render(force);
-		});
 	}
 
 	render_overlay() {

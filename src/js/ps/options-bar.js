@@ -67,12 +67,16 @@ const LASSO_LAYOUT = [
 	{ type: 'sep' },
 	{ type: 'button', text: 'Refine Edge...' },
 ];
+const PAINT_MODES = ['Normal', 'Behind', 'Clear', 'Darken', 'Multiply', 'Color Burn', 'Lighten', 'Screen', 'Color Dodge',
+	'Linear Dodge (Add)', 'Overlay', 'Soft Light', 'Hard Light', 'Difference', 'Exclusion', 'Hue', 'Saturation', 'Color', 'Luminosity'];
+const MODE_MAP = {};
+for (const m of PAINT_MODES) MODE_MAP[m] = m;
 const BRUSH_COMMON = [
 	{ type: 'brush', bind: 'size' },
 	{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
 	{ type: 'sep' },
-	{ type: 'select', label: 'Mode:', values: MODES },
-	{ type: 'pct', label: 'Opacity:', value: 100 },
+	{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
+	{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
 	{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
 	{ type: 'pct', label: 'Flow:', value: 100 },
 	{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
@@ -224,8 +228,8 @@ const LAYOUTS = {
 			{ icon: IC.grad_diamond, title: 'Diamond Gradient' },
 		] },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: MODES },
-		{ type: 'pct', label: 'Opacity:', value: 100 },
+		{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
+		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
 		{ type: 'check', label: 'Reverse', value: false },
 		{ type: 'check', label: 'Dither', value: true },
 		{ type: 'check', label: 'Transparency', value: true },
@@ -479,14 +483,14 @@ class Ps_options_bar_class {
 			if (bound) {
 				input.addEventListener('change', () => {
 					var n = parseFloat(input.value);
-					if (!isNaN(n)) this.set(c.bind, n);
+					if (!isNaN(n)) this.set(c.bind, c.type == 'pct' ? Math.max(1, Math.min(100, n)) : n);
 					input.value = this.get(c.bind) + unit;
 				});
 				input.addEventListener('keydown', (e) => {
 					if (e.key == 'ArrowUp' || e.key == 'ArrowDown') {
 						e.preventDefault();
 						var n = (parseFloat(input.value) || 0) + (e.key == 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 10 : 1);
-						this.set(c.bind, Math.max(0, n));
+						this.set(c.bind, c.type == 'pct' ? Math.max(1, Math.min(100, n)) : Math.max(0, n));
 						input.value = this.get(c.bind) + unit;
 					}
 					if (e.key == 'Enter') input.blur();

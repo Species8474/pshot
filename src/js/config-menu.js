@@ -103,8 +103,8 @@ const M = [
 		]],
 		'-',
 		['Adjustments', [
-			'Brightness/Contrast...|image/color_corrections.color_corrections', 'Levels...|Ctrl+L', 'Curves...|Ctrl+M', 'Exposure...', '-',
-			'Vibrance...|effects/vibrance.vibrance', 'Hue/Saturation...|Ctrl+U|image/color_corrections.color_corrections', 'Color Balance...|Ctrl+B|image/color_corrections.color_corrections', 'Black & White...|Alt+Shift+Ctrl+B|effects/black_and_white.black_and_white', 'Photo Filter...|effects/common/sepia.sepia', 'Channel Mixer...', 'Color Lookup...', '-',
+			'Brightness/Contrast...|ps/commands.brightness_contrast', 'Levels...|Ctrl+L|ps/commands.levels', 'Curves...|Ctrl+M|ps/commands.curves', 'Exposure...', '-',
+			'Vibrance...|effects/vibrance.vibrance', 'Hue/Saturation...|Ctrl+U|ps/commands.hue_saturation', 'Color Balance...|Ctrl+B|image/color_corrections.color_corrections', 'Black & White...|Alt+Shift+Ctrl+B|effects/black_and_white.black_and_white', 'Photo Filter...|effects/common/sepia.sepia', 'Channel Mixer...', 'Color Lookup...', '-',
 			'Invert|Ctrl+I|effects/common/invert.invert', 'Posterize...|image/decrease_colors.decrease_colors', 'Threshold...|effects/black_and_white.black_and_white', 'Gradient Map...', 'Selective Color...', '-',
 			'Shadows/Highlights...', 'HDR Toning...', 'Variations...', '-',
 			'Desaturate|Shift+Ctrl+U|effects/common/grayscale.grayscale', 'Match Color...', 'Replace Color...|tools/replace_color.replace_color', 'Equalize',

@@ -126,6 +126,8 @@ config.TOOLS = [
 		attributes: {
 			size: 4,
 			pressure: false,
+			opacity: 100,
+			blend: 'Normal',
 		},
 	},
 	{
@@ -133,6 +135,8 @@ config.TOOLS = [
 		attributes: {
 			size: 1,
 			pressure: false,
+			opacity: 100,
+			blend: 'Normal',
 		},
 	},
 	{
@@ -460,9 +464,11 @@ config.TOOLS = [
 		attributes: {
 			color_1: '#008000',
 			color_2: '#ffffff',
-			alpha: 0,
+			alpha: 100,
 			radial: false,
 			radial_power: 50,
+			opacity: 100,
+			blend: 'Normal',
 		},
 	},
 	{

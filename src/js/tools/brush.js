@@ -219,7 +219,8 @@ class Brush_class extends Base_tools_class {
 				hide_selection_if_active: true,
 				rotate: null,
 				is_vector: true,
-				color: config.COLOR
+				color: config.COLOR,
+				opacity: this.getParams().opacity == null ? 100 : this.getParams().opacity,
 			};
 			app.State.do_action(
 				new app.Actions.Bundle_action('new_brush_layer', 'New Brush Layer', [

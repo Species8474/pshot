@@ -1257,3 +1257,20 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 #popups .popup.ps_alert [data-id="popup_cancel"] { display: none; }
 
 #ps_selection_overlay { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; box-shadow: none !important; border: none !important; }
+
+/* adjustment dialogs */
+#popups .popup.ps_adjust_dialog { max-width: 420px; }
+.ps_adj { display: flex; flex-direction: column; gap: 6px; min-width: 280px; }
+.ps_adj_row { display: flex; align-items: center; gap: 8px; }
+.ps_adj_row > span { width: 64px; }
+.ps_adj_label { margin-top: 4px; }
+.ps_adj_hist, .ps_adj_curve { width: 256px; border: 1px solid #222; background: #fff; display: block; }
+.ps_adj_curve { cursor: crosshair; height: 256px; }
+.ps_adj_triple, .ps_adj_pair { display: flex; justify-content: space-between; width: 258px; }
+.ps_adj_triple input, .ps_adj_pair input { width: 56px; }
+.ps_adj_ramp { width: 256px; height: 12px; border: 1px solid #222; background: linear-gradient(90deg, #000, #fff); }
+.ps_adj_slider { display: grid; grid-template-columns: 76px 56px; grid-template-rows: auto auto; gap: 2px 8px; align-items: center; }
+.ps_adj_slider input[type="range"] { grid-column: 1 / 3; width: 260px; }
+.ps_adj_hint { color: #aaa; font-size: 11px; max-width: 260px; }
+.ps_adj_check, .ps_adj_preview { display: flex; align-items: center; gap: 6px; }
+.ps_adj_preview { margin-top: 6px; }

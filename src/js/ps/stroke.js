@@ -9,6 +9,15 @@
 import app from './../app.js';
 import config from './../config.js';
 
+// options bar Mode -> canvas composite operation
+const BLEND_OPS = {
+	'Normal': 'source-over', 'Behind': 'destination-over', 'Clear': 'destination-out',
+	'Darken': 'darken', 'Multiply': 'multiply', 'Color Burn': 'color-burn', 'Lighten': 'lighten', 'Screen': 'screen',
+	'Color Dodge': 'color-dodge', 'Linear Dodge (Add)': 'lighter', 'Overlay': 'overlay', 'Soft Light': 'soft-light',
+	'Hard Light': 'hard-light', 'Difference': 'difference', 'Exclusion': 'exclusion', 'Hue': 'hue',
+	'Saturation': 'saturation', 'Color': 'color', 'Luminosity': 'luminosity',
+};
+
 async function commit_stroke(tool, pending, label) {
 	await pending;
 	var target_id = tool.paint_target;
@@ -57,6 +66,7 @@ async function commit_stroke(tool, pending, label) {
 	var sy = target.height_original / target.height;
 	ctx.setTransform(sx, 0, 0, sy, -target.x * sx, -target.y * sy);
 	ctx.globalAlpha = (temp.opacity == null ? 100 : temp.opacity) / 100;
+	ctx.globalCompositeOperation = BLEND_OPS[temp.params && temp.params.blend] || 'source-over';
 	ctx.drawImage(stroke, 0, 0);
 
 	await app.State.do_action(
