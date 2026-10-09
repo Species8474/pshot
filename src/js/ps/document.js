@@ -8,6 +8,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { readPsd, writePsd } from 'ag-psd';
+import { inject_paths, read_paths } from './psd-paths.js';
 import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
@@ -277,7 +278,7 @@ async function file_to_layers(file) {
 				settings._ps_mask_canvas = psd_mask_to_alpha(settings._ps_mask, psd.width, psd.height);
 			}
 		}
-		return { width: psd.width, height: psd.height, layers, annotations: psd.annotations };
+		return { width: psd.width, height: psd.height, layers, annotations: psd.annotations, paths: read_paths(buffer, psd.width, psd.height) };
 	}
 	const data = await read_file(file, 'dataurl');
 	const image = await load_image(data);
@@ -388,6 +389,10 @@ async function open_document(files) {
 	}
 	//notes (annotations)
 	config.ps_notes = app.GUI.Ps_workspace.Notes.from_psd(doc.annotations);
+	//saved paths and the Work Path
+	config.ps_paths = doc.paths || [];
+	config.ps_path_active = -1;
+	app.GUI.Ps_workspace.Paths.render_panel();
 	app.GUI.modules['ps/commands'].purge_histories();
 	app.GUI.GUI_preview.zoom_auto(true);
 	app.GUI.GUI_layers.render_layers();
@@ -650,7 +655,7 @@ function build_psd() {
 
 function save_psd(file_name) {
 	try {
-		const buffer = writePsd(build_psd(), { generateThumbnail: true, invalidateTextLayers: true });
+		const buffer = inject_paths(writePsd(build_psd(), { generateThumbnail: true, invalidateTextLayers: true }), config.ps_paths, config.WIDTH, config.HEIGHT);
 		const blob = new Blob([buffer], { type: 'application/octet-stream' });
 		const name = /\.psd$/i.test(file_name) ? file_name : file_name + '.psd';
 		filesaver.saveAs(blob, name);
