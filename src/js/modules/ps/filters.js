@@ -426,6 +426,163 @@ class Ps_filters_class {
 	// ---------- Distort ----------
 
 	/**
+	 * CS6 Filter > Blur > Lens Blur: blur that grows with the distance from the
+	 * focal depth of a depth map (transparency, layer mask or alpha channel),
+	 * specular highlights and noise
+	 */
+	lens_blur() {
+		var layer = config.layer;
+		var alpha = (config.ps_alpha || []).map(c => c.name);
+		this.dialog('lens_blur', 'Lens Blur', [
+			{ key: 'source', label: 'Depth Map Source:', type: 'select', values: ['None', 'Transparency', 'Layer Mask'].concat(alpha), value: 'None' },
+			{ key: 'focal', label: 'Blur Focal Distance:', min: 0, max: 255, value: 0 },
+			{ key: 'invert', label: 'Invert', type: 'check', value: false },
+			{ key: 'shape', label: 'Iris Shape:', type: 'select', values: ['Triangle (3)', 'Square (4)', 'Pentagon (5)', 'Hexagon (6)', 'Heptagon (7)', 'Octagon (8)'], value: 'Hexagon (6)' },
+			{ key: 'radius', label: 'Radius:', min: 0, max: 100, value: 15 },
+			{ key: 'brightness', label: 'Specular Brightness:', min: 0, max: 100, value: 0 },
+			{ key: 'threshold', label: 'Specular Threshold:', min: 0, max: 255, value: 255 },
+			{ key: 'noise', label: 'Noise Amount:', min: 0, max: 100, value: 0 },
+			{ key: 'mono', label: 'Monochromatic', type: 'check', value: false },
+		], (s) => (src, dst, w, h) => {
+			//depth 0..1 per pixel (0 = near)
+			var depth = new Float32Array(w * h);
+			var mask = null;
+			if (s.source == 'Layer Mask' && layer && layer.ps_mask) mask = { c: layer.ps_mask, x: layer.ps_mask_x - layer.x, y: layer.ps_mask_y - layer.y };
+			var ch = (config.ps_alpha || []).find(c => c.name == s.source);
+			if (ch) mask = { c: ch.mask, x: -(layer ? layer.x : 0), y: -(layer ? layer.y : 0) };
+			if (mask) {
+				var mc = document.createElement('canvas');
+				mc.width = w;
+				mc.height = h;
+				mc.getContext('2d').drawImage(mask.c, mask.x, mask.y);
+				var md = mc.getContext('2d').getImageData(0, 0, w, h).data;
+				for (var i = 0; i < w * h; i++) depth[i] = md[i * 4 + 3] / 255;
+			}
+			else if (s.source == 'Transparency') {
+				for (var j = 0; j < w * h; j++) depth[j] = src[j * 4 + 3] / 255;
+			}
+			else depth.fill(1);
+			var focal = s.focal / 255;
+			//specular highlights: bright areas bloom
+			var base = new Uint8ClampedArray(src);
+			if (s.brightness > 0) {
+				for (var q = 0; q < base.length; q += 4) {
+					var l = base[q] * 0.299 + base[q + 1] * 0.587 + base[q + 2] * 0.114;
+					if (l >= s.threshold) { var b = 1 + s.brightness / 25; base[q] *= b; base[q + 1] *= b; base[q + 2] *= b; }
+				}
+			}
+			var levels = [0, s.radius / 4, s.radius / 2, s.radius * 3 / 4, s.radius];
+			var data = levels.map(r => gaussian(base, w, h, r / 2));
+			for (var k = 0; k < w * h; k++) {
+				var dd = s.invert ? 1 - depth[k] : depth[k];
+				var r = Math.min(1, Math.abs(dd - focal)) * s.radius, li = 0;
+				while (li < levels.length - 2 && levels[li + 1] < r) li++;
+				var t = levels[li + 1] > levels[li] ? Math.max(0, Math.min(1, (r - levels[li]) / (levels[li + 1] - levels[li]))) : 0;
+				var o = k * 4, A = data[li], B = data[li + 1];
+				for (var c = 0; c < 3; c++) dst[o + c] = A[o + c] + (B[o + c] - A[o + c]) * t;
+				if (s.noise) {
+					var n = (Math.random() - 0.5) * s.noise * 2.5;
+					if (s.mono) { dst[o] += n; dst[o + 1] += n; dst[o + 2] += n; }
+					else { dst[o] += n; dst[o + 1] += (Math.random() - 0.5) * s.noise * 2.5; dst[o + 2] += (Math.random() - 0.5) * s.noise * 2.5; }
+				}
+			}
+		});
+	}
+
+	/**
+	 * CS6 Filter > Blur > Shape Blur: averages through a shape kernel
+	 */
+	shape_blur() {
+		var SHAPES = {
+			'Circle': (x, y) => x * x + y * y <= 1,
+			'Ring': (x, y) => { var d = x * x + y * y; return d <= 1 && d >= 0.45; },
+			'Square': () => true,
+			'Diamond': (x, y) => Math.abs(x) + Math.abs(y) <= 1,
+			'Star': (x, y) => { var a = Math.atan2(y, x), r = Math.hypot(x, y), m = 0.55 + 0.45 * Math.abs(Math.cos(a * 2.5)); return r <= m; },
+			'Heart': (x, y) => { y = -y * 1.2 + 0.25; x *= 1.2; var t = x * x + y * y - 1; return t * t * t - x * x * y * y * y <= 0; },
+			'Cross': (x, y) => Math.abs(x) < 0.3 || Math.abs(y) < 0.3,
+		};
+		this.dialog('shape_blur', 'Shape Blur', [
+			{ key: 'radius', label: 'Radius:', min: 5, max: 100, value: 10, unit: 'Pixels' },
+			{ key: 'shape', label: 'Shape:', type: 'select', values: Object.keys(SHAPES), value: 'Circle' },
+		], (s) => (src, dst, w, h) => {
+			var r = Math.round(s.radius / 2), fn = SHAPES[s.shape] || SHAPES.Circle, offs = [];
+			var step = Math.max(1, Math.round(r / 12));
+			for (var y = -r; y <= r; y += step) for (var x = -r; x <= r; x += step) if (fn(x / r, y / r)) offs.push([x, y]);
+			if (!offs.length) offs.push([0, 0]);
+			for (var py = 0; py < h; py++) {
+				for (var px = 0; px < w; px++) {
+					var R = 0, G = 0, B = 0, A = 0;
+					for (var o of offs) {
+						var sx = Math.max(0, Math.min(w - 1, px + o[0])), sy = Math.max(0, Math.min(h - 1, py + o[1])), i = (sy * w + sx) * 4, a = src[i + 3];
+						R += src[i] * a; G += src[i + 1] * a; B += src[i + 2] * a; A += a;
+					}
+					var d = (py * w + px) * 4;
+					if (A > 0) { dst[d] = R / A; dst[d + 1] = G / A; dst[d + 2] = B / A; }
+					dst[d + 3] = A / offs.length;
+				}
+			}
+		});
+	}
+
+	/**
+	 * CS6 Filter > Distort > Displace: offsets pixels by a displacement map file
+	 * (red = horizontal, green = vertical; 128 = no offset)
+	 */
+	displace(map) {
+		if (!map && !this.silent) {
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = 'image/*,.psd';
+			input.addEventListener('change', () => {
+				var f = input.files[0];
+				if (!f) return;
+				var reader = new FileReader();
+				reader.onload = () => {
+					var img = new Image();
+					img.onload = () => {
+						var c = document.createElement('canvas');
+						c.width = img.width;
+						c.height = img.height;
+						c.getContext('2d').drawImage(img, 0, 0);
+						this.displace_map = c;
+						this.displace(c);
+					};
+					img.src = reader.result;
+				};
+				reader.readAsDataURL(f);
+			});
+			input.click();
+			return;
+		}
+		var dmap = map || this.displace_map;
+		this.dialog('displace', 'Displace', [
+			{ key: 'h', label: 'Horizontal Scale:', min: -999, max: 999, value: 10, unit: '%' },
+			{ key: 'v', label: 'Vertical Scale:', min: -999, max: 999, value: 10, unit: '%' },
+			{ key: 'fit', label: 'Displacement Map:', type: 'radio', values: ['Stretch to Fit', 'Tile'], value: 'Stretch to Fit' },
+			{ key: 'undefined', label: 'Undefined Areas:', type: 'radio', values: ['Wrap Around', 'Repeat Edge Pixels'], value: 'Repeat Edge Pixels' },
+		], (s) => (src, dst, w, h) => {
+			if (!dmap) return;
+			var mc = document.createElement('canvas');
+			mc.width = w;
+			mc.height = h;
+			var mctx = mc.getContext('2d');
+			if (s.fit == 'Tile') { mctx.fillStyle = mctx.createPattern(dmap, 'repeat'); mctx.fillRect(0, 0, w, h); }
+			else mctx.drawImage(dmap, 0, 0, w, h);
+			var M = mctx.getImageData(0, 0, w, h).data, px = [0, 0, 0, 0];
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var i = (y * w + x) * 4;
+					var sx = x + (M[i] - 128) / 128 * 128 * s.h / 100, sy = y + (M[i + 1] - 128) / 128 * 128 * s.v / 100;
+					if (s.undefined == 'Wrap Around') { sx = ((sx % w) + w) % w; sy = ((sy % h) + h) % h; }
+					sample(src, w, h, sx, sy, px, 0);
+					dst[i] = px[0]; dst[i + 1] = px[1]; dst[i + 2] = px[2]; dst[i + 3] = px[3];
+				}
+			}
+		});
+	}
+
+	/**
 	 * CS6 Filter > Lens Correction (Custom): distortion, chromatic aberration,
 	 * vignette, perspective, angle, scale
 	 */
