@@ -699,6 +699,112 @@ class Ps_adjust_class {
 		}, (state) => this.build_gradient_map(state), 'gradient_map');
 	}
 
+	/**
+	 * CS6 Black & White: six color sliders and an optional Tint
+	 */
+	black_white() {
+		var extra = '<div class="ps_adj_row"><span>Preset:</span><select disabled><option>Default</option></select></div>';
+		this.sliders('Black & White', 'black_white', [
+			{ key: 'reds', label: 'Reds:', min: -200, max: 300, value: 40 },
+			{ key: 'yellows', label: 'Yellows:', min: -200, max: 300, value: 60 },
+			{ key: 'greens', label: 'Greens:', min: -200, max: 300, value: 40 },
+			{ key: 'cyans', label: 'Cyans:', min: -200, max: 300, value: 60 },
+			{ key: 'blues', label: 'Blues:', min: -200, max: 300, value: 20 },
+			{ key: 'magentas', label: 'Magentas:', min: -200, max: 300, value: 80 },
+		], extra, (root, state, update) => {
+			root.insertAdjacentHTML('beforeend', '<label class="ps_adj_check"><input type="checkbox" id="bw_tint"> Tint</label>'
+				+ '<div class="ps_adj_slider"><span>Hue:</span><input type="number" id="bw_hue_n" min="0" max="360"><span class="ps_adj_unit">°</span><input type="range" id="bw_hue" min="0" max="360"></div>'
+				+ '<div class="ps_adj_slider"><span>Saturation:</span><input type="number" id="bw_sat_n" min="0" max="100"><span class="ps_adj_unit">%</span><input type="range" id="bw_sat" min="0" max="100"></div>');
+			root.appendChild(root.querySelector('.ps_adj_preview'));
+			state.tint = !!state.tint;
+			if (state.hue == null) state.hue = 42;
+			if (state.sat == null) state.sat = 20;
+			var t = root.querySelector('#bw_tint');
+			t.checked = state.tint;
+			t.addEventListener('change', () => { state.tint = t.checked; update(); });
+			[['hue', 'bw_hue'], ['sat', 'bw_sat']].forEach(([k, id]) => {
+				var r = root.querySelector('#' + id), n = root.querySelector('#' + id + '_n');
+				r.value = n.value = state[k];
+				var set = (v) => { if (isNaN(v)) return; state[k] = v; r.value = n.value = v; update(); };
+				r.addEventListener('input', () => set(parseFloat(r.value)));
+				n.addEventListener('change', () => set(parseFloat(n.value)));
+			});
+		});
+	}
+
+	build_black_white(state) {
+		var w = {
+			r: (state.reds == null ? 40 : state.reds) / 100, y: (state.yellows == null ? 60 : state.yellows) / 100,
+			g: (state.greens == null ? 40 : state.greens) / 100, c: (state.cyans == null ? 60 : state.cyans) / 100,
+			b: (state.blues == null ? 20 : state.blues) / 100, m: (state.magentas == null ? 80 : state.magentas) / 100,
+		};
+		var tint = state.tint ? hsl_to_rgb((state.hue == null ? 42 : state.hue) / 360, (state.sat == null ? 20 : state.sat) / 100, 0.5) : null;
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i], g = src[i + 1], b = src[i + 2];
+				//gray = min + (mid-min) * secondary weight + (max-mid) * primary weight
+				var max = Math.max(r, g, b), min = Math.min(r, g, b), mid = r + g + b - max - min;
+				var primary = max == r ? w.r : (max == g ? w.g : w.b);
+				var secondary;
+				if (min == b) secondary = w.y; else if (min == r) secondary = w.c; else secondary = w.m;
+				var v = min + (mid - min) * secondary + (max - mid) * primary;
+				v = Math.max(0, Math.min(255, v));
+				if (tint) {
+					//tint keeps the gray value as luminosity
+					var l = v / 255;
+					var tl = (tint[0] * 0.299 + tint[1] * 0.587 + tint[2] * 0.114) / 255;
+					var k = tl > 0 ? l / tl : 0;
+					var mixr = tint[0] * k, mixg = tint[1] * k, mixb = tint[2] * k;
+					var s = (state.sat == null ? 20 : state.sat) / 100;
+					dst[i] = v + (mixr - v) * s * 2; dst[i + 1] = v + (mixg - v) * s * 2; dst[i + 2] = v + (mixb - v) * s * 2;
+				}
+				else {
+					dst[i] = dst[i + 1] = dst[i + 2] = v;
+				}
+			}
+		};
+	}
+
+	/**
+	 * CS6 Threshold: histogram and Threshold Level
+	 */
+	threshold() {
+		var html = '<div class="ps_adj_label">Threshold Level:</div><canvas id="th_hist" width="256" height="110" class="ps_adj_hist"></canvas>'
+			+ '<div class="ps_adj_slider"><span>Level:</span><input type="number" id="th_n" min="1" max="255"><span class="ps_adj_unit"></span><input type="range" id="th_r" min="1" max="255"></div>';
+		this.show('Threshold', html, (root, state, update, job) => {
+			if (state.level == null) state.level = 128;
+			if (job && job.original) this.draw_histogram(root.querySelector('#th_hist'), this.histogram(job, 'RGB'));
+			var r = root.querySelector('#th_r'), n = root.querySelector('#th_n');
+			r.value = n.value = state.level;
+			var set = (v) => { if (isNaN(v)) return; state.level = Math.max(1, Math.min(255, Math.round(v))); r.value = n.value = state.level; update(); };
+			r.addEventListener('input', () => set(parseFloat(r.value)));
+			n.addEventListener('change', () => set(parseFloat(n.value)));
+		}, (state) => this.build_threshold(state), 'threshold');
+	}
+
+	build_threshold(state) {
+		var level = state.level == null ? 128 : state.level;
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var v = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114 >= level ? 255 : 0;
+				dst[i] = dst[i + 1] = dst[i + 2] = v;
+			}
+		};
+	}
+
+	posterize() {
+		this.sliders('Posterize', 'posterize', [{ key: 'levels', label: 'Levels:', min: 2, max: 255, value: 4 }]);
+	}
+
+	build_posterize(state) {
+		var n = Math.max(2, Math.min(255, state.levels || 4));
+		var lut = new Uint8ClampedArray(256);
+		for (var x = 0; x < 256; x++) lut[x] = Math.round(Math.round(x / 255 * (n - 1)) * 255 / (n - 1));
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) { dst[i] = lut[src[i]]; dst[i + 1] = lut[src[i + 1]]; dst[i + 2] = lut[src[i + 2]]; }
+		};
+	}
+
 	selective_color() {
 		var colors = ['Reds', 'Yellows', 'Greens', 'Cyans', 'Blues', 'Magentas', 'Whites', 'Neutrals', 'Blacks'];
 		var extra = '<div class="ps_adj_row"><span>Colors:</span><select id="sc_color">' + colors.map(c => '<option>' + c + '</option>').join('') + '</select></div>';

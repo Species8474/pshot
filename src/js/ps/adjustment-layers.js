@@ -18,12 +18,20 @@ function rgb_hex(c) {
 	return '#' + h(c.r) + h(c.g) + h(c.b);
 }
 
+function hsl_to_rgb_255(hue, sat) {
+	//tint color for PSD: the hue at the given saturation, 50% lightness
+	var h = hue / 360, s = sat / 100, l = 0.5;
+	var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+	var f = (t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
+	return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+
 const KINDS = {
 	brightness_contrast: { title: 'Brightness/Contrast', dialog: 'brightness_contrast' },
 	levels: { title: 'Levels', dialog: 'levels' },
 	curves: { title: 'Curves', dialog: 'curves' },
 	hue_saturation: { title: 'Hue/Saturation', dialog: 'hue_saturation' },
-	black_white: { title: 'Black & White' },
+	black_white: { title: 'Black & White', dialog: 'black_white' },
 	exposure: { title: 'Exposure', dialog: 'exposure' },
 	vibrance: { title: 'Vibrance', dialog: 'vibrance' },
 	color_balance: { title: 'Color Balance', dialog: 'color_balance' },
@@ -32,8 +40,8 @@ const KINDS = {
 	gradient_map: { title: 'Gradient Map', dialog: 'gradient_map' },
 	selective_color: { title: 'Selective Color', dialog: 'selective_color' },
 	invert: { title: 'Invert' },
-	posterize: { title: 'Posterize', state: { levels: 4 } },
-	threshold: { title: 'Threshold', state: { level: 128 } },
+	posterize: { title: 'Posterize', state: { levels: 4 }, dialog: 'posterize' },
+	threshold: { title: 'Threshold', state: { level: 128 }, dialog: 'threshold' },
 };
 
 class Ps_adjustment_layers_class {
@@ -66,12 +74,7 @@ class Ps_adjustment_layers_class {
 			case 'invert': return (src, dst) => {
 				for (var i = 0; i < src.length; i += 4) { dst[i] = 255 - src[i]; dst[i + 1] = 255 - src[i + 1]; dst[i + 2] = 255 - src[i + 2]; }
 			};
-			case 'black_white': return (src, dst) => {
-				for (var i = 0; i < src.length; i += 4) {
-					var v = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
-					dst[i] = dst[i + 1] = dst[i + 2] = v;
-				}
-			};
+			case 'black_white': return this.adjust().build_black_white(state);
 			case 'posterize': {
 				var n = Math.max(2, Math.min(255, state.levels || 4));
 				var lut = new Uint8ClampedArray(256);
@@ -218,7 +221,11 @@ class Ps_adjustment_layers_class {
 			case 'invert': return { type: 'invert' };
 			case 'posterize': return { type: 'posterize', levels: s.levels || 4 };
 			case 'threshold': return { type: 'threshold', level: s.level == null ? 128 : s.level };
-			case 'black_white': return { type: 'black & white', reds: 40, yellows: 60, greens: 40, cyans: 60, blues: 20, magentas: 80 };
+			case 'black_white': {
+				var v = (k, d) => s[k] == null ? d : s[k];
+				return { type: 'black & white', reds: v('reds', 40), yellows: v('yellows', 60), greens: v('greens', 40), cyans: v('cyans', 60), blues: v('blues', 20), magentas: v('magentas', 80),
+					useTint: !!s.tint, tintColor: s.tint ? (() => { var c = hsl_to_rgb_255(v('hue', 42), v('sat', 20)); return { r: c[0], g: c[1], b: c[2] }; })() : undefined };
+			}
 			case 'hue_saturation': return { type: 'hue/saturation', colorize: !!s.colorize, master: { a: 0, b: 0, c: 0, d: 0, hue: s.h || 0, saturation: s.s || 0, lightness: s.l || 0 } };
 			case 'exposure': return { type: 'exposure', exposure: s.exposure || 0, offset: s.offset || 0, gamma: s.gamma || 1 };
 			case 'vibrance': return { type: 'vibrance', vibrance: s.vibrance || 0, saturation: s.saturation || 0 };
@@ -263,7 +270,8 @@ class Ps_adjustment_layers_class {
 			case 'invert': return { kind: 'invert', state: {} };
 			case 'posterize': return { kind: 'posterize', state: { levels: a.levels || 4 } };
 			case 'threshold': return { kind: 'threshold', state: { level: a.level == null ? 128 : a.level } };
-			case 'black & white': return { kind: 'black_white', state: {} };
+			case 'black & white': return { kind: 'black_white', state: { reds: a.reds == null ? 40 : a.reds, yellows: a.yellows == null ? 60 : a.yellows, greens: a.greens == null ? 40 : a.greens,
+				cyans: a.cyans == null ? 60 : a.cyans, blues: a.blues == null ? 20 : a.blues, magentas: a.magentas == null ? 80 : a.magentas, tint: !!a.useTint } };
 			case 'hue/saturation': {
 				var m = a.master || {};
 				return { kind: 'hue_saturation', state: { h: m.hue || 0, s: m.saturation || 0, l: m.lightness || 0, colorize: !!a.colorize } };

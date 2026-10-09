@@ -49,6 +49,9 @@ class Ps_commands_class {
 	channel_mixer() { this.Adjust.channel_mixer(); }
 	gradient_map() { this.Adjust.gradient_map(); }
 	selective_color() { this.Adjust.selective_color(); }
+	black_white() { this.Adjust.black_white(); }
+	threshold() { this.Adjust.threshold(); }
+	posterize() { this.Adjust.posterize(); }
 	shadows_highlights() { this.Adjust.shadows_highlights(); }
 	equalize() { this.Adjust.equalize(); }
 
@@ -797,6 +800,113 @@ class Ps_commands_class {
 		app.State.do_action(new app.Actions.Bundle_action('image_rotation', description, actions));
 	}
 
+	/**
+	 * Image > Image Rotation > Arbitrary: the canvas grows to hold the rotated image;
+	 * new areas of the Background take the background color
+	 */
+	rotate_canvas_arbitrary() {
+		for (var l of config.layers) {
+			if (l.type != 'image' && l.type != null && l.type != 'ps_group' && l.type != 'ps_adjust') {
+				alertify.error('Rasterize vector and text layers first (Layer > Rasterize > All Layers).');
+				return;
+			}
+		}
+		this.POP.show({
+			title: 'Rotate Canvas',
+			params: [
+				{ name: 'angle', title: 'Angle:', value: this.last_rotate_angle || 0 },
+				{ name: 'dir', title: '', values: ['°CW', '°CCW'], value: this.last_rotate_dir || '°CW' },
+			],
+			on_finish: (params) => {
+				var a = parseFloat(params.angle) || 0;
+				this.last_rotate_angle = a;
+				this.last_rotate_dir = params.dir;
+				if (!a) return;
+				this.rotate_canvas_by(params.dir == '°CCW' ? -a : a);
+			},
+		});
+	}
+
+	rotate_canvas_by(deg) {
+		var W = config.WIDTH, H = config.HEIGHT, r = deg * Math.PI / 180;
+		var cos = Math.abs(Math.cos(r)), sin = Math.abs(Math.sin(r));
+		var NW = Math.round(W * cos + H * sin), NH = Math.round(W * sin + H * cos);
+		var ordered = app.GUI.Ps_workspace.Groups.ordered();
+		var bottom = ordered[ordered.length - 1];
+		var draw = (src, x, y, w, h, fill) => {
+			var c = document.createElement('canvas');
+			c.width = NW;
+			c.height = NH;
+			var ctx = c.getContext('2d');
+			if (fill) { ctx.fillStyle = fill; ctx.fillRect(0, 0, NW, NH); }
+			ctx.translate(NW / 2, NH / 2);
+			ctx.rotate(r);
+			ctx.translate(-W / 2, -H / 2);
+			ctx.imageSmoothingQuality = 'high';
+			ctx.drawImage(src, x, y, w, h);
+			return c;
+		};
+		var actions = [new app.Actions.Prepare_canvas_action('undo')];
+		for (var layer of config.layers) {
+			if (layer.type != 'image' || !layer.link) continue;
+			var is_bg = layer === bottom && layer.name == 'Background';
+			var settings = { x: 0, y: 0, width: NW, height: NH, width_original: NW, height_original: NH };
+			if (layer.ps_mask) {
+				var m = document.createElement('canvas');
+				m.width = W;
+				m.height = H;
+				m.getContext('2d').drawImage(layer.ps_mask, layer.x - layer.ps_mask_x, layer.y - layer.ps_mask_y);
+				Object.assign(settings, { ps_mask: draw(m, 0, 0, W, H), ps_mask_x: 0, ps_mask_y: 0 });
+			}
+			actions.push(new app.Actions.Update_layer_action(layer.id, settings));
+			actions.push(new app.Actions.Update_layer_image_action(draw(layer.link, layer.x, layer.y, layer.width, layer.height, is_bg ? config.BG_COLOR : null), layer.id));
+		}
+		actions.push(new app.Actions.Update_config_action({ WIDTH: NW, HEIGHT: NH }));
+		actions.push(new app.Actions.Prepare_canvas_action('do'));
+		return app.State.do_action(new app.Actions.Bundle_action('image_rotation', 'Rotate Canvas', actions)).then(() => app.GUI.GUI_preview.zoom_auto(true));
+	}
+
+	/**
+	 * Image > Trim: based on transparent pixels or a corner color; trims chosen sides
+	 */
+	trim() {
+		this.POP.show({
+			title: 'Trim',
+			params: [
+				{ title: 'Based On' },
+				{ name: 'based', title: '', values: ['Transparent Pixels', 'Top Left Pixel Color', 'Bottom Right Pixel Color'], value: 'Top Left Pixel Color' },
+				{ title: 'Trim Away' },
+				{ name: 'top', title: 'Top', value: true },
+				{ name: 'bottom', title: 'Bottom', value: true },
+				{ name: 'left', title: 'Left', value: true },
+				{ name: 'right', title: 'Right', value: true },
+			],
+			on_finish: (params) => {
+				var W = config.WIDTH, H = config.HEIGHT;
+				var c = document.createElement('canvas');
+				c.width = W;
+				c.height = H;
+				var ctx = c.getContext('2d', { willReadFrequently: true });
+				this.Base_layers.convert_layers_to_canvas(ctx, null, false);
+				var d = ctx.getImageData(0, 0, W, H).data;
+				var ref = params.based == 'Bottom Right Pixel Color' ? ((H - 1) * W + W - 1) * 4 : 0;
+				var keep = params.based == 'Transparent Pixels'
+					? (i) => d[i + 3] > 0
+					: (i) => Math.abs(d[i] - d[ref]) + Math.abs(d[i + 1] - d[ref + 1]) + Math.abs(d[i + 2] - d[ref + 2]) + Math.abs(d[i + 3] - d[ref + 3]) > 0;
+				var x0 = W, y0 = H, x1 = -1, y1 = -1;
+				for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+					if (keep((y * W + x) * 4)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+				}
+				if (x1 < 0) return;
+				if (!params.left) x0 = 0;
+				if (!params.top) y0 = 0;
+				if (!params.right) x1 = W - 1;
+				if (!params.bottom) y1 = H - 1;
+				this.crop_rect({ x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 }, 'Trim');
+			},
+		});
+	}
+
 	rotate_canvas_180() { this.transform_canvas('180', 'Rotate Canvas'); }
 	rotate_canvas_cw() { this.transform_canvas('cw', 'Rotate Canvas'); }
 	rotate_canvas_ccw() { this.transform_canvas('ccw', 'Rotate Canvas'); }
@@ -809,6 +919,10 @@ class Ps_commands_class {
 			alertify.error('Make a selection first (Rectangular Marquee Tool).');
 			return;
 		}
+		return this.crop_rect(s, 'Crop');
+	}
+
+	crop_rect(s, description) {
 		var actions = [
 			new app.Actions.Prepare_canvas_action('undo'),
 		];
@@ -823,7 +937,7 @@ class Ps_commands_class {
 		actions.push(new app.Actions.Update_config_action({WIDTH: s.width, HEIGHT: s.height}));
 		actions.push(new app.Actions.Prepare_canvas_action('do'));
 		var sel = this.selection();
-		app.State.do_action(new app.Actions.Bundle_action('crop', 'Crop', actions)).then(() => {
+		return app.State.do_action(new app.Actions.Bundle_action('crop', description || 'Crop', actions)).then(() => {
 			sel.set_mask_direct(null);
 			sel.last_mask = null;
 		});
