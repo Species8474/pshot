@@ -66,6 +66,7 @@ class Ps_selection_class {
 		this.preview = null; //{type, points|rect} while dragging
 		this.overlay = null;
 		this.offset = null;
+		this.decorate = null;
 		setInterval(() => {
 			if (this.mask || this.preview) {
 				this.phase = (this.phase + 1) % 8;
@@ -474,7 +475,7 @@ class Ps_selection_class {
 		var ctx = overlay.getContext('2d');
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, overlay.width, overlay.height);
-		if (!this.mask && !this.preview) {
+		if (!this.mask && !this.preview && !this.decorate) {
 			return;
 		}
 		var m = zoomView.matrix;
@@ -492,6 +493,11 @@ class Ps_selection_class {
 		}
 		if (this.preview) {
 			this.draw_preview(ctx, m[0]);
+		}
+		if (this.decorate) {
+			//Free Transform box (drawn in document space, not offset)
+			ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+			this.decorate(ctx, m[0]);
 		}
 	}
 

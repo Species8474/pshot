@@ -69,7 +69,7 @@ const M = [
 		'Free Transform|Ctrl+T|ps/commands.free_transform',
 		['Transform', [
 			'Again|Shift+Ctrl+T', '-',
-			'Scale|ps/commands.free_transform', 'Rotate|image/rotate.rotate', 'Skew', 'Distort', 'Perspective', 'Warp', '-',
+			'Scale|ps/commands.free_transform', 'Rotate|ps/commands.free_transform', 'Skew', 'Distort', 'Perspective', 'Warp', '-',
 			'Rotate 180°|ps/commands.rotate_layer_180', 'Rotate 90° CW|image/rotate.right', 'Rotate 90° CCW|image/rotate.left', '-',
 			'Flip Horizontal|image/flip.horizontal', 'Flip Vertical|image/flip.vertical',
 		]],

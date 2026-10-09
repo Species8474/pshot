@@ -153,6 +153,9 @@ class Ps_documents_class {
 			return;
 		}
 		this.end_text_editing();
+		if (app.GUI.Ps_workspace.Transform.active()) {
+			app.GUI.Ps_workspace.Transform.commit();
+		}
 		this.current().state = this.capture();
 		this.active = index;
 		this.apply(this.docs[index].state);

@@ -17,6 +17,7 @@ import Ps_options_bar_class from './options-bar.js';
 import Ps_documents_class from './documents.js';
 import Ps_selection_class from './selection.js';
 import Ps_mask_class from './mask.js';
+import Ps_transform_class from './transform.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 
@@ -55,6 +56,7 @@ class Ps_workspace_class {
 		this.screen_mode = 'standard';
 		this.Selection = new Ps_selection_class();
 		this.Mask = new Ps_mask_class();
+		this.Transform = new Ps_transform_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
 		this.two_column = false;
@@ -208,6 +210,9 @@ class Ps_workspace_class {
 	 * activates a CS6 tool (group index, member index)
 	 */
 	select_member(gi, mi) {
+		if (this.Transform && this.Transform.active()) {
+			this.Transform.commit();
+		}
 		var group = this.groups[gi];
 		var member = group.members[mi];
 		group.current = mi;

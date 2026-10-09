@@ -253,7 +253,7 @@ class Ps_commands_class {
 	}
 
 	free_transform() {
-		app.GUI.GUI_tools.activate_tool('select');
+		app.GUI.Ps_workspace.Transform.start();
 	}
 
 	rotate_layer_180() {
