@@ -285,7 +285,7 @@ class Ps_preferences_class {
 			else if (c.type == 'check') html += '<label class="ps_adj_check' + (c.disabled ? ' disabled' : '') + '"><input type="checkbox"' + (c.value ? ' checked' : '') + (c.disabled ? ' disabled' : '') + '> ' + esc(c.label) + '</label>';
 			else if (c.type == 'row') html += '<div class="ps_prefs_row">' + c.items.map(control).join('') + '</div>';
 			else if (c.type == 'theme') html += '<div class="ps_prefs_row"><span class="ps_prefs_label">' + esc(c.label) + '</span>'
-				+ [1, 2, 3, 4].map(t => '<button type="button" class="ps_prefs_theme' + (d.theme == t ? ' active' : '') + '" data-theme="' + t + '" style="background:' + THEME_SWATCH[t] + '" title="Color theme ' + t + '"'></button>').join('') + '</div>';
+				+ [1, 2, 3, 4].map(t => '<button type="button" class="ps_prefs_theme' + (d.theme == t ? ' active' : '') + '" data-theme="' + t + '" style="background:' + THEME_SWATCH[t] + '" title="Color theme ' + t + '"></button>').join('') + '</div>';
 			else html += control(c);
 		}
 		root.innerHTML = html;
