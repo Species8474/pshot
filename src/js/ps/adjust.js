@@ -148,11 +148,15 @@ class Ps_adjust_class {
 	/**
 	 * prepares the active layer for an adjustment; returns null when impossible
 	 */
-	begin(title) {
+	begin(title, allow_smart) {
 		ensure_pixel_layer();
 		var layer = config.layer;
 		if (!layer || layer.type != 'image' || !layer.link) {
 			alertify.error('Could not complete the ' + title + ' command because the active layer is not a pixel layer.');
+			return null;
+		}
+		if (layer.ps_smart && !allow_smart) {
+			alertify.error('Could not complete the ' + title + ' command because the smart object is not directly editable.');
 			return null;
 		}
 		var canvas = document.createElement('canvas');
@@ -261,9 +265,27 @@ class Ps_adjust_class {
 			return this.show_for_layer(title, html, setup, kind);
 		}
 		var POP = new Dialog_class();
-		var job = this.begin(title);
+		var filter_key = this.filter_key, smart_edit = this.smart_edit;
+		this.filter_key = null;
+		this.smart_edit = null;
+		var job = this.begin(title, true);
 		if (!job) {
 			return;
+		}
+		if (job.layer.ps_smart) {
+			//CS6: only filters apply to smart objects, as Smart Filters
+			if (!filter_key) {
+				alertify.error('Could not complete the ' + title + ' command because the smart object is not directly editable.');
+				return;
+			}
+			if (smart_edit) {
+				var bctx = document.createElement('canvas').getContext('2d');
+				bctx.canvas.width = job.w;
+				bctx.canvas.height = job.h;
+				bctx.drawImage(smart_edit.base, 0, 0);
+				job.original = bctx.getImageData(0, 0, job.w, job.h);
+			}
+			job.smart_filter = { key: filter_key, edit: smart_edit };
 		}
 		var _this = this;
 		var state = {};
@@ -272,6 +294,14 @@ class Ps_adjust_class {
 			className: 'ps_adjust_dialog',
 			params: [{ function() { return '<div class="ps_adj">' + html + '<label class="ps_adj_preview"><input type="checkbox" id="ps_adj_preview" checked> Preview</label></div>'; } }],
 			on_finish() {
+				if (job.smart_filter) {
+					build_fn(state);
+					_this.cancel(job);
+					var SF = app.GUI.Ps_workspace.Smart_filters;
+					if (job.smart_filter.edit) SF.replace(job.layer, job.smart_filter.edit.index, state);
+					else SF.add(job.layer, job.smart_filter.key, title, state);
+					return;
+				}
 				_this.finish(job, build_fn(state), (hooks && hooks.history_name) || title);
 			},
 			on_cancel() {

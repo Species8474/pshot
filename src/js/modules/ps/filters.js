@@ -184,6 +184,7 @@ class Ps_filters_class {
 				+ '<input type="range" data-range="' + f.key + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '"></div>';
 		}).join('');
 		var adjust = this.adjust();
+		adjust.filter_key = key;
 		adjust.show(title, html, (root, state, update) => {
 			Object.assign(state, defaults, saved || {});
 			fields.forEach((f) => {
@@ -232,6 +233,10 @@ class Ps_filters_class {
 		var state = {};
 		b.fields.forEach(f => { state[f.key] = f.value; });
 		Object.assign(state, settings);
+		if (config.layer && config.layer.ps_smart) {
+			app.GUI.Ps_workspace.Smart_filters.add(config.layer, key, b.title, state);
+			return true;
+		}
 		var adjust = this.adjust();
 		var job = adjust.begin(b.title);
 		if (!job) return true;

@@ -1622,3 +1622,12 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 #popups .popup.ps_lighting { width: auto; max-width: 98vw; }
 .ps_le_props { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; }
 .ps_le_lights { min-height: 60px; }
+
+/* Smart Filters under a smart object */
+.ps_sfilters .ps_effect_head { display: flex; align-items: center; gap: 6px; padding-left: 6px; }
+.ps_sfilters .ps_effect_head svg { margin-right: 0; }
+.ps_sf_eye { width: 16px; flex: none; display: inline-flex; justify-content: center; cursor: default; color: var(--ps-text); }
+.ps_sf_mask { width: 14px; height: 11px; margin-left: 22px; background: #fff; border: 1px solid #333; }
+.ps_sfilter { display: flex; align-items: center; gap: 6px; padding-left: 6px; }
+.ps_sfilter .ps_effect_name { padding-left: 42px; }
+.ps_sfilters.disabled .ps_effect_name { color: var(--ps-text-disabled); }

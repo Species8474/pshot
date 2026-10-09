@@ -741,6 +741,13 @@ class Ps_commands_class {
 	transform_distort() { app.GUI.Ps_workspace.Transform.start_mode('distort'); }
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
+	smart_filters_label() { return app.GUI.Ps_workspace.Smart_filters.label(); }
+	smart_filters_toggle() { app.GUI.Ps_workspace.Smart_filters.toggle_all(); }
+	smart_filters_clear() { app.GUI.Ps_workspace.Smart_filters.clear(); }
+	convert_for_smart_filters() {
+		if (config.layer && config.layer.ps_smart) return;
+		this.convert_to_smart_object();
+	}
 	layer_content_options() {
 		if (!app.GUI.Ps_workspace.Shapes.edit_fill()) alertify.error('Layer Content Options works on fill and shape layers.');
 	}

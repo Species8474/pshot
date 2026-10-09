@@ -416,6 +416,8 @@ class Ps_transform_class {
 	 */
 	render_smart(layer, source) {
 		var smart = layer.ps_smart;
+		//Smart Filters run on the source before the transform
+		if (smart.filters && smart.filters.length) source = app.GUI.Ps_workspace.Smart_filters.filtered(Object.assign({}, smart, { source: source }));
 		var dx = layer.x - smart.lx, dy = layer.y - smart.ly;
 		var out = doc_canvas();
 		var ctx = out.getContext('2d');
@@ -450,7 +452,9 @@ class Ps_transform_class {
 			kind: 'pixels',
 			smart: true,
 			layer: layer,
-			piece: smart.source,
+			piece: smart.filters && smart.filters.length ? app.GUI.Ps_workspace.Smart_filters.filtered(smart) : smart.source,
+			smart_source: smart.source,
+			smart_state: smart,
 			hole: doc_canvas(),
 			mask_piece: null,
 			geometry: { x: layer.x, y: layer.y, width: layer.width, height: layer.height, width_original: layer.width_original, height_original: layer.height_original },
@@ -1141,10 +1145,10 @@ class Ps_transform_class {
 			}));
 			actions.push(new app.Actions.Update_layer_image_action(result, job.layer.id));
 			if (job.smart) {
-				actions.push(new app.Actions.Update_layer_action(job.layer.id, { ps_smart: {
-					source: job.piece, box: Object.assign({}, job.box), quad: job.quad ? job.quad.map(c => ({ x: c.x, y: c.y })) : null,
+				actions.push(new app.Actions.Update_layer_action(job.layer.id, { ps_smart: Object.assign({}, job.smart_state, {
+					source: job.smart_source || job.piece, box: Object.assign({}, job.box), quad: job.quad ? job.quad.map(c => ({ x: c.x, y: c.y })) : null,
 					warp: job.warp ? job.warp.map(c => ({ x: c.x, y: c.y })) : null, lx: 0, ly: 0,
-				} }));
+				}) }));
 			}
 			if (job.mask_piece) {
 				var mask = doc_canvas();

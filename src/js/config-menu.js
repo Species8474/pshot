@@ -152,7 +152,7 @@ const M = [
 			'Copy Layer Style|ps/commands.copy_layer_style', 'Paste Layer Style|ps/commands.paste_layer_style', 'Clear Layer Style|ps/commands.clear_layer_style', '-',
 			'Global Light...', 'Create Layer', 'Hide All Effects', 'Scale Effects...',
 		]],
-		['Smart Filter', ['Disable Smart Filters', 'Delete Filter Mask', 'Disable Filter Mask', 'Clear Smart Filters']],
+		['Smart Filter', [{ name: 'Disable Smart Filters', target: 'ps/commands.smart_filters_toggle', dynamic_name: 'smart_filters_label' }, 'Delete Filter Mask', 'Disable Filter Mask', 'Clear Smart Filters|ps/commands.smart_filters_clear']],
 		'-',
 		['New Fill Layer', ['Solid Color...|ps/commands.new_fill_layer', 'Gradient...|ps/commands.new_gradient_fill_layer', 'Pattern...|ps/commands.new_pattern_fill_layer']],
 		['New Adjustment Layer', [{ name: 'Brightness/Contrast...', target: 'ps/commands.new_adjustment_layer', parameter: 'brightness_contrast' }, { name: 'Levels...', target: 'ps/commands.new_adjustment_layer', parameter: 'levels' }, { name: 'Curves...', target: 'ps/commands.new_adjustment_layer', parameter: 'curves' }, { name: 'Exposure...', target: 'ps/commands.new_adjustment_layer', parameter: 'exposure' }, '-', { name: 'Vibrance...', target: 'ps/commands.new_adjustment_layer', parameter: 'vibrance' }, { name: 'Hue/Saturation...', target: 'ps/commands.new_adjustment_layer', parameter: 'hue_saturation' }, { name: 'Color Balance...', target: 'ps/commands.new_adjustment_layer', parameter: 'color_balance' }, { name: 'Black & White...', target: 'ps/commands.new_adjustment_layer', parameter: 'black_white' }, { name: 'Photo Filter...', target: 'ps/commands.new_adjustment_layer', parameter: 'photo_filter' }, { name: 'Channel Mixer...', target: 'ps/commands.new_adjustment_layer', parameter: 'channel_mixer' }, { name: 'Color Lookup...', target: 'ps/commands.new_adjustment_layer', parameter: 'color_lookup' }, '-', { name: 'Invert', target: 'ps/commands.new_adjustment_layer', parameter: 'invert' }, { name: 'Posterize...', target: 'ps/commands.new_adjustment_layer', parameter: 'posterize' }, { name: 'Threshold...', target: 'ps/commands.new_adjustment_layer', parameter: 'threshold' }, { name: 'Gradient Map...', target: 'ps/commands.new_adjustment_layer', parameter: 'gradient_map' }, { name: 'Selective Color...', target: 'ps/commands.new_adjustment_layer', parameter: 'selective_color' }]],
@@ -245,7 +245,7 @@ const M = [
 	['Filter', [
 		'Last Filter|Ctrl+F|ps/commands.last_filter',
 		'-',
-		'Convert for Smart Filters',
+		'Convert for Smart Filters|ps/commands.convert_for_smart_filters',
 		'-',
 		'Filter Gallery...|ps/commands.filter_gallery',
 		'Adaptive Wide Angle...|Alt+Shift+Ctrl+A',

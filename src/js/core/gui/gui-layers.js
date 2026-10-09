@@ -587,10 +587,48 @@ class GUI_layers_class {
 					}
 					html += '</div>';
 				}
+				//pshot: Smart Filters under a smart object (top = applied last, CS6)
+				if (value.ps_smart && value.ps_smart.filters && value.ps_smart.filters.length) {
+					var sfs = value.ps_smart.filters, sf_off = !!value.ps_smart.filters_disabled;
+					html += '<div class="ps_effects ps_sfilters' + (sf_off ? ' disabled' : '') + '">';
+					html += '<div class="ps_effect_head"><span class="ps_sf_eye" data-sf-all="' + value.id + '" title="Show or hide all smart filters">' + (sf_off ? '' : ICON.eye) + '</span><span class="ps_sf_mask"></span><span>Smart Filters</span></div>';
+					for (var sfi = sfs.length - 1; sfi >= 0; sfi--) {
+						html += '<div class="ps_effect ps_sfilter" data-sf-layer="' + value.id + '" data-sf-index="' + sfi + '" title="Double-click to edit the filter settings">'
+							+ '<span class="ps_sf_eye" data-sf-eye="1">' + (sfs[sfi].visible === false ? '' : ICON.eye) + '</span><span class="ps_effect_name">' + this.Helper.escapeHtml(sfs[sfi].title) + '</span></div>';
+					}
+					html += '</div>';
+				}
 			}
 		}
 
 		target.innerHTML = html;
+		var SF = app.GUI && app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Smart_filters : null;
+		target.querySelectorAll('[data-sf-all]').forEach((el) => el.addEventListener('click', (e) => {
+			e.stopPropagation();
+			SF.toggle_all(this.Base_layers.get_layer(el.dataset.sfAll));
+		}));
+		target.querySelectorAll('[data-sf-index]').forEach((row) => {
+			var get = () => [this.Base_layers.get_layer(row.dataset.sfLayer), parseInt(row.dataset.sfIndex)];
+			row.addEventListener('click', (e) => {
+				e.stopPropagation();
+				if (e.target.closest('[data-sf-eye]')) { var g = get(); SF.toggle(g[0], g[1]); }
+			});
+			row.addEventListener('dblclick', (e) => {
+				e.stopPropagation();
+				var g = get();
+				if (g[0] && config.layer !== g[0]) app.State.do_action(new app.Actions.Select_layer_action(g[0].id));
+				SF.edit(g[0], g[1]);
+			});
+			row.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				var g = get();
+				show_popup_menu(row, [
+					{ name: 'Edit Smart Filter...', action: () => SF.edit(g[0], g[1]) },
+					{ name: 'Delete Smart Filter', action: () => SF.remove(g[0], g[1]) },
+				], { placement: 'below' });
+			});
+		});
 		target.querySelectorAll('canvas.ps_thumb').forEach((canvas) => {
 			var layer = this.Base_layers.get_layer(canvas.dataset.id);
 			if (layer) {
