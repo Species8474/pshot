@@ -208,7 +208,7 @@ class Ps_adjust_class {
 		}
 	}
 
-	show(title, html, setup, build_fn, kind) {
+	show(title, html, setup, build_fn, kind, hooks) {
 		if (this.layer_mode) {
 			return this.show_for_layer(title, html, setup, kind);
 		}
@@ -224,10 +224,11 @@ class Ps_adjust_class {
 			className: 'ps_adjust_dialog',
 			params: [{ function() { return '<div class="ps_adj">' + html + '<label class="ps_adj_preview"><input type="checkbox" id="ps_adj_preview" checked> Preview</label></div>'; } }],
 			on_finish() {
-				_this.finish(job, build_fn(state), title);
+				_this.finish(job, build_fn(state), (hooks && hooks.history_name) || title);
 			},
 			on_cancel() {
 				_this.cancel(job);
+				if (hooks && hooks.cancel) hooks.cancel();
 			},
 		});
 		var root = document.querySelector('#popups .popup .ps_adj');

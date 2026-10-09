@@ -90,7 +90,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Quick Mask mode.
   - Add, subtract and intersect; Inverse, Feather, Expand, Contract, Border; Reselect.
   - Move the selected pixels (Alt copies).
-  - Fill, Clear, Cut, Copy, Copy Merged, Paste, Paste in Place.
+  - Fill, Clear, Cut, Copy, Copy Merged, Paste, Paste in Place, Paste Into / Paste Outside (new layer masked by the selection).
+  - Edit > Stroke (Inside/Center/Outside; without a selection it outlines the layer's pixels) and Edit > Fade (Shift+Ctrl+F: opacity and mode of the last step).
 - **Layers**
   - New layers go above the active layer.
   - Groups (Ctrl+G and Shift+Ctrl+G; drag into and out of groups; the Move tool moves the whole group).
@@ -120,5 +121,5 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 
 ## Testing
-- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 211 targets, 0 errors at last run.
+- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 232 targets, 0 errors at last run.
 - Feature checks run through the Playwright MCP browser. Screenshots are in `docs/screens/`.

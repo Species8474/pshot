@@ -431,6 +431,222 @@ class Ps_commands_class {
 		]));
 	}
 
+	/**
+	 * Edit > Paste Into / Paste Outside: the clipboard as a new layer, masked by the selection
+	 */
+	async paste_into(outside) {
+		var sel = app.GUI.Ps_workspace.Selection;
+		if (!sel.has()) {
+			alertify.error('Could not complete the Paste ' + (outside ? 'Outside' : 'Into') + ' command because there is no selection.');
+			return;
+		}
+		if (!this.clipboard) {
+			return this.paste();
+		}
+		var part = this.clipboard;
+		var d = sel.mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, sel.mask.width, sel.mask.height).data;
+		var x0 = sel.mask.width, y0 = sel.mask.height, x1 = -1, y1 = -1;
+		for (var y = 0; y < sel.mask.height; y++) {
+			for (var x = 0; x < sel.mask.width; x++) {
+				if (d[(y * sel.mask.width + x) * 4 + 3] > 0) {
+					if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+				}
+			}
+		}
+		var mask = document.createElement('canvas');
+		mask.width = sel.mask.width;
+		mask.height = sel.mask.height;
+		var mctx = mask.getContext('2d');
+		if (outside) {
+			mctx.fillStyle = '#fff';
+			mctx.fillRect(0, 0, mask.width, mask.height);
+			mctx.globalCompositeOperation = 'destination-out';
+		}
+		mctx.drawImage(sel.mask, 0, 0);
+		//CS6 centers the pasted pixels on the selection
+		var px = Math.round(x0 + (x1 - x0 + 1 - part.canvas.width) / 2), py = Math.round(y0 + (y1 - y0 + 1 - part.canvas.height) / 2);
+		await app.State.do_action(new app.Actions.Bundle_action('paste', outside ? 'Paste Outside' : 'Paste Into', [
+			new app.Actions.Insert_layer_action({
+				type: 'image', x: px, y: py,
+				width: part.canvas.width, height: part.canvas.height,
+				width_original: part.canvas.width, height_original: part.canvas.height,
+				data: part.canvas.toDataURL('image/png'),
+				ps_mask: mask, ps_mask_x: px, ps_mask_y: py, ps_mask_disabled: false, ps_mask_editing: false,
+			}, false),
+		]));
+		sel.deselect();
+		app.GUI.GUI_layers.render_layers();
+	}
+
+	paste_outside() {
+		return this.paste_into(true);
+	}
+
+	/**
+	 * Edit > Stroke: an outline of the selection (or of the layer's pixels) in the foreground color
+	 */
+	stroke() {
+		ensure_pixel_layer();
+		var layer = config.layer;
+		if (!layer || layer.type != 'image' || !layer.link) {
+			alertify.error('Could not complete the Stroke command because the active layer is not a pixel layer.');
+			return;
+		}
+		var POP = new Dialog_class();
+		var saved = this.stroke_settings || { width: 1, location: 'Center', opacity: 100, mode: 'Normal', preserve: false };
+		var modes = { 'Normal': 'source-over', 'Multiply': 'multiply', 'Screen': 'screen', 'Overlay': 'overlay', 'Darken': 'darken', 'Lighten': 'lighten',
+			'Color Dodge': 'color-dodge', 'Color Burn': 'color-burn', 'Soft Light': 'soft-light', 'Hard Light': 'hard-light', 'Difference': 'difference',
+			'Exclusion': 'exclusion', 'Hue': 'hue', 'Saturation': 'saturation', 'Color': 'color', 'Luminosity': 'luminosity' };
+		POP.show({
+			title: 'Stroke',
+			params: [
+				{ title: 'Stroke' },
+				{ name: 'width', title: 'Width (px):', value: saved.width, range: [1, 250] },
+				{ name: 'color', title: 'Color:', value: config.COLOR, type: 'color' },
+				{ title: 'Location' },
+				{ name: 'location', title: '', values: ['Inside', 'Center', 'Outside'], value: saved.location, type: 'radio' },
+				{ title: 'Blending' },
+				{ name: 'mode', title: 'Mode:', values: Object.keys(modes), value: saved.mode },
+				{ name: 'opacity', title: 'Opacity (%):', value: saved.opacity, range: [1, 100] },
+				{ name: 'preserve', title: 'Preserve Transparency', value: saved.preserve },
+			],
+			on_finish: (params) => {
+				this.stroke_settings = { width: parseInt(params.width) || 1, location: params.location || 'Center', opacity: parseInt(params.opacity) || 100, mode: params.mode, preserve: !!params.preserve };
+				this.apply_stroke(layer, this.stroke_settings, params.color || config.COLOR, modes[params.mode] || 'source-over');
+			},
+		});
+	}
+
+	apply_stroke(layer, s, color, op) {
+		var sel = app.GUI.Ps_workspace.Selection;
+		var W = config.WIDTH, H = config.HEIGHT;
+		var shape = document.createElement('canvas');
+		shape.width = W;
+		shape.height = H;
+		var sctx = shape.getContext('2d');
+		if (sel.has()) {
+			sctx.drawImage(sel.mask, 0, 0);
+		}
+		else {
+			//no selection: the edge of the layer's pixels
+			this.Base_layers.render_object(sctx, layer);
+		}
+		var grow = (src, r) => {
+			var out = document.createElement('canvas');
+			out.width = W;
+			out.height = H;
+			var ctx = out.getContext('2d');
+			ctx.drawImage(src, 0, 0);
+			if (r <= 0) return out;
+			var steps = Math.max(16, Math.round(r * 6));
+			for (var i = 0; i < steps; i++) {
+				var a = i / steps * Math.PI * 2;
+				for (var k = 1; k <= r; k++) ctx.drawImage(src, Math.cos(a) * k, Math.sin(a) * k);
+			}
+			return out;
+		};
+		var invert = (src) => {
+			var out = document.createElement('canvas');
+			out.width = W;
+			out.height = H;
+			var ctx = out.getContext('2d');
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, W, H);
+			ctx.globalCompositeOperation = 'destination-out';
+			ctx.drawImage(src, 0, 0);
+			return out;
+		};
+		var outer_r = s.location == 'Outside' ? s.width : (s.location == 'Center' ? Math.ceil(s.width / 2) : 0);
+		var inner_r = s.location == 'Inside' ? s.width : (s.location == 'Center' ? Math.floor(s.width / 2) : 0);
+		var outer = grow(shape, outer_r);
+		var inner = inner_r > 0 ? invert(grow(invert(shape), inner_r)) : shape;
+		var ring = document.createElement('canvas');
+		ring.width = W;
+		ring.height = H;
+		var rctx = ring.getContext('2d');
+		rctx.drawImage(outer, 0, 0);
+		rctx.globalCompositeOperation = 'destination-out';
+		rctx.drawImage(inner, 0, 0);
+		rctx.globalCompositeOperation = 'source-in';
+		rctx.fillStyle = color;
+		rctx.fillRect(0, 0, W, H);
+		//into the layer's pixels
+		var out = document.createElement('canvas');
+		out.width = layer.width_original;
+		out.height = layer.height_original;
+		var octx = out.getContext('2d');
+		octx.drawImage(layer.link, 0, 0);
+		var sx = layer.width_original / layer.width, sy = layer.height_original / layer.height;
+		octx.setTransform(sx, 0, 0, sy, -layer.x * sx, -layer.y * sy);
+		octx.globalAlpha = s.opacity / 100;
+		octx.globalCompositeOperation = s.preserve || (layer.ps_lock && layer.ps_lock.transparency) ? 'source-atop' : op;
+		octx.drawImage(ring, 0, 0);
+		app.State.do_action(new app.Actions.Bundle_action('stroke', 'Stroke', [
+			new app.Actions.Update_layer_image_action(out, layer.id),
+		]));
+	}
+
+	/**
+	 * Edit > Fade (Shift+Ctrl+F): blend the result of the last pixel operation with
+	 * the state before it, at an opacity and blend mode
+	 */
+	async fade() {
+		var history = app.State.action_history;
+		var last = history[app.State.action_history_index - 1];
+		var layer = config.layer;
+		if (!last || !layer || layer.type != 'image' || !layer.link) {
+			return;
+		}
+		var copy = (src) => {
+			var c = document.createElement('canvas');
+			c.width = src.width;
+			c.height = src.height;
+			c.getContext('2d').drawImage(src, 0, 0);
+			return c;
+		};
+		var after = copy(layer.link);
+		var layer_id = layer.id;
+		await app.State.undo_action();
+		layer = this.Base_layers.get_layer(layer_id);
+		if (!layer || !layer.link || layer.link.width != after.width || layer.link.height != after.height) {
+			await app.State.redo_action();
+			alertify.error('Could not Fade because the last step did not change the pixels of this layer.');
+			return;
+		}
+		if (layer !== config.layer) {
+			await app.State.do_action(new app.Actions.Select_layer_action(layer_id));
+		}
+		var modes = { 'Normal': 'source-over', 'Multiply': 'multiply', 'Screen': 'screen', 'Overlay': 'overlay', 'Darken': 'darken', 'Lighten': 'lighten',
+			'Color Dodge': 'color-dodge', 'Color Burn': 'color-burn', 'Soft Light': 'soft-light', 'Hard Light': 'hard-light', 'Difference': 'difference',
+			'Exclusion': 'exclusion', 'Hue': 'hue', 'Saturation': 'saturation', 'Color': 'color', 'Luminosity': 'luminosity' };
+		var html = '<div class="ps_adj_slider"><span>Opacity:</span><input type="number" id="fade_opacity_n" min="0" max="100" value="100"><span class="ps_adj_unit">%</span>'
+			+ '<input type="range" id="fade_opacity" min="0" max="100" value="100"></div>'
+			+ '<div class="ps_adj_row"><span>Mode:</span><select id="fade_mode">' + Object.keys(modes).map(m => '<option>' + m + '</option>').join('') + '</select></div>';
+		var name = last.action_description;
+		this.Adjust.show('Fade', html, (root, state, update) => {
+			state.opacity = 100;
+			state.mode = 'Normal';
+			var r = root.querySelector('#fade_opacity'), n = root.querySelector('#fade_opacity_n');
+			var set = (v) => { if (isNaN(v)) return; state.opacity = Math.max(0, Math.min(100, v)); r.value = n.value = state.opacity; update(); };
+			r.addEventListener('input', () => set(parseFloat(r.value)));
+			n.addEventListener('change', () => set(parseFloat(n.value)));
+			root.querySelector('#fade_mode').addEventListener('change', (e) => { state.mode = e.target.value; update(); });
+		}, (state) => (src, dst, w, h) => {
+			var c = document.createElement('canvas');
+			c.width = w;
+			c.height = h;
+			var ctx = c.getContext('2d', { willReadFrequently: true });
+			ctx.putImageData(new ImageData(new Uint8ClampedArray(src), w, h), 0, 0);
+			ctx.globalAlpha = state.opacity / 100;
+			ctx.globalCompositeOperation = modes[state.mode] || 'source-over';
+			ctx.drawImage(after, 0, 0);
+			dst.set(ctx.getImageData(0, 0, w, h).data);
+		}, 'fade', {
+			history_name: 'Fade ' + name,
+			cancel: () => app.State.redo_action(),
+		});
+	}
+
 	free_transform() {
 		var locks = (config.layer && config.layer.ps_lock) || {};
 		if (locks.all || locks.position || locks.image) {
