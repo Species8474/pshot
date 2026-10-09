@@ -286,6 +286,136 @@ class Ps_extras_class {
 	/**
 	 * Image > Analysis > Ruler Tool / Count Tool
 	 */
+	/**
+	 * View > Print Size: the document at its printed size (Screen Resolution 72 ppi)
+	 */
+	print_size() {
+		var ppi = app.GUI.Ps_workspace.Documents.current().ppi || 72;
+		app.GUI.GUI_preview.zoom(72 / ppi * 100);
+	}
+
+	/**
+	 * Type > Update All Text Layers: re-lays out every text layer
+	 */
+	update_text_layers() {
+		config.layers.forEach(l => { if (l.type == 'text') { delete l._ps_warp_cache; delete l._ps_aa_cache; } });
+		config.need_render = true;
+		app.GUI.Ps_workspace.status_message('Text layers updated.');
+	}
+
+	/**
+	 * fonts the browser does not have (rendered with a fallback instead)
+	 */
+	font_missing(family) {
+		var ctx = this._font_ctx || (this._font_ctx = document.createElement('canvas').getContext('2d'));
+		var text = 'mmmmmmmmmmlli10WQ@';
+		return ['monospace', 'serif', 'sans-serif'].every((base) => {
+			ctx.font = '72px ' + base;
+			var w0 = ctx.measureText(text).width;
+			ctx.font = '72px "' + family + '", ' + base;
+			return ctx.measureText(text).width == w0;
+		});
+	}
+
+	/**
+	 * Type > Replace All Missing Fonts: missing fonts become the default font (Arial)
+	 */
+	async replace_missing_fonts() {
+		var actions = [], missing = new Set();
+		for (var l of config.layers) {
+			if (l.type != 'text' || !Array.isArray(l.data)) continue;
+			var changed = false;
+			var data = l.data.map(line => line.map(span => {
+				var fam = span.meta && span.meta.family;
+				if (fam && !['monospace', 'serif', 'sans-serif'].includes(fam) && this.font_missing(fam)) {
+					missing.add(fam);
+					changed = true;
+					return Object.assign({}, span, { meta: Object.assign({}, span.meta, { family: 'Arial' }) });
+				}
+				return span;
+			}));
+			if (changed) actions.push(new app.Actions.Update_layer_action(l.id, { data: data }));
+		}
+		if (!actions.length) {
+			app.GUI.Ps_workspace.status_message('There are no missing fonts.');
+			return;
+		}
+		await app.State.do_action(new app.Actions.Bundle_action('replace_fonts', 'Replace All Missing Fonts', actions));
+		app.GUI.Ps_workspace.status_message('Replaced ' + Array.from(missing).join(', ') + ' with Arial.');
+	}
+
+	/**
+	 * Edit > Find and Replace Text: Change All in the text layers (within each style run)
+	 */
+	find_replace_text() {
+		var POP = new Dialog_class();
+		var s = this.find_state || { find: '', change: '', all: true, case: false, whole: false };
+		POP.show({
+			title: 'Find and Replace Text',
+			params: [
+				{ name: 'find', title: 'Find What:', value: s.find },
+				{ name: 'change', title: 'Change To:', value: s.change },
+				{ name: 'all', title: 'Search All Layers', value: s.all },
+				{ name: 'case', title: 'Case Sensitive', value: s.case },
+				{ name: 'whole', title: 'Whole Word Only', value: s.whole },
+			],
+			on_finish: (p) => {
+				this.find_state = p;
+				this.replace_all_text(p);
+			},
+		});
+	}
+
+	async replace_all_text(p) {
+		if (!p.find) return;
+		var esc = String(p.find).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		var re = new RegExp(p.whole ? '\\b' + esc + '\\b' : esc, p.case ? 'g' : 'gi');
+		var layers = p.all ? config.layers : [config.layer];
+		var actions = [], count = 0;
+		for (var l of layers) {
+			if (!l || l.type != 'text' || !Array.isArray(l.data)) continue;
+			var changed = false;
+			var data = l.data.map(line => line.map(span => {
+				var hits = (span.text.match(re) || []).length;
+				if (!hits) return span;
+				count += hits;
+				changed = true;
+				return Object.assign({}, span, { text: span.text.replace(re, () => p.change) });
+			}));
+			if (changed) actions.push(new app.Actions.Update_layer_action(l.id, { data: data }));
+		}
+		if (actions.length) {
+			await app.State.do_action(new app.Actions.Bundle_action('find_replace', 'Replace All Text', actions));
+		}
+		alertify.success('Search completed. ' + count + ' replacement' + (count == 1 ? '' : 's') + ' made.');
+	}
+
+	/**
+	 * Help > System Info
+	 */
+	system_info() {
+		var gl = document.createElement('canvas').getContext('webgl');
+		var dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+		var lines = [
+			'pshot version: ' + (typeof VERSION != 'undefined' ? VERSION : 'dev'),
+			'Operating System: ' + (navigator.userAgentData && navigator.userAgentData.platform || navigator.platform),
+			'Browser: ' + navigator.userAgent,
+			'Number of logical processors: ' + (navigator.hardwareConcurrency || 'unknown'),
+			'Device memory: ' + (navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'unknown'),
+			'Language: ' + navigator.language,
+			'Display: ' + screen.width + 'x' + screen.height + ', ' + screen.colorDepth + '-bit, device pixel ratio ' + window.devicePixelRatio,
+			'Graphics processor: ' + (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : (gl ? gl.getParameter(gl.RENDERER) : 'WebGL unavailable')),
+			'Open documents: ' + app.GUI.Ps_workspace.Documents.docs.length,
+			'Current document: ' + config.WIDTH + ' x ' + config.HEIGHT + ' px, ' + config.layers.length + ' layers',
+			'History states: ' + app.State.action_history.length,
+		];
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'System Info',
+			params: [{ html: '<textarea readonly style="width:560px;height:240px;font-family:monospace;font-size:11px">' + lines.join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</textarea>' }],
+		});
+	}
+
 	select_tool(id) {
 		var ws = app.GUI.Ps_workspace;
 		ws.groups.forEach((g, gi) => g.members.forEach((m, mi) => { if (m.id == id) ws.select_member(gi, mi); }));

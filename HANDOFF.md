@@ -107,6 +107,11 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Type > Convert to Shape (`ps/commands.type_to_shape`): the text layer becomes a shape layer in place (same id, effects and masks kept) from its traced outline (`Paths.trace_mask`), filled with the text color.
   - Type > Convert to Paragraph Text / Convert to Point Text (dynamic menu label): toggles the text layer's `params.boundary` between `dynamic` and `box`; undoable. Point conversion does not yet insert hard returns at the wrap points like CS6.
   - View > Snap To > Guides / Grid / Layers / Document Bounds / All / None (`config.ps_snap_to`, checked in the menu); grid snapping works while the grid is shown, guide snapping while guides are shown. Slices is not built.
+  - Filter > Video > De-Interlace (odd/even fields, duplication/interpolation) and NTSC Colors (YIQ composite kept in broadcast range).
+  - View > Print Size (and the Hand/Zoom options bar button): zoom = 72 / document ppi.
+  - Type > Update All Text Layers; Type > Replace All Missing Fonts (fonts the browser lacks, by width detection, become Arial; undoable).
+  - Edit > Find and Replace Text (Change All; Search All Layers, Case Sensitive, Whole Word Only; replaces within each style run). No Find Next / Change single yet.
+  - Help > System Info (read-only report).
   - Color Lookup (dialog and adjustment layer): built-in looks with the CS6 3DLUT names, Load 3D LUT... reads .CUBE files (trilinear lookup; stored in the layer state), Dither.
   - HDR Toning: flattens first (confirm), Local Adaptation (Edge Glow radius/strength, Gamma, Exposure, Detail, Shadow, Highlight, Vibrance, Saturation), Equalize Histogram, Exposure and Gamma, Highlight Compression, presets.
   - Match Color: Reinhard-style transfer of the YCbCr mean and spread from another open document (its merged image is cached as `flat` on the document entry when switching away) or the active document's merged image; Luminance, Color Intensity, Fade, Neutralize.

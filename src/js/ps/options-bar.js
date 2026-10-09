@@ -130,7 +130,7 @@ const ZOOM_BUTTONS = [
 	{ type: 'button', text: 'Actual Pixels', action: () => app.GUI.modules['view/zoom'].original() },
 	{ type: 'button', text: 'Fit Screen', action: () => app.GUI.modules['view/zoom'].auto() },
 	{ type: 'button', text: 'Fill Screen', action: () => fill_screen() },
-	{ type: 'button', text: 'Print Size' },
+	{ type: 'button', text: 'Print Size', action: () => app.GUI.Ps_workspace.Extras.print_size() },
 ];
 const SHAPE_COMMON = (extra) => [
 	{ type: 'select', values: ['Shape', 'Path', 'Pixels'], bind: 'shape_mode', map: { Shape: 'Shape', Path: 'Path', Pixels: 'Pixels' } },

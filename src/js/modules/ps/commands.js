@@ -754,6 +754,11 @@ class Ps_commands_class {
 	effects_label() { return app.GUI.Ps_workspace.Extras.effects_label(); }
 	scale_effects() { app.GUI.Ps_workspace.Extras.scale_effects(); }
 	global_light() { app.GUI.Ps_workspace.Extras.global_light(); }
+	print_size() { app.GUI.Ps_workspace.Extras.print_size(); }
+	update_text_layers() { app.GUI.Ps_workspace.Extras.update_text_layers(); }
+	replace_missing_fonts() { app.GUI.Ps_workspace.Extras.replace_missing_fonts(); }
+	find_replace_text() { app.GUI.Ps_workspace.Extras.find_replace_text(); }
+	system_info() { app.GUI.Ps_workspace.Extras.system_info(); }
 	show_extras(on) { app.GUI.Ps_workspace.Extras.show_extras(on !== false); }
 	analysis_tool(id) { app.GUI.Ps_workspace.Extras.select_tool(id || 'ruler'); }
 	batch() { app.GUI.Ps_workspace.Batch.batch(); }

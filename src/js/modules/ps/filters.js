@@ -791,7 +791,45 @@ class Ps_filters_class {
 		});
 	}
 
+	ntsc_colors() {
+		this.direct('ntsc_colors', 'NTSC Colors', (src, dst) => {
+			//keep the composite signal (luma + chroma amplitude, YIQ) within broadcast range
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i] / 255, g = src[i + 1] / 255, b = src[i + 2] / 255;
+				var y = 0.299 * r + 0.587 * g + 0.114 * b;
+				var ci = 0.596 * r - 0.274 * g - 0.322 * b, cq = 0.211 * r - 0.523 * g + 0.312 * b;
+				var c = Math.hypot(ci, cq), k = 1;
+				if (y + c > 1) k = Math.min(k, (1 - y) / c);
+				if (y - c < -0.2) k = Math.min(k, (y + 0.2) / c);
+				ci *= k; cq *= k;
+				dst[i] = (y + 0.956 * ci + 0.621 * cq) * 255;
+				dst[i + 1] = (y - 0.272 * ci - 0.647 * cq) * 255;
+				dst[i + 2] = (y - 1.106 * ci + 1.703 * cq) * 255;
+			}
+		});
+	}
+
 	// ---------- dialog filters ----------
+
+	de_interlace() {
+		this.dialog('de_interlace', 'De-Interlace', [
+			{ key: 'eliminate', label: 'Eliminate:', type: 'radio', values: ['Odd Fields', 'Even Fields'], value: 'Odd Fields' },
+			{ key: 'create', label: 'Create New Fields by:', type: 'radio', values: ['Duplication', 'Interpolation'], value: 'Interpolation' },
+		], (s) => (src, dst, w, h) => {
+			//odd fields are rows 1, 3, 5... (counting from 1: the first row is odd)
+			var drop = s.eliminate == 'Odd Fields' ? 0 : 1;
+			var row = (y) => y * w * 4;
+			for (var y = drop; y < h; y += 2) {
+				var above = y - 1, below = y + 1;
+				for (var x = 0; x < w * 4; x++) {
+					if ((x & 3) == 3) continue;
+					var a = above >= 0 ? src[row(above) + x] : src[row(below) + x];
+					var b = below < h ? src[row(below) + x] : a;
+					dst[row(y) + x] = s.create == 'Duplication' ? (above >= 0 ? a : b) : (a + b) / 2;
+				}
+			}
+		});
+	}
 
 	box_blur() {
 		this.dialog('box_blur', 'Box Blur', [{ key: 'radius', label: 'Radius:', min: 1, max: 999, value: 5, unit: 'Pixels' }], (s) => (src, dst, w, h) => {
