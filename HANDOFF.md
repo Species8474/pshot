@@ -204,6 +204,6 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 
 ## Testing
 - Test layers built in page code must have an `Image` as `link` (Update_layer_image_action reads `link.src`); a canvas `link` makes every later adjustment silently do nothing.
-- Menu sweep: dump the `config-menu.js` targets to `public/targets.json`, then in Playwright stub file inputs, confirm/alert/prompt and anchor clicks with addInitScript and call every target (330 targets, 328 run after skipping print/fullscreen; 0 errors on 2026-10-09).
-- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 303 targets, 0 errors at last run.
+- Menu sweep: dump the `config-menu.js` targets to `public/targets.json`, then in Playwright stub file inputs, confirm/alert/prompt and anchor clicks with addInitScript and call every target (402 targets, 400 run after skipping Close / Close All; 0 errors on 2026-10-09 evening).
+- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts).
 - Feature checks run through the Playwright MCP browser. Screenshots are in `docs/screens/`.
