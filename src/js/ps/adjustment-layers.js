@@ -39,6 +39,7 @@ const KINDS = {
 	channel_mixer: { title: 'Channel Mixer', dialog: 'channel_mixer' },
 	gradient_map: { title: 'Gradient Map', dialog: 'gradient_map' },
 	selective_color: { title: 'Selective Color', dialog: 'selective_color' },
+	color_lookup: { title: 'Color Lookup', dialog: 'color_lookup' },
 	invert: { title: 'Invert' },
 	posterize: { title: 'Posterize', state: { levels: 4 }, dialog: 'posterize' },
 	threshold: { title: 'Threshold', state: { level: 128 }, dialog: 'threshold' },
@@ -75,6 +76,7 @@ class Ps_adjustment_layers_class {
 				for (var i = 0; i < src.length; i += 4) { dst[i] = 255 - src[i]; dst[i + 1] = 255 - src[i + 1]; dst[i + 2] = 255 - src[i + 2]; }
 			};
 			case 'black_white': return this.adjust().build_black_white(state);
+			case 'color_lookup': return state.look ? this.adjust().build_color_lookup(state) : null;
 			case 'posterize': {
 				var n = Math.max(2, Math.min(255, state.levels || 4));
 				var lut = new Uint8ClampedArray(256);

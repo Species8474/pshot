@@ -62,6 +62,7 @@ class Ps_commands_class {
 	equalize() { this.Adjust.equalize(); }
 	variations() { this.Adjust.variations(); }
 	hdr_toning() { return this.Adjust.hdr_toning(); }
+	color_lookup() { this.Adjust.color_lookup(); }
 
 	new_adjustment_layer(kind) { app.GUI.Ps_workspace.Adjustment_layers.create(kind); }
 

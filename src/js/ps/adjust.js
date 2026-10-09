@@ -95,6 +95,54 @@ function hsl_to_rgb(h, s, l) {
 	return [hue2rgb(p, q, h + 1 / 3) * 255, hue2rgb(p, q, h) * 255, hue2rgb(p, q, h - 1 / 3) * 255];
 }
 
+/**
+ * .CUBE text -> { n, data: [r, g, b, ...] (red fastest) }
+ */
+function parse_cube(text) {
+	var n = 0, data = [], dmin = [0, 0, 0], dmax = [1, 1, 1];
+	for (var line of text.split(/\r?\n/)) {
+		line = line.trim();
+		if (!line || line[0] == '#') continue;
+		var parts = line.split(/\s+/);
+		if (parts[0] == 'LUT_3D_SIZE') n = parseInt(parts[1]);
+		else if (parts[0] == 'DOMAIN_MIN') dmin = parts.slice(1, 4).map(parseFloat);
+		else if (parts[0] == 'DOMAIN_MAX') dmax = parts.slice(1, 4).map(parseFloat);
+		else if (/^[-\d.]/.test(parts[0]) && parts.length >= 3) {
+			for (var c = 0; c < 3; c++) data.push(Math.round((parseFloat(parts[c]) - dmin[c]) / ((dmax[c] - dmin[c]) || 1) * 10000) / 10000);
+		}
+	}
+	if (n < 2 || data.length != n * n * n * 3) return null;
+	return { n: n, data: data };
+}
+
+//procedural looks named after the CS6 3DLUT presets (r, g, b in 0..1)
+function lum_of(r, g, b) { return r * 0.299 + g * 0.587 + b * 0.114; }
+function mix(a, b, t) { return a + (b - a) * t; }
+function sat_of(c, s) { var l = lum_of(c[0], c[1], c[2]); return c.map(v => mix(l, v, s)); }
+function con_of(c, k) { return c.map(v => 0.5 + (v - 0.5) * k); }
+const LOOKS = {
+	'2Strip.look': (r, g, b) => { var cy = (g + b) / 2; return [r, cy, cy]; },
+	'3Strip.look': (r, g, b) => con_of(sat_of([r, g, b], 1.5), 1.1),
+	'Bleach Bypass.look': (r, g, b) => { var l = lum_of(r, g, b); return con_of([r, g, b].map(v => mix(v, l, 0.55)), 1.35); },
+	'Candlelight.CUBE': (r, g, b) => [r * 1.08 + 0.04, g * 0.94 + 0.01, b * 0.7],
+	'Crisp_Warm.look': (r, g, b) => con_of([r * 1.05, g, b * 0.92], 1.15),
+	'Crisp_Winter.look': (r, g, b) => con_of([r * 0.93, g * 0.99, b * 1.07], 1.15),
+	'Drop Blues.3DL': (r, g, b) => { var l = lum_of(r, g, b); return [r, g, mix(b, l, 0.6)]; },
+	'EdgyAmber.3DL': (r, g, b) => { var c = con_of(sat_of([r, g, b], 0.5), 1.25); return [c[0] * 1.12, c[1] * 0.92, c[2] * 0.6]; },
+	'FallColors.look': (r, g, b) => [r * 1.05 + g * 0.1, g * 0.9, b * 0.85],
+	'FoggyNight.3DL': (r, g, b) => { var c = sat_of([r, g, b], 0.7); return [0.18 + c[0] * 0.65, 0.2 + c[1] * 0.68, 0.26 + c[2] * 0.7]; },
+	'HorrorBlue.3DL': (r, g, b) => { var c = con_of(sat_of([r, g, b], 0.3), 1.2); return [c[0] * 0.8, c[1] * 0.95, c[2] * 1.15]; },
+	'LateSunset.3DL': (r, g, b) => [r * 1.15 + 0.02, g * 0.9, b * 0.95 + 0.03],
+	'Moonlight.3DL': (r, g, b) => { var c = sat_of([r, g, b], 0.4); return [c[0] * 0.6, c[1] * 0.7, c[2] * 0.9 + 0.04]; },
+	'NightFromDay.CUBE': (r, g, b) => { var c = sat_of([r, g, b], 0.5); return [c[0] * 0.3, c[1] * 0.4, c[2] * 0.6 + 0.03]; },
+	'Soft_Warming.look': (r, g, b) => [r * 1.04 + 0.02, g * 1.01 + 0.01, b * 0.92],
+	'TealOrangePlusContrast.3DL': (r, g, b) => {
+		var l = lum_of(r, g, b), t = [mix(0, 1, l), mix(0.5, 0.6, l), mix(0.55, 0.25, l)];
+		return con_of([mix(r, t[0], 0.35), mix(g, t[1], 0.35), mix(b, t[2], 0.35)], 1.2);
+	},
+	'TensionGreen.3DL': (r, g, b) => { var c = con_of(sat_of([r, g, b], 0.7), 1.15); return [c[0] * 0.9, c[1] * 1.08, c[2] * 0.95]; },
+};
+
 class Ps_adjust_class {
 
 	/**
@@ -1078,6 +1126,88 @@ class Ps_adjust_class {
 					R = m + (R - m) * (1 + amt); G = m + (G - m) * (1 + amt); Bc = m + (Bc - m) * (1 + amt);
 				}
 				dst[o] = R; dst[o + 1] = G; dst[o + 2] = Bc;
+			}
+		};
+	}
+
+	/**
+	 * CS6 Color Lookup: a 3D LUT from the built-in list (procedural looks named
+	 * like the CS6 presets) or a loaded .CUBE file
+	 */
+	color_lookup() {
+		var names = Object.keys(LOOKS);
+		var html = '<div class="ps_adj_row ps_clut_row"><label class="ps_adj_check"><input type="radio" name="clut_kind" checked> 3DLUT File</label><select id="clut_file"><option value="">Load 3D LUT...</option>'
+			+ names.map(n => '<option>' + n + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row ps_clut_row"><label class="ps_adj_check"><input type="radio" name="clut_kind" disabled> Abstract</label><select disabled><option>Load Abstract Profile...</option></select></div>'
+			+ '<div class="ps_adj_row ps_clut_row"><label class="ps_adj_check"><input type="radio" name="clut_kind" disabled> Device Link</label><select disabled><option>Load DeviceLink Profile...</option></select></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="clut_dither"> Dither</label>';
+		this.show('Color Lookup', html, (root, state, update) => {
+			var sel = root.querySelector('#clut_file');
+			var refresh = () => {
+				if (state.file) {
+					var opt = sel.querySelector('option[data-file]');
+					if (!opt) { opt = document.createElement('option'); opt.dataset.file = '1'; sel.insertBefore(opt, sel.options[1]); }
+					opt.textContent = state.file.name;
+					opt.value = '__file';
+					sel.value = state.look == '__file' ? '__file' : (state.look || '');
+				}
+				else sel.value = state.look || '';
+				root.querySelector('#clut_dither').checked = !!state.dither;
+			};
+			sel.addEventListener('change', () => {
+				if (sel.value) { state.look = sel.value; update(); return; }
+				//Load 3D LUT...
+				var input = document.createElement('input');
+				input.type = 'file';
+				input.accept = '.cube,.CUBE';
+				input.addEventListener('change', () => {
+					var f = input.files[0];
+					if (!f) return refresh();
+					f.text().then((text) => {
+						var lut = parse_cube(text);
+						if (!lut) { alertify.error('Could not load the 3D LUT "' + f.name + '".'); return refresh(); }
+						state.file = { name: f.name, n: lut.n, data: lut.data };
+						state.look = '__file';
+						refresh();
+						update();
+					});
+				});
+				input.click();
+				refresh();
+			});
+			root.querySelector('#clut_dither').addEventListener('change', (e) => { state.dither = e.target.checked; update(); });
+			refresh();
+		}, (state) => this.build_color_lookup(state), 'color_lookup');
+	}
+
+	build_color_lookup(state) {
+		var look = state.look;
+		var fn = null;
+		if (look == '__file' && state.file) {
+			var n = state.file.n, d = state.file.data, m = n - 1;
+			fn = (r, g, b) => {
+				//trilinear, red fastest (CUBE order)
+				var x = r * m, y = g * m, z = b * m;
+				var x0 = Math.min(m - 1, Math.floor(x)), y0 = Math.min(m - 1, Math.floor(y)), z0 = Math.min(m - 1, Math.floor(z));
+				if (m == 0) x0 = y0 = z0 = 0;
+				var fx = x - x0, fy = y - y0, fz = z - z0, out = [0, 0, 0];
+				for (var c = 0; c < 3; c++) {
+					var at = (i, j, k) => d[((k * n + j) * n + i) * 3 + c];
+					var c00 = at(x0, y0, z0) * (1 - fx) + at(x0 + 1, y0, z0) * fx, c10 = at(x0, y0 + 1, z0) * (1 - fx) + at(x0 + 1, y0 + 1, z0) * fx;
+					var c01 = at(x0, y0, z0 + 1) * (1 - fx) + at(x0 + 1, y0, z0 + 1) * fx, c11 = at(x0, y0 + 1, z0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1, z0 + 1) * fx;
+					out[c] = (c00 * (1 - fy) + c10 * fy) * (1 - fz) + (c01 * (1 - fy) + c11 * fy) * fz;
+				}
+				return out;
+			};
+		}
+		else if (LOOKS[look]) fn = LOOKS[look];
+		var dither = !!state.dither;
+		return (src, dst) => {
+			if (!fn) return;
+			for (var i = 0; i < src.length; i += 4) {
+				var o = fn(src[i] / 255, src[i + 1] / 255, src[i + 2] / 255);
+				var e = dither ? Math.random() - 0.5 : 0;
+				dst[i] = o[0] * 255 + e; dst[i + 1] = o[1] * 255 + e; dst[i + 2] = o[2] * 255 + e;
 			}
 		};
 	}

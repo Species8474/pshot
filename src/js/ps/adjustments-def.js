@@ -30,7 +30,7 @@ const ADJUSTMENTS = [
 	['Black & White', 'ps/commands.black_white', `<rect x="2" y="2" width="14" height="14" ${S}/><path d="M2 16L16 2V16z" fill="currentColor"/>`, 'black_white'],
 	['Photo Filter', 'ps/commands.photo_filter', `<rect x="1.5" y="5" width="15" height="10" rx="1.5" ${S}/><circle cx="9" cy="10" r="3.2" ${S}/><path d="M6 5l1-2h4l1 2" ${S}/>`, 'photo_filter'],
 	['Channel Mixer', 'ps/commands.channel_mixer', `<circle cx="6.5" cy="7" r="4" ${S}/><circle cx="11.5" cy="7" r="4" ${S}/><circle cx="9" cy="11.5" r="4" ${S}/>`, 'channel_mixer'],
-	['Color Lookup', null, `<rect x="2" y="2" width="6" height="6" fill="currentColor"/><rect x="10" y="2" width="6" height="6" ${S}/><rect x="2" y="10" width="6" height="6" ${S}/><rect x="10" y="10" width="6" height="6" fill="currentColor"/>`, null],
+	['Color Lookup', 'ps/commands.color_lookup', `<rect x="2" y="2" width="6" height="6" fill="currentColor"/><rect x="10" y="2" width="6" height="6" ${S}/><rect x="2" y="10" width="6" height="6" ${S}/><rect x="10" y="10" width="6" height="6" fill="currentColor"/>`, 'color_lookup'],
 	['Invert', 'ps/commands.invert', `<rect x="2" y="2" width="14" height="14" ${S}/><path d="M2 2h7v14H2z" fill="currentColor"/>`, 'invert'],
 	['Posterize', 'ps/commands.posterize', `<path d="M2 16h3.5v-4H9V8h3.5V4H16" ${S}/>`, 'posterize'],
 	['Threshold', 'ps/commands.threshold', `<path d="M2 14h6V4h8" ${S}/><path d="M8 4v10h8V4z" fill="currentColor"/>`, 'threshold'],
