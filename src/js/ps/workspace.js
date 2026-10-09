@@ -24,14 +24,18 @@ import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_guides_class from './guides.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
+import { render_character, render_paragraph } from './type-panels.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
+	character: 'Character', paragraph: 'Paragraph',
 };
 
 const STRIP_ICONS = {
+	character: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 15L7.5 3h1L13 15M5 11h6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
+	paragraph: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M9 3h5M11 3v12M9 3v12M9 3a3 3 0 0 0 0 6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
 	history: '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2.5" y="3" width="10" height="12" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h5M5 9h5M5 12h5" stroke="currentColor" stroke-width="1.2"/><path d="M14.5 4v10" stroke="currentColor" stroke-width="1.2"/></svg>',
 	properties: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 4.5h12M3 9h12M3 13.5h12" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="4.5" r="1.6" fill="currentColor"/><circle cx="12" cy="9" r="1.6" fill="currentColor"/><circle cx="8" cy="13.5" r="1.6" fill="currentColor"/></svg>',
 	navigator: '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2" y="3.5" width="14" height="11" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="6" y="6.5" width="6" height="5" fill="none" stroke="#c03030" stroke-width="1.4"/></svg>',
@@ -608,6 +612,12 @@ class Ps_workspace_class {
 		this.open_popout = panel;
 		if (panel == 'history') {
 			this.render_history();
+		}
+		if (panel == 'character') {
+			render_character(document.getElementById('ps_character'));
+		}
+		if (panel == 'paragraph') {
+			render_paragraph(document.getElementById('ps_paragraph'));
 		}
 	}
 

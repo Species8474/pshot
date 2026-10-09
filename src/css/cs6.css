@@ -1362,3 +1362,18 @@ body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { cursor: default; }
 .ps_info_hint { padding-top: 6px; color: #cfcfcf; }
 body.theme-cs6 #toggle_colors .ui_number_input { width: 58px; flex: none; }
 body.theme-cs6 #toggle_colors .ui_input_group input[type="range"] { min-width: 0; flex: 1; }
+
+/* Character / Paragraph panels */
+.ps_typ { padding: 8px; width: 236px; display: flex; flex-direction: column; gap: 6px; }
+.ps_typ_row { display: flex; align-items: center; gap: 4px; }
+.ps_typ_row select, .ps_typ_row input[type="number"] { height: 20px; background: #f0f0f0; color: #111; border: 1px solid #222; font-size: 11px; min-width: 0; }
+.ps_typ_row input[type="number"] { width: 52px; }
+.ps_typ_row select:disabled, .ps_typ_row input:disabled { opacity: .5; }
+.ps_typ_wide { flex: 1; }
+.ps_typ_icon { width: 22px; text-align: center; color: #cfcfcf; font-size: 10px; }
+.ps_typ_row > span:not(.ps_typ_icon) { color: #d8d8d8; }
+.ps_typ_color { width: 40px; height: 16px; border: 1px solid #111; padding: 0; border-radius: 0; }
+.ps_typ_faux button, .ps_typ_align button { width: 24px; height: 22px; padding: 0; background: #4a4a4a; border: 1px solid #333; border-radius: 2px; color: #e0e0e0; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.ps_typ_faux button.pressed, .ps_typ_align button.pressed { background: #2c2c2c; box-shadow: inset 0 1px 2px rgba(0,0,0,.6); color: #fff; }
+.ps_typ_faux button.disabled, .ps_typ_align button.disabled { opacity: .4; pointer-events: none; }
+.ps_typ_hint { color: #bdbdbd; font-size: 11px; }

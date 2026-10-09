@@ -63,6 +63,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - The toolbox with flyouts and Shift+letter cycling.
   - Per-tool options bars.
   - The dock: Color, Swatches, Adjustments, Styles, Layers, Channels, Paths. The icon strip holds History and Properties; Navigator and Info open from the Window menu.
+  - Character and Paragraph panels (Window menu, Type > Panels): font, style, size, leading, tracking, colour, faux styles, alignment. With a type layer selected but not being edited, changes apply to all its text.
   - Screen modes (F) and Tab to hide panels.
 - **Documents**
   - Tabs.
@@ -103,7 +104,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Magnetic Lasso, Color Replacement, Mixer Brush, History Brush, Pen paths and the Paths panel, Slice tools, 3D.
 - Adjustment kinds: Selective Color, Color Lookup, Shadows/Highlights, HDR Toning.
 - Styles: Bevel & Emboss, Satin, Pattern Overlay. Vector masks. Smart Objects.
-- Brush hardness, flow and the Brush panel. Character and Paragraph panels.
+- Brush hardness, flow and the Brush panel.
 - Multiple layer selection (Shift-click) is not supported: miniPaint has one active layer.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 
