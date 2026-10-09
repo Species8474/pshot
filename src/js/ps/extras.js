@@ -166,7 +166,7 @@ class Ps_extras_class {
 		actions.push(new app.Actions.Prepare_canvas_action('do'));
 		await app.State.do_action(new app.Actions.Bundle_action('open', 'Load Layers', actions));
 		app.GUI.modules['ps/commands'].purge_histories();
-		app.GUI.GUI_preview.zoom_auto(true);
+		app.GUI.GUI_preview.zoom_open();
 		app.GUI.GUI_layers.render_layers();
 	}
 

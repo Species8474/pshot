@@ -451,7 +451,7 @@ async function open_document(files) {
 	config.ps_path_active = -1;
 	app.GUI.Ps_workspace.Paths.render_panel();
 	app.GUI.modules['ps/commands'].purge_histories();
-	app.GUI.GUI_preview.zoom_auto(true);
+	app.GUI.GUI_preview.zoom_open();
 	app.GUI.GUI_layers.render_layers();
 	config.need_render = true;
 }

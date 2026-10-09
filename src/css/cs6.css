@@ -1705,3 +1705,4 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 #ps_tool_presets { width: 240px; display: flex; flex-direction: column; }
 #ps_tool_presets .ps_panel_footer .ps_tpre_only { margin-right: auto; padding: 0; }
 .ps_tool_preset:not([disabled]) { cursor: pointer; }
+.ps_dialog_note { color: var(--ps-text-dim); font-size: 11px; }

@@ -752,6 +752,11 @@ class Ps_commands_class {
 	lock_layers() { app.GUI.Ps_workspace.Extras.lock_layers(); }
 	toggle_all_effects() { app.GUI.Ps_workspace.Extras.toggle_all_effects(); }
 	effects_label() { return app.GUI.Ps_workspace.Extras.effects_label(); }
+	photomerge() { app.GUI.Ps_workspace.Automate.photomerge(); }
+	crop_straighten() { app.GUI.Ps_workspace.Automate.crop_straighten(); }
+	contact_sheet() { app.GUI.Ps_workspace.Automate.contact_sheet(); }
+	conditional_mode() { app.GUI.Ps_workspace.Automate.conditional_mode(); }
+	statistics() { app.GUI.Ps_workspace.Automate.statistics(); }
 	auto_align() { app.GUI.Ps_workspace.Auto_align.align_dialog(); }
 	auto_blend() { app.GUI.Ps_workspace.Auto_align.blend_dialog(); }
 	create_style_layers() { app.GUI.Ps_workspace.Styles.create_layers(); }

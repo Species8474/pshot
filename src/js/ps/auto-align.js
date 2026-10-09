@@ -33,39 +33,63 @@ function sample_layer(layer, k) {
 }
 
 /**
- * mean absolute difference of `mov` shifted by (dx, dy) against `ref` over the overlap
+ * an image's own pixels ({ link, width, height }) at scale k -> { w, h, gray, alpha }
+ */
+function sample_local(item, k) {
+	var w = Math.max(1, Math.round(item.width * k)), h = Math.max(1, Math.round(item.height * k));
+	var c = document.createElement('canvas');
+	c.width = w;
+	c.height = h;
+	var ctx = c.getContext('2d', { willReadFrequently: true });
+	ctx.drawImage(item.link, 0, 0, w, h);
+	var d = ctx.getImageData(0, 0, w, h).data;
+	var gray = new Float32Array(w * h), alpha = new Uint8Array(w * h);
+	for (var i = 0; i < w * h; i++) {
+		gray[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+		alpha[i] = d[i * 4 + 3];
+	}
+	return { w: w, h: h, gray: gray, alpha: alpha };
+}
+
+/**
+ * mean absolute difference with `mov` placed at (dx, dy) in `ref` coordinates, over the overlap
  */
 function cost(ref, mov, dx, dy, step) {
-	var w = ref.w, h = ref.h, sum = 0, n = 0;
-	for (var y = 0; y < h; y += step) {
-		var my = y - dy;
-		if (my < 0 || my >= h) continue;
-		for (var x = 0; x < w; x += step) {
-			var mx = x - dx;
-			if (mx < 0 || mx >= w) continue;
-			var i = y * w + x, j = my * w + mx;
+	var x0 = Math.max(0, dx), y0 = Math.max(0, dy), x1 = Math.min(ref.w, dx + mov.w), y1 = Math.min(ref.h, dy + mov.h);
+	if (x1 <= x0 || y1 <= y0) return Infinity;
+	var sum = 0, n = 0;
+	for (var y = y0; y < y1; y += step) {
+		for (var x = x0; x < x1; x += step) {
+			var i = y * ref.w + x, j = (y - dy) * mov.w + (x - dx);
 			if (ref.alpha[i] < 128 || mov.alpha[j] < 128) continue;
 			sum += Math.abs(ref.gray[i] - mov.gray[j]);
 			n++;
 		}
 	}
 	//too little overlap is not a match
-	var total = (w / step) * (h / step);
-	if (n < total * 0.08) return Infinity;
+	var smaller = Math.min(ref.w * ref.h, mov.w * mov.h) / (step * step);
+	if (n < smaller * 0.08) return Infinity;
 	return sum / n;
 }
 
-function best_offset(ref_layer, layer) {
-	var dx = 0, dy = 0;
-	var levels = [1 / 8, 1 / 4, 1 / 2, 1];
+/**
+ * where `mov` sits relative to `ref` (pixels): a search around `guess`
+ * (within `range` of the larger size) at about 64 px, refined up to full size
+ */
+function best_offset(ref_item, mov_item, guess, range) {
+	var big = Math.max(ref_item.width, ref_item.height, mov_item.width, mov_item.height);
+	var levels = [];
+	for (var k = Math.min(1, 64 / big); k < 1; k *= 2) levels.push(k);
+	levels.push(1);
+	var dx = guess.x, dy = guess.y;
 	levels.forEach((k, li) => {
-		var ref = sample_layer(ref_layer, k), mov = sample_layer(layer, k);
+		var ref = sample_local(ref_item, k), mov = sample_local(mov_item, k);
 		var cx = Math.round(dx * k), cy = Math.round(dy * k);
-		var range = li == 0 ? Math.round(Math.max(ref.w, ref.h) * 0.45) : 2;
+		var r = li == 0 ? Math.round(big * k * range) : 2;
 		var step = ref.w * ref.h > 200000 ? 2 : 1;
 		var best = Infinity, bx = cx, by = cy;
-		for (var oy = cy - range; oy <= cy + range; oy++) {
-			for (var ox = cx - range; ox <= cx + range; ox++) {
+		for (var oy = cy - r; oy <= cy + r; oy++) {
+			for (var ox = cx - r; ox <= cx + r; ox++) {
 				var c = cost(ref, mov, ox, oy, step);
 				if (c < best) { best = c; bx = ox; by = oy; }
 			}
@@ -167,7 +191,7 @@ class Ps_auto_align_class {
 			title: 'Auto-Align Layers',
 			params: [
 				{ name: 'projection', title: 'Projection:', values: ['Auto', 'Reposition'], value: this.projection || 'Auto' },
-				{ title: 'Perspective, Collage, Cylindrical and Spherical are not available in pshot.' },
+				{ title: '', html: '<span class="ps_dialog_note">Perspective, Collage, Cylindrical and Spherical are not available in pshot.</span>' },
 				{ name: 'vignette', title: 'Vignette Removal', value: false },
 				{ name: 'distortion', title: 'Geometric Distortion', value: false },
 			],
@@ -184,8 +208,9 @@ class Ps_auto_align_class {
 		var ref = list[0];
 		var actions = [];
 		for (var l of list.slice(1)) {
-			var o = best_offset(ref, l);
-			if (o.x || o.y) actions.push(new app.Actions.Update_layer_action(l.id, { x: (l.x || 0) + o.x, y: (l.y || 0) + o.y }));
+			var o = best_offset(ref, l, { x: (l.x || 0) - (ref.x || 0), y: (l.y || 0) - (ref.y || 0) }, 0.45);
+			var nx = (ref.x || 0) + o.x, ny = (ref.y || 0) + o.y;
+			if (nx != l.x || ny != l.y) actions.push(new app.Actions.Update_layer_action(l.id, { x: nx, y: ny }));
 		}
 		if (actions.length) await app.State.do_action(new app.Actions.Bundle_action('auto_align', 'Auto-Align Layers', actions));
 		app.GUI.Ps_workspace.status_message('Auto-Align Layers: ' + actions.length + ' layer' + (actions.length == 1 ? '' : 's') + ' moved.');
@@ -234,8 +259,12 @@ class Ps_auto_align_class {
 			var m = doc_canvas(), mctx = m.getContext('2d');
 			var img = mctx.createImageData(W, H), d = img.data;
 			for (var i2 = 0; i2 < W * H; i2++) {
+				//a layer also reveals what upper layers own (they cover it), so only
+				//its seam with the layers below is feathered and the alphas add up;
 				//the bottom layer keeps whatever no layer covers
-				var on = owner[i2] == n || (n == 0 && owner[i2] < 0);
+				//(where the layer has no pixels the mask does not matter: on, so the
+				//feather stays off the layer's outer edges)
+				var on = owner[i2] >= n || samples[n].alpha[i2] < 128 || (n == 0 && owner[i2] < 0);
 				d[i2 * 4] = d[i2 * 4 + 1] = d[i2 * 4 + 2] = 255;
 				d[i2 * 4 + 3] = on ? 255 : 0;
 			}
@@ -243,6 +272,13 @@ class Ps_auto_align_class {
 			var soft = doc_canvas(), sctx = soft.getContext('2d');
 			sctx.filter = 'blur(' + feather + 'px)';
 			sctx.drawImage(m, 0, 0);
+			sctx.filter = 'none';
+			//the blur fades toward the document border: keep a hard band there
+			var band = Math.ceil(feather * 3);
+			sctx.clearRect(0, 0, W, band); sctx.drawImage(m, 0, 0, W, band, 0, 0, W, band);
+			sctx.clearRect(0, H - band, W, band); sctx.drawImage(m, 0, H - band, W, band, 0, H - band, W, band);
+			sctx.clearRect(0, 0, band, H); sctx.drawImage(m, 0, 0, band, H, 0, 0, band, H);
+			sctx.clearRect(W - band, 0, band, H); sctx.drawImage(m, W - band, 0, band, H, W - band, 0, band, H);
 			var settings = { ps_mask: soft, ps_mask_x: l.x || 0, ps_mask_y: l.y || 0, ps_mask_disabled: false, ps_mask_editing: false };
 			actions.push(new app.Actions.Update_layer_action(l.id, settings));
 		});
@@ -293,4 +329,5 @@ class Ps_auto_align_class {
 	}
 }
 
+export { best_offset };
 export default Ps_auto_align_class;

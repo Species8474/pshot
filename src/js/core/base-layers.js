@@ -169,6 +169,19 @@ class Base_layers_class {
 			config.need_render = true;
 		}
 
+		//pshot: along an axis where the document fits the canvas it starts at 0; a stale
+		//offset from the previous document would cut it off
+		var ws = this.Base_gui.Ps_workspace;
+		if (!(ws && ws.view_rotation)) {
+			var vp = zoomView.getPosition(), vs = zoomView.getScale();
+			var fx = config.WIDTH * vs <= this.ctx.canvas.width + 0.5 ? 0 : vp.x;
+			var fy = config.HEIGHT * vs <= this.ctx.canvas.height + 0.5 ? 0 : vp.y;
+			if (fx != vp.x || fy != vp.y) {
+				zoomView.setView(vs, fx, fy);
+				config.need_render = true;
+			}
+		}
+
 		if (config.need_render == true) {
 			this.render_success = null;
 

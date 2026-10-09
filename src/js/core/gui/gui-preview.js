@@ -284,6 +284,19 @@ class GUI_preview_class {
 	}
 
 	/**
+	 * pshot: a new or opened document shows at 100% when it fits, otherwise at
+	 * the largest CS6 zoom step that fits
+	 */
+	zoom_open() {
+		var container = document.getElementById('main_wrapper');
+		if (Math.min(container.clientWidth / config.WIDTH, container.clientHeight / config.HEIGHT) >= 1) {
+			if (config.ZOOM != 1) this.zoom(100);
+			return;
+		}
+		this.zoom_auto(true);
+	}
+
+	/**
 	 * scroll the document view by screen pixels
 	 */
 	pan(dx, dy) {

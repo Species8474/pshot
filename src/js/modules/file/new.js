@@ -126,7 +126,7 @@ class File_new_class {
 		app.GUI.modules['ps/commands'].purge_histories();
 
 		//fit to screen?
-		this.Base_gui.GUI_preview.zoom_auto(true);
+		this.Base_gui.GUI_preview.zoom_open();
 
 		// Save transparency
 		if (transparency) {
