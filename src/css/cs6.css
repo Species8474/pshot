@@ -755,7 +755,7 @@ body.theme-cs6 #toggle_colors .ui_input_grid { gap: 3px; }
 body.theme-cs6 #toggle_colors .ui_input_group { margin: 0; gap: 6px; }
 body.theme-cs6 #toggle_colors .ui_input_group label { width: 12px; color: #e3e3e3; }
 body.theme-cs6 #toggle_colors .ui_input_group label strong { font-weight: normal; }
-body.theme-cs6 #toggle_colors input[type="number"] { width: 40px; height: 18px; font-size: 11px; }
+body.theme-cs6 #toggle_colors input[type="number"] { width: 54px; height: 18px; font-size: 11px; }
 .ps_spectrum {
 	display: block;
 	width: 100%;
@@ -1351,3 +1351,14 @@ body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { cursor: default; }
 .ps_cs_grid { display: grid; grid-template-columns: repeat(3, 22px); gap: 2px; }
 .ps_cs_anchor { width: 22px; height: 22px; padding: 0; background: #444; border: 1px solid #2a2a2a; border-radius: 0; }
 .ps_cs_anchor.active { background: #d8d8d8; }
+
+/* Info panel */
+#ps_info { padding: 8px 10px; }
+.ps_info_grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
+.ps_info_cell { display: flex; gap: 8px; }
+.ps_info_cell b { font-weight: normal; color: #f0f0f0; }
+.ps_info_icon { width: 14px; color: #cfcfcf; }
+.ps_info_doc { padding: 6px 0; border-bottom: 1px solid #444; }
+.ps_info_hint { padding-top: 6px; color: #cfcfcf; }
+body.theme-cs6 #toggle_colors .ui_number_input { width: 58px; flex: none; }
+body.theme-cs6 #toggle_colors .ui_input_group input[type="range"] { min-width: 0; flex: 1; }

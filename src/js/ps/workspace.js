@@ -93,6 +93,7 @@ class Ps_workspace_class {
 		this.init_options_bar();
 		this.init_statusbar();
 		this.hook_state();
+		this.init_info_panel();
 		this.Keymap.install();
 		this.Guides.install();
 		this.Groups.install_group_move();
@@ -875,6 +876,46 @@ class Ps_workspace_class {
 		el.textContent = text;
 		clearTimeout(this.status_message_timer);
 		this.status_message_timer = setTimeout(() => { el.textContent = ''; }, 3500);
+	}
+
+	// =================================================================
+	// Info panel (CS6: RGB / CMYK under the cursor, X/Y, W/H)
+	// =================================================================
+
+	init_info_panel() {
+		var host = document.querySelector('.ps_panel[data-panel="info"]');
+		var block = document.createElement('div');
+		block.id = 'ps_info';
+		block.innerHTML = '<div class="ps_info_grid">'
+			+ '<div class="ps_info_cell"><span class="ps_info_icon">&#8857;</span><div><div>R: <b id="pi_r"></b></div><div>G: <b id="pi_g"></b></div><div>B: <b id="pi_b"></b></div></div></div>'
+			+ '<div class="ps_info_cell"><span class="ps_info_icon">&#8857;</span><div><div>C: <b id="pi_c"></b></div><div>M: <b id="pi_m"></b></div><div>Y: <b id="pi_y"></b></div><div>K: <b id="pi_k"></b></div></div></div>'
+			+ '<div class="ps_info_cell"><span class="ps_info_icon">+</span><div><div>X: <b id="pi_x"></b></div><div>Y: <b id="pi_yy"></b></div></div></div>'
+			+ '<div class="ps_info_cell"><span class="ps_info_icon">&#9633;</span><div><div>W: <b id="pi_w"></b></div><div>H: <b id="pi_h"></b></div></div></div>'
+			+ '</div><div class="ps_info_doc" id="pi_doc"></div><div class="ps_info_hint" id="pi_hint"></div>';
+		host.insertBefore(block, host.firstChild);
+		document.getElementById('toggle_info').style.display = 'none';
+		var set = (id, v) => { var el = document.getElementById(id); if (el) el.textContent = v; };
+		document.getElementById('main_wrapper').addEventListener('mousemove', (e) => {
+			if (this.open_popout != 'info') return;
+			var canvas = document.getElementById('canvas_minipaint');
+			var rect = canvas.getBoundingClientRect();
+			var sx = Math.floor(e.clientX - rect.left), sy = Math.floor(e.clientY - rect.top);
+			var p = app.Layers.get_world_coords(sx, sy);
+			set('pi_x', Math.round(p.x));
+			set('pi_yy', Math.round(p.y));
+			if (sx >= 0 && sy >= 0 && sx < canvas.width && sy < canvas.height) {
+				var d = canvas.getContext('2d').getImageData(sx, sy, 1, 1).data;
+				set('pi_r', d[0]); set('pi_g', d[1]); set('pi_b', d[2]);
+				var k = 1 - Math.max(d[0], d[1], d[2]) / 255;
+				var cmy = (v) => k >= 1 ? 0 : Math.round((1 - v / 255 - k) / (1 - k) * 100);
+				set('pi_c', cmy(d[0]) + '%'); set('pi_m', cmy(d[1]) + '%'); set('pi_y', cmy(d[2]) + '%'); set('pi_k', Math.round(k * 100) + '%');
+			}
+			var b = this.Selection.bounds;
+			set('pi_w', b ? b.width : '');
+			set('pi_h', b ? b.height : '');
+			set('pi_doc', 'Doc: ' + this.format_bytes(config.WIDTH * config.HEIGHT * 3));
+			set('pi_hint', this.active_member ? 'Click and drag to use the ' + this.active_member.name.replace(/ Tool$/, '').toLowerCase() + ' tool.' : '');
+		});
 	}
 
 	// =================================================================
