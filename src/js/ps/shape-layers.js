@@ -208,6 +208,41 @@ class Ps_shape_layers_class {
 		app.GUI.Ps_workspace.Paths.changed();
 	}
 
+	/**
+	 * a shape drawn with a Path operation joins an existing shape layer
+	 */
+	async add_component(layer, subpaths, op) {
+		var all = this.current_subpaths(layer).concat(subpaths.map((sp, i) => Object.assign({}, sp, i == 0 ? { op: op } : {})));
+		var names = { combine: 'Combine Shapes', subtract: 'Subtract Front Shape', intersect: 'Intersect Shape Areas', exclude: 'Exclude Overlapping Shapes' };
+		await app.State.do_action(new app.Actions.Bundle_action('shape_layer', names[op] || 'Combine Shapes', [
+			new app.Actions.Select_layer_action(layer.id, true),
+			new app.Actions.Update_layer_action(layer.id, app.GUI.Ps_workspace.Paths.layer_path_settings(layer, all)),
+		]));
+		config.ps_path_active = 'layer';
+		app.GUI.GUI_layers.render_layers();
+		app.GUI.Ps_workspace.Paths.changed();
+	}
+
+	/**
+	 * Path operations > Merge Shape Components: the visible result as one plain path
+	 */
+	async merge_components() {
+		var layer = config.layer;
+		if (!layer || layer.type != 'ps_shape') return;
+		var mask = document.createElement('canvas');
+		mask.width = config.WIDTH;
+		mask.height = config.HEIGHT;
+		this.render(mask.getContext('2d'), Object.assign({}, layer, { ps_shape: Object.assign({}, layer.ps_shape, { fill: '#000000', stroke: null }) }));
+		var subpaths = app.GUI.Ps_workspace.Paths.trace_mask(mask, 0.75);
+		if (!subpaths.length) return;
+		var settings = app.GUI.Ps_workspace.Paths.layer_path_settings(layer, subpaths);
+		settings.ps_shape.fill_rule = 'evenodd';
+		await app.State.do_action(new app.Actions.Bundle_action('shape_layer', 'Merge Shape Components', [
+			new app.Actions.Update_layer_action(layer.id, settings),
+		]));
+		app.GUI.Ps_workspace.Paths.changed();
+	}
+
 	next_name(base) {
 		var n = 0;
 		var re = new RegExp('^' + base + ' (\\d+)$');

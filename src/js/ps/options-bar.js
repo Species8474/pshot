@@ -12,6 +12,7 @@ import { names as custom_shape_names } from './custom-shapes.js';
 import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 import Patterns from './patterns.js';
+import { show_popup_menu } from './popup-menu.js';
 
 function measure_tool() {
 	return app.GUI.GUI_tools.tools_modules.ps_measure.object;
@@ -142,7 +143,7 @@ const SHAPE_COMMON = (extra) => [
 	{ type: 'sep' },
 	{ type: 'num', label: 'W:', unit: 'px', width: 50 },
 	{ type: 'num', label: 'H:', unit: 'px', width: 50 },
-	{ type: 'icon', icon: IC.path_ops, title: 'Path operations' },
+	{ type: 'icon', icon: IC.path_ops, title: 'Path operations', action: (e) => shape_ops_menu(e.currentTarget) },
 	{ type: 'icon', icon: IC.gear, title: 'Set additional shape and path options' },
 	...extra,
 ];
@@ -621,6 +622,24 @@ LAYOUTS.vertical_type = LAYOUTS.type_mask = LAYOUTS.vertical_type_mask = LAYOUTS
 
 function run(command) {
 	app.GUI.modules['ps/commands'][command]();
+}
+
+/**
+ * shape tools in Shape mode: how the next shape joins the selected shape layer
+ */
+function shape_ops_menu(anchor) {
+	var ws = app.GUI.Ps_workspace, cur = ws.shape_op || 'new';
+	var shape_layer = config.layer && config.layer.type == 'ps_shape';
+	var item = (name, op) => ({ name: name, checked: cur == op, action: () => { ws.shape_op = op; } });
+	show_popup_menu(anchor, [
+		item('New Layer', 'new'),
+		item('Combine Shapes', 'combine'),
+		item('Subtract Front Shape', 'subtract'),
+		item('Intersect Shape Areas', 'intersect'),
+		item('Exclude Overlapping Shapes', 'exclude'),
+		{ divider: true },
+		{ name: 'Merge Shape Components', action: shape_layer ? () => ws.Shapes.merge_components() : null },
+	]);
 }
 
 function fill_screen() {

@@ -105,6 +105,12 @@ async function convert(job) {
 		}
 		app.State.action_history.length = app.State.action_history_index;
 		var Shapes = app.GUI.Ps_workspace.Shapes;
+		//Path operations other than New Layer add the shape to the selected shape layer
+		var op = app.GUI.Ps_workspace.shape_op || 'new';
+		if (op != 'new' && job.before && job.before.type == 'ps_shape' && config.layers.includes(job.before)) {
+			await Shapes.add_component(job.before, Array.isArray(shape_path) ? shape_path : [shape_path], op);
+			return;
+		}
 		var tool_names = { rectangle: custom ? 'Custom Shape Tool' : 'Rectangle Tool', ellipse: 'Ellipse Tool', line: 'Line Tool', pentagon: 'Polygon Tool' };
 		await Shapes.create(Shapes.next_name(name), Array.isArray(shape_path) ? shape_path : [shape_path], fill, stroke, tool_names[layer.type], custom ? 'evenodd' : 'nonzero');
 		return;
