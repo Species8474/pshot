@@ -1054,12 +1054,32 @@ body.theme-cs6 #toggle_info { padding: 8px; }
 
 .ps_bottombar {
 	display: flex;
-	align-items: flex-end;
-	gap: 1px;
-	padding-left: 2px;
+	flex-direction: column;
+	min-height: 0;
 	background: var(--ps-tabstrip);
 	border-top: 1px solid var(--ps-border);
 }
+.ps_bottomtabs {
+	display: flex;
+	align-items: flex-end;
+	gap: 1px;
+	padding-left: 2px;
+	height: 20px;
+	flex: 0 0 20px;
+}
+.ps_bottomtab.active { background: var(--ps-panel); color: var(--ps-text); }
+.ps_bottompanel { display: none; flex: 1 1 auto; min-height: 0; background: var(--ps-panel); flex-direction: column; }
+.ps_app.bottom_open { grid-template-rows: 22px 34px minmax(0, 1fr) 190px; }
+.ps_app.bottom_open.hide_panels { grid-template-rows: 22px 0 minmax(0, 1fr) 190px; }
+.ps_app.bottom_open .ps_bottompanel { display: flex; }
+.ps_mlog_bar { display: flex; align-items: center; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--ps-border); }
+.ps_mlog_bar button { height: 22px; padding: 0 8px; font-size: 11px; }
+.ps_mlog_spacer { flex: 1; }
+.ps_mlog_table { flex: 1 1 auto; overflow: auto; min-height: 0; }
+.ps_mlog_table table { border-collapse: collapse; font-size: 11px; color: var(--ps-text); white-space: nowrap; }
+.ps_mlog_table th { position: sticky; top: 0; background: var(--ps-panel-dark); font-weight: normal; text-align: left; padding: 3px 8px; border-right: 1px solid var(--ps-border); }
+.ps_mlog_table td { padding: 2px 8px; border-right: 1px solid var(--ps-border); border-bottom: 1px solid var(--ps-panel-dark); }
+.ps_mlog_table tr.selected td { background: var(--ps-select); color: var(--ps-text-strong); }
 .ps_bottomtab {
 	height: 19px;
 	padding: 0 10px;

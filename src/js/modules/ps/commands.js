@@ -760,6 +760,10 @@ class Ps_commands_class {
 	find_replace_text() { app.GUI.Ps_workspace.Extras.find_replace_text(); }
 	system_info() { app.GUI.Ps_workspace.Extras.system_info(); }
 	show_extras(on) { app.GUI.Ps_workspace.Extras.show_extras(on !== false); }
+	record_measurements() { app.GUI.Ps_workspace.Measure_log.record(); }
+	measurement_scale(kind) { app.GUI.Ps_workspace.Measure_log.set_scale(kind); }
+	data_points(kind) { app.GUI.Ps_workspace.Measure_log.select_points(kind); }
+	toggle_measure_log() { app.GUI.Ps_workspace.Measure_log.toggle(); }
 	analysis_tool(id) { app.GUI.Ps_workspace.Extras.select_tool(id || 'ruler'); }
 	batch() { app.GUI.Ps_workspace.Batch.batch(); }
 	export_layers() { app.GUI.Ps_workspace.Batch.export_layers(); }

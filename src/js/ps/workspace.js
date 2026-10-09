@@ -24,6 +24,7 @@ import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_warp_text_class from './warp-text.js';
 import Ps_text_aa_class from './text-aa.js';
 import Ps_clone_source_class from './clone-source.js';
+import Ps_measure_log_class from './measure-log.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -106,6 +107,7 @@ class Ps_workspace_class {
 		this.Warp_text = new Ps_warp_text_class();
 		this.Text_aa = new Ps_text_aa_class();
 		this.Clone_source = new Ps_clone_source_class();
+		this.Measure_log = new Ps_measure_log_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -1016,6 +1018,7 @@ class Ps_workspace_class {
 			case 'grid': return app.GUI.grid == true;
 			case 'pixel_grid': return this.pixel_grid !== false;
 			case 'layer_edges': return this.layer_edges === true;
+			case 'measure_log': return this.Measure_log.open;
 			case 'target_path': return this.target_path !== false;
 			case 'show_notes': return this.show_notes !== false;
 			case 'guides': return config.guides_enabled == true;
