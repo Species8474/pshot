@@ -1,6 +1,7 @@
 /*
  * pshot - CS6 layer styles (fx): Drop Shadow, Inner Shadow, Outer Glow,
- * Inner Glow, Stroke, Color Overlay, Gradient Overlay, plus Fill Opacity.
+ * Inner Glow, Stroke, Bevel & Emboss, Satin, Color Overlay, Gradient Overlay,
+ * plus Fill Opacity.
  *
  * layer.ps_styles = { drop_shadow: {...}, ... }; each entry has `enabled`.
  * Effects are drawn at render time (non-destructive) from the layer's alpha.
@@ -25,6 +26,9 @@ const DEFAULTS = {
 	outer_glow: { enabled: false, blend: 'Screen', color: '#ffffbe', opacity: 75, size: 5 },
 	inner_glow: { enabled: false, blend: 'Screen', color: '#ffffbe', opacity: 75, size: 5 },
 	stroke: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100, size: 3, position: 'Outside' },
+	bevel: { enabled: false, style: 'Inner Bevel', technique: 'Smooth', depth: 100, direction: 'Up', size: 5, soften: 0, angle: 120, altitude: 30,
+		highlight_blend: 'Screen', highlight_color: '#ffffff', highlight_opacity: 75, shadow_blend: 'Multiply', shadow_color: '#000000', shadow_opacity: 75 },
+	satin: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 50, angle: 19, distance: 11, size: 14, invert: true },
 	color_overlay: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100 },
 	gradient_overlay: { enabled: false, blend: 'Normal', opacity: 100, color_1: '#000000', color_2: '#ffffff', angle: 90, reverse: false },
 };
@@ -32,11 +36,11 @@ const DEFAULTS = {
 // left column of the CS6 Layer Style dialog (null = not available yet)
 const LIST = [
 	['blending', 'Blending Options: Default'],
-	[null, 'Bevel & Emboss'], [null, 'Contour'], [null, 'Texture'],
+	['bevel', 'Bevel & Emboss'], [null, 'Contour'], [null, 'Texture'],
 	['stroke', 'Stroke'],
 	['inner_shadow', 'Inner Shadow'],
 	['inner_glow', 'Inner Glow'],
-	[null, 'Satin'],
+	['satin', 'Satin'],
 	['color_overlay', 'Color Overlay'],
 	['gradient_overlay', 'Gradient Overlay'],
 	[null, 'Pattern Overlay'],
@@ -107,6 +111,105 @@ class Ps_styles_class {
 		return out;
 	}
 
+	alpha_of(canvas) {
+		var d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height).data;
+		var a = new Float32Array(canvas.width * canvas.height);
+		for (var i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] / 255;
+		return a;
+	}
+
+	blurred(src, blur) {
+		var out = canvas_like(src);
+		var ctx = out.getContext('2d');
+		if (blur > 0) ctx.filter = 'blur(' + blur + 'px)';
+		ctx.drawImage(src, 0, 0);
+		return out;
+	}
+
+	/**
+	 * a canvas of `color` whose alpha is `alpha` (0..1 per pixel) times opacity
+	 */
+	from_alpha(w, h, alpha, color, opacity) {
+		var out = document.createElement('canvas');
+		out.width = w;
+		out.height = h;
+		var ctx = out.getContext('2d');
+		var img = ctx.createImageData(w, h);
+		var r = parseInt(color.substr(1, 2), 16), g = parseInt(color.substr(3, 2), 16), b = parseInt(color.substr(5, 2), 16);
+		for (var i = 0; i < alpha.length; i++) {
+			if (alpha[i] <= 0) continue;
+			img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = b;
+			img.data[i * 4 + 3] = Math.min(255, alpha[i] * opacity * 255);
+		}
+		ctx.putImageData(img, 0, 0);
+		return out;
+	}
+
+	/**
+	 * Bevel & Emboss: shading of a height map built from the layer's alpha.
+	 * returns { inner: [highlight, shadow], outer: [highlight, shadow] } canvases
+	 */
+	bevel(content, e, scale) {
+		var w = content.width, h = content.height;
+		var size = Math.max(1, e.size * scale);
+		var style = e.style || 'Inner Bevel';
+		var shape = this.alpha_of(content);
+		var height;
+		if (style == 'Inner Bevel') {
+			//ramp inside the edge: blur of the shape, kept inside
+			height = this.alpha_of(this.blurred(this.inverted(content), size / 2));
+			for (var i = 0; i < height.length; i++) height[i] = 1 - height[i];
+		}
+		else if (style == 'Outer Bevel') {
+			height = this.alpha_of(this.blurred(content, size / 2));
+		}
+		else {
+			height = this.alpha_of(this.blurred(content, size / 2));
+		}
+		var depth = (e.depth == null ? 100 : e.depth) / 100 * (e.direction == 'Down' ? -1 : 1);
+		var k = size * depth * 1.5;
+		var th = (e.angle || 0) * Math.PI / 180, ph = (e.altitude == null ? 30 : e.altitude) * Math.PI / 180;
+		var lx = Math.cos(ph) * Math.cos(th), ly = -Math.cos(ph) * Math.sin(th), lz = Math.sin(ph);
+		var hi = new Float32Array(w * h), sh = new Float32Array(w * h);
+		for (var y = 1; y < h - 1; y++) {
+			for (var x = 1; x < w - 1; x++) {
+				var p = y * w + x;
+				var gx = (height[p + 1] - height[p - 1]) / 2 * k, gy = (height[p + w] - height[p - w]) / 2 * k;
+				if (gx == 0 && gy == 0) continue;
+				var len = Math.sqrt(gx * gx + gy * gy + 1);
+				var shade = (-gx * lx - gy * ly + lz) / len - lz;
+				var inside = shape[p];
+				var weight = style == 'Inner Bevel' ? inside : (style == 'Outer Bevel' ? 1 - inside : 1);
+				if (shade > 0) hi[p] = Math.min(1, shade / (1 - lz + 0.001)) * weight;
+				else sh[p] = Math.min(1, -shade / (lz + 0.001)) * weight;
+			}
+		}
+		var soften = (e.soften || 0) * scale;
+		var mk = (a, color, opacity) => {
+			var c = this.from_alpha(w, h, a, color, opacity / 100);
+			return soften > 0 ? this.blurred(c, soften) : c;
+		};
+		return [mk(hi, e.highlight_color, e.highlight_opacity), mk(sh, e.shadow_color, e.shadow_opacity)];
+	}
+
+	/**
+	 * Satin: difference of two offset, blurred copies of the shape
+	 */
+	satin(content, e, scale) {
+		var w = content.width, h = content.height;
+		var a = (e.angle || 0) * Math.PI / 180;
+		var dx = Math.cos(a) * e.distance * scale, dy = -Math.sin(a) * e.distance * scale;
+		var blur = e.size * scale / 2;
+		var a1 = this.alpha_of(this.shadow_only(content, '#000000', 100, dx, dy, blur));
+		var a2 = this.alpha_of(this.shadow_only(content, '#000000', 100, -dx, -dy, blur));
+		var out = new Float32Array(w * h);
+		for (var i = 0; i < out.length; i++) {
+			var v = Math.abs(a1[i] - a2[i]);
+			out[i] = e.invert ? 1 - v : v;
+		}
+		return this.from_alpha(w, h, out, e.color, e.opacity / 100);
+	}
+
 	/**
 	 * content: the layer rendered on a canvas the size of the target (screen space)
 	 * scale: document -> screen scale, for sizes given in document pixels
@@ -157,6 +260,23 @@ class Ps_styles_class {
 			ctx.globalAlpha = 1;
 		}
 
+		//outer part of Bevel & Emboss
+		var bevel = on('bevel') ? this.bevel(content, s.bevel, scale) : null;
+		if (bevel && (s.bevel.style || 'Inner Bevel') != 'Inner Bevel') {
+			var outside = (c) => {
+				var o = canvas_like(content);
+				var octx = o.getContext('2d');
+				octx.drawImage(c, 0, 0);
+				octx.globalCompositeOperation = 'destination-out';
+				octx.drawImage(content, 0, 0);
+				return o;
+			};
+			ctx.globalCompositeOperation = BLEND[s.bevel.highlight_blend] || 'screen';
+			ctx.drawImage(outside(bevel[0]), 0, 0);
+			ctx.globalCompositeOperation = BLEND[s.bevel.shadow_blend] || 'multiply';
+			ctx.drawImage(outside(bevel[1]), 0, 0);
+		}
+
 		//the layer itself, at Fill opacity, with the inner effects on top of it
 		var body = canvas_like(content);
 		var bctx = body.getContext('2d');
@@ -181,6 +301,10 @@ class Ps_styles_class {
 			bctx.globalCompositeOperation = BLEND[ig.blend] || 'screen';
 			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), ig.color, ig.opacity, 0, 0, ig.size * scale * 1.2)), 0, 0);
 		}
+		if (on('satin')) {
+			bctx.globalCompositeOperation = BLEND[s.satin.blend] || 'multiply';
+			bctx.drawImage(clip_to_shape(this.satin(content, s.satin, scale)), 0, 0);
+		}
 		if (on('color_overlay')) {
 			var co = s.color_overlay;
 			var fillc = canvas_like(content);
@@ -204,6 +328,12 @@ class Ps_styles_class {
 			gctx.fillRect(0, 0, gc.width, gc.height);
 			bctx.globalCompositeOperation = BLEND[go.blend] || 'source-over';
 			bctx.drawImage(clip_to_shape(gc), 0, 0);
+		}
+		if (bevel && (s.bevel.style || 'Inner Bevel') != 'Outer Bevel') {
+			bctx.globalCompositeOperation = BLEND[s.bevel.highlight_blend] || 'screen';
+			bctx.drawImage(clip_to_shape(bevel[0]), 0, 0);
+			bctx.globalCompositeOperation = BLEND[s.bevel.shadow_blend] || 'multiply';
+			bctx.drawImage(clip_to_shape(bevel[1]), 0, 0);
 		}
 		ctx.globalCompositeOperation = 'source-over';
 		ctx.drawImage(body, 0, 0);
@@ -319,6 +449,30 @@ class Ps_styles_class {
 					+ row('Opacity:', num('opacity', e.opacity, '%', 0, 100))
 					+ row('Color:', swatch('color', e.color));
 			}
+			else if (key == 'bevel') {
+				html += row('Style:', select('style', ['Outer Bevel', 'Inner Bevel', 'Emboss', 'Pillow Emboss', 'Stroke Emboss'], e.style))
+					+ row('Technique:', select('technique', ['Smooth', 'Chisel Hard', 'Chisel Soft'], e.technique))
+					+ row('Depth:', num('depth', e.depth, '%', 1, 1000))
+					+ row('Direction:', '<label class="ps_fx_check"><input type="radio" name="ps_fx_dir" data-field="direction" value="Up"' + (e.direction != 'Down' ? ' checked' : '') + '> Up</label>'
+						+ '<label class="ps_fx_check"><input type="radio" name="ps_fx_dir" data-field="direction" value="Down"' + (e.direction == 'Down' ? ' checked' : '') + '> Down</label>')
+					+ row('Size:', num('size', e.size, 'px', 0, 250))
+					+ row('Soften:', num('soften', e.soften, 'px', 0, 16))
+					+ '<div class="ps_fx_group">Shading</div>'
+					+ row('Angle:', num('angle', e.angle, '°', -180, 180))
+					+ row('Altitude:', num('altitude', e.altitude, '°', 0, 90))
+					+ row('Highlight Mode:', select('highlight_blend', BLEND_NAMES, e.highlight_blend) + swatch('highlight_color', e.highlight_color))
+					+ row('Opacity:', num('highlight_opacity', e.highlight_opacity, '%', 0, 100))
+					+ row('Shadow Mode:', select('shadow_blend', BLEND_NAMES, e.shadow_blend) + swatch('shadow_color', e.shadow_color))
+					+ row('Opacity:', num('shadow_opacity', e.shadow_opacity, '%', 0, 100));
+			}
+			else if (key == 'satin') {
+				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend) + swatch('color', e.color))
+					+ row('Opacity:', num('opacity', e.opacity, '%', 0, 100))
+					+ row('Angle:', num('angle', e.angle, '°', -180, 180))
+					+ row('Distance:', num('distance', e.distance, 'px', 0, 250))
+					+ row('Size:', num('size', e.size, 'px', 0, 250))
+					+ row('', '<label class="ps_fx_check"><input type="checkbox" data-field="invert"' + (e.invert ? ' checked' : '') + '> Invert</label>');
+			}
 			else if (key == 'gradient_overlay') {
 				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend))
 					+ row('Opacity:', num('opacity', e.opacity, '%', 0, 100))
@@ -342,6 +496,7 @@ class Ps_styles_class {
 		panel.querySelectorAll('[data-field]').forEach((input) => {
 			var update = () => {
 				var field = input.dataset.field;
+				if (input.type == 'radio' && !input.checked) return;
 				var value = input.type == 'checkbox' ? input.checked : (input.type == 'number' ? parseFloat(input.value) : input.value);
 				if (input.type == 'number' && isNaN(value)) return;
 				if (key == 'blending') {

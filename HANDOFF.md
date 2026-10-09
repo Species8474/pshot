@@ -86,7 +86,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Layers**
   - New layers go above the active layer.
   - Groups (Ctrl+G and Shift+Ctrl+G; drag into and out of groups; the Move tool moves the whole group).
-  - Masks, styles and Fill Opacity.
+  - Masks, styles (Bevel & Emboss, Stroke, Inner Shadow, Inner Glow, Satin, Color and Gradient Overlay, Outer Glow, Drop Shadow) and Fill Opacity.
   - Adjustment layers: Brightness/Contrast, Levels, Curves, Exposure, Vibrance, Hue/Saturation, Color Balance, Black & White, Photo Filter, Channel Mixer, Invert, Posterize, Threshold, Gradient Map.
   - Locks; clipping mask; blend modes.
   - Duplicate layers are named "X copy"; Layer via Copy/Cut.
@@ -104,7 +104,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 ## Known gaps / next
 - Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Pen paths and the Paths panel, Slice tools, 3D.
 - Adjustment kinds: Selective Color, Color Lookup, Shadows/Highlights, HDR Toning.
-- Styles: Bevel & Emboss, Satin, Pattern Overlay. Vector masks. Smart Objects.
+- Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.
 - Multiple layer selection (Shift-click) is not supported: miniPaint has one active layer.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.

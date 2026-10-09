@@ -65,11 +65,11 @@ function layer_style_items() {
 	return [
 		{ name: 'Blending Options...', action: open('blending') },
 		{ divider: true },
-		{ name: 'Bevel & Emboss...' },
+		{ name: 'Bevel & Emboss...', action: open('bevel') },
 		{ name: 'Stroke...', action: open('stroke') },
 		{ name: 'Inner Shadow...', action: open('inner_shadow') },
 		{ name: 'Inner Glow...', action: open('inner_glow') },
-		{ name: 'Satin...' },
+		{ name: 'Satin...', action: open('satin') },
 		{ name: 'Color Overlay...', action: open('color_overlay') },
 		{ name: 'Gradient Overlay...', action: open('gradient_overlay') },
 		{ name: 'Pattern Overlay...' },

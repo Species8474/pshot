@@ -105,6 +105,13 @@ function styles_to_effects(styles) {
 		if (key == 'outer_glow') fx.outerGlow = glow(e);
 		if (key == 'inner_glow') fx.innerGlow = glow(e);
 		if (key == 'stroke') fx.stroke = [{ enabled: true, size: px(e.size), position: (e.position || 'Outside').toLowerCase(), fillType: 'color', color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 }];
+		if (key == 'bevel') fx.bevel = {
+			enabled: true, style: (e.style || 'Inner Bevel').toLowerCase(), technique: (e.technique || 'Smooth').toLowerCase(), strength: e.depth, direction: e.direction == 'Down' ? 'down' : 'up',
+			size: px(e.size), soften: px(e.soften), angle: e.angle, altitude: e.altitude, useGlobalLight: false,
+			highlightBlendMode: blend_to_psd(e.highlight_blend), highlightColor: hex_to_rgb(e.highlight_color), highlightOpacity: e.highlight_opacity / 100,
+			shadowBlendMode: blend_to_psd(e.shadow_blend), shadowColor: hex_to_rgb(e.shadow_color), shadowOpacity: e.shadow_opacity / 100,
+		};
+		if (key == 'satin') fx.satin = { enabled: true, blendMode: blend_to_psd(e.blend), color: hex_to_rgb(e.color), opacity: e.opacity / 100, angle: e.angle, distance: px(e.distance), size: px(e.size), invert: !!e.invert };
 		if (key == 'color_overlay') fx.solidFill = [{ enabled: true, color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 }];
 		if (key == 'gradient_overlay') fx.gradientOverlay = [{
 			enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, angle: e.angle, reverse: !!e.reverse, type: 'linear', scale: 100,
@@ -127,6 +134,20 @@ function effects_to_styles(fx) {
 	if (fx.innerGlow) styles.inner_glow = glow(fx.innerGlow);
 	var stroke = first(fx.stroke);
 	if (stroke) styles.stroke = { enabled: stroke.enabled !== false, blend: blend_from_psd(stroke.blendMode), color: rgb_to_hex(stroke.color), opacity: Math.round((stroke.opacity === undefined ? 1 : stroke.opacity) * 100), size: val(stroke.size), position: stroke.position == 'center' ? 'Center' : 'Outside' };
+	var title = (v) => (v || '').replace(/\b\w/g, c => c.toUpperCase());
+	if (fx.bevel) {
+		var b = fx.bevel;
+		styles.bevel = {
+			enabled: b.enabled !== false, style: title(b.style || 'inner bevel'), technique: title(b.technique || 'smooth'), depth: b.strength == null ? 100 : b.strength,
+			direction: b.direction == 'down' ? 'Down' : 'Up', size: val(b.size), soften: val(b.soften), angle: b.angle == null ? 120 : b.angle, altitude: b.altitude == null ? 30 : b.altitude,
+			highlight_blend: blend_from_psd(b.highlightBlendMode || 'screen'), highlight_color: b.highlightColor ? rgb_to_hex(b.highlightColor) : '#ffffff', highlight_opacity: Math.round((b.highlightOpacity == null ? 0.75 : b.highlightOpacity) * 100),
+			shadow_blend: blend_from_psd(b.shadowBlendMode || 'multiply'), shadow_color: rgb_to_hex(b.shadowColor), shadow_opacity: Math.round((b.shadowOpacity == null ? 0.75 : b.shadowOpacity) * 100),
+		};
+	}
+	if (fx.satin) {
+		var sa = fx.satin;
+		styles.satin = { enabled: sa.enabled !== false, blend: blend_from_psd(sa.blendMode || 'multiply'), color: rgb_to_hex(sa.color), opacity: Math.round((sa.opacity == null ? 0.5 : sa.opacity) * 100), angle: sa.angle == null ? 19 : sa.angle, distance: val(sa.distance), size: val(sa.size), invert: !!sa.invert };
+	}
 	var fill = first(fx.solidFill);
 	if (fill) styles.color_overlay = { enabled: fill.enabled !== false, blend: blend_from_psd(fill.blendMode), color: rgb_to_hex(fill.color), opacity: Math.round((fill.opacity === undefined ? 1 : fill.opacity) * 100) };
 	var go = first(fx.gradientOverlay);

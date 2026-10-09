@@ -139,11 +139,11 @@ const M = [
 		'-',
 		['Layer Style', [
 			{ name: 'Blending Options...', target: 'ps/commands.layer_style', parameter: 'blending' }, '-',
-			'Bevel & Emboss...',
+			{ name: 'Bevel & Emboss...', target: 'ps/commands.layer_style', parameter: 'bevel' },
 			{ name: 'Stroke...', target: 'ps/commands.layer_style', parameter: 'stroke' },
 			{ name: 'Inner Shadow...', target: 'ps/commands.layer_style', parameter: 'inner_shadow' },
 			{ name: 'Inner Glow...', target: 'ps/commands.layer_style', parameter: 'inner_glow' },
-			'Satin...',
+			{ name: 'Satin...', target: 'ps/commands.layer_style', parameter: 'satin' },
 			{ name: 'Color Overlay...', target: 'ps/commands.layer_style', parameter: 'color_overlay' },
 			{ name: 'Gradient Overlay...', target: 'ps/commands.layer_style', parameter: 'gradient_overlay' },
 			'Pattern Overlay...',
