@@ -19,6 +19,7 @@ import Ps_selection_class from './selection.js';
 import Ps_mask_class from './mask.js';
 import Ps_transform_class from './transform.js';
 import Ps_groups_class from './groups.js';
+import Ps_styles_class from './styles.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 
@@ -59,6 +60,7 @@ class Ps_workspace_class {
 		this.Mask = new Ps_mask_class();
 		this.Transform = new Ps_transform_class();
 		this.Groups = new Ps_groups_class();
+		this.Styles = new Ps_styles_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
 		this.two_column = false;

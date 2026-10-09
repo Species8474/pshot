@@ -64,6 +64,79 @@ function alpha_to_psd_mask(layer) {
 	};
 }
 
+// ---------- layer styles <-> PSD effects ----------
+
+function hex_to_rgb(hex) {
+	return { r: parseInt(hex.substr(1, 2), 16), g: parseInt(hex.substr(3, 2), 16), b: parseInt(hex.substr(5, 2), 16) };
+}
+
+function rgb_to_hex(c) {
+	if (!c || c.r === undefined) return '#000000';
+	var h = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+	return '#' + h(c.r) + h(c.g) + h(c.b);
+}
+
+function blend_to_psd(name) {
+	return (name || 'Normal').toLowerCase().replace(' (add)', '');
+}
+
+function blend_from_psd(mode) {
+	if (!mode) return 'Normal';
+	if (mode == 'linear dodge') return 'Linear Dodge (Add)';
+	return mode.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function px(v) {
+	return { units: 'Pixels', value: v || 0 };
+}
+
+function styles_to_effects(styles) {
+	if (!styles) return undefined;
+	var fx = {};
+	var any = false;
+	var shadow = (e) => ({ enabled: true, size: px(e.size), angle: e.angle, distance: px(e.distance), color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 });
+	var glow = (e) => ({ enabled: true, size: px(e.size), color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 });
+	for (var key in styles) {
+		var e = styles[key];
+		if (!e || !e.enabled) continue;
+		any = true;
+		if (key == 'drop_shadow') fx.dropShadow = [shadow(e)];
+		if (key == 'inner_shadow') fx.innerShadow = [shadow(e)];
+		if (key == 'outer_glow') fx.outerGlow = glow(e);
+		if (key == 'inner_glow') fx.innerGlow = glow(e);
+		if (key == 'stroke') fx.stroke = [{ enabled: true, size: px(e.size), position: (e.position || 'Outside').toLowerCase(), fillType: 'color', color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 }];
+		if (key == 'color_overlay') fx.solidFill = [{ enabled: true, color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 }];
+		if (key == 'gradient_overlay') fx.gradientOverlay = [{
+			enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, angle: e.angle, reverse: !!e.reverse, type: 'linear', scale: 100,
+			gradient: { name: 'Custom', type: 'solid', colorStops: [{ color: hex_to_rgb(e.color_1), location: 0, midpoint: 50 }, { color: hex_to_rgb(e.color_2), location: 4096, midpoint: 50 }], opacityStops: [{ opacity: 1, location: 0, midpoint: 50 }, { opacity: 1, location: 4096, midpoint: 50 }] },
+		}];
+	}
+	return any ? fx : undefined;
+}
+
+function effects_to_styles(fx) {
+	if (!fx) return null;
+	var styles = {};
+	var val = (u) => (u && u.value !== undefined ? u.value : (typeof u == 'number' ? u : 0));
+	var first = (x) => Array.isArray(x) ? x[0] : x;
+	var shadow = (e) => ({ enabled: e.enabled !== false, blend: blend_from_psd(e.blendMode), color: rgb_to_hex(e.color), opacity: Math.round((e.opacity === undefined ? 0.75 : e.opacity) * 100), angle: e.angle === undefined ? 120 : e.angle, distance: val(e.distance), size: val(e.size) });
+	var glow = (e) => ({ enabled: e.enabled !== false, blend: blend_from_psd(e.blendMode), color: rgb_to_hex(e.color), opacity: Math.round((e.opacity === undefined ? 0.75 : e.opacity) * 100), size: val(e.size) });
+	if (first(fx.dropShadow)) styles.drop_shadow = shadow(first(fx.dropShadow));
+	if (first(fx.innerShadow)) styles.inner_shadow = shadow(first(fx.innerShadow));
+	if (fx.outerGlow) styles.outer_glow = glow(fx.outerGlow);
+	if (fx.innerGlow) styles.inner_glow = glow(fx.innerGlow);
+	var stroke = first(fx.stroke);
+	if (stroke) styles.stroke = { enabled: stroke.enabled !== false, blend: blend_from_psd(stroke.blendMode), color: rgb_to_hex(stroke.color), opacity: Math.round((stroke.opacity === undefined ? 1 : stroke.opacity) * 100), size: val(stroke.size), position: stroke.position == 'center' ? 'Center' : 'Outside' };
+	var fill = first(fx.solidFill);
+	if (fill) styles.color_overlay = { enabled: fill.enabled !== false, blend: blend_from_psd(fill.blendMode), color: rgb_to_hex(fill.color), opacity: Math.round((fill.opacity === undefined ? 1 : fill.opacity) * 100) };
+	var go = first(fx.gradientOverlay);
+	if (go) {
+		var stops = go.gradient && go.gradient.colorStops || [];
+		styles.gradient_overlay = { enabled: go.enabled !== false, blend: blend_from_psd(go.blendMode), opacity: Math.round((go.opacity === undefined ? 1 : go.opacity) * 100), angle: go.angle === undefined ? 90 : go.angle, reverse: !!go.reverse, color_1: rgb_to_hex(stops[0] && stops[0].color), color_2: rgb_to_hex(stops[stops.length - 1] && stops[stops.length - 1].color) };
+	}
+	return styles;
+}
+
 function read_file(file, as) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -131,6 +204,8 @@ async function file_to_layers(file) {
 					composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
 					data: child.canvas.toDataURL('image/png'),
 					_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+					_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
+					_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
 					_parent_key: parent_key,
 				});
 			}
@@ -223,6 +298,16 @@ async function open_document(files) {
 	});
 	actions.push(new app.Actions.Prepare_canvas_action('do'));
 	await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', actions));
+	//layer styles and fill opacity
+	for (const settings of doc.layers) {
+		if (settings._ps_styles || settings._ps_fill != null) {
+			const layer = config.layers.find(l => l.order == settings.order);
+			if (layer) {
+				if (settings._ps_styles) layer.ps_styles = settings._ps_styles;
+				if (settings._ps_fill != null) layer.ps_fill = settings._ps_fill;
+			}
+		}
+	}
 	//groups: connect members to their group headers
 	const by_key = {};
 	for (const settings of doc.layers) {
@@ -302,10 +387,12 @@ function psd_node(layer) {
 	}
 	else {
 		//vector, text and filtered layers are rasterized at document size
-		const saved = { visible: layer.visible, opacity: layer.opacity, ps_mask_disabled: layer.ps_mask_disabled };
+		const saved = { visible: layer.visible, opacity: layer.opacity, ps_mask_disabled: layer.ps_mask_disabled, ps_styles: layer.ps_styles, ps_fill: layer.ps_fill };
 		layer.visible = true;
 		layer.opacity = 100;
 		layer.ps_mask_disabled = true;
+		layer.ps_styles = null;
+		layer.ps_fill = null;
 		layer._ps_ignore_groups = true;
 		canvas = app.Layers.convert_layer_to_canvas(layer.id, false, false);
 		Object.assign(layer, saved);
@@ -323,6 +410,8 @@ function psd_node(layer) {
 		blendMode: TO_PSD_BLEND[layer.composition] || 'normal',
 		clipping: layer.composition == 'source-atop',
 		mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
+		effects: styles_to_effects(layer.ps_styles),
+		fillOpacity: layer.ps_fill == null ? undefined : layer.ps_fill / 100,
 	};
 }
 

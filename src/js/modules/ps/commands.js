@@ -37,6 +37,10 @@ class Ps_commands_class {
 
 	levels() { this.Adjust.levels(); }
 
+	layer_style(key) { app.GUI.Ps_workspace.Styles.open(null, key || 'blending'); }
+	copy_layer_style() { app.GUI.Ps_workspace.Styles.copy(); }
+	paste_layer_style() { app.GUI.Ps_workspace.Styles.paste(); }
+
 	group_layers() { app.GUI.Ps_workspace.Groups.group_layers(); }
 	ungroup_layers() { app.GUI.Ps_workspace.Groups.ungroup(); }
 	new_group() { app.GUI.Ps_workspace.Groups.new_group(); }
@@ -467,6 +471,7 @@ class Ps_commands_class {
 	}
 
 	clear_layer_style() {
+		app.GUI.Ps_workspace.Styles.clear();
 		var actions = [];
 		for (var filter of config.layer.filters) {
 			actions.push(new app.Actions.Delete_layer_filter_action(config.layer.id, filter.id));

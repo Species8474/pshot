@@ -409,8 +409,12 @@ class Base_layers_class {
 			ctx.globalAlpha *= Groups.group_opacity(object);
 		}
 
-		//pshot: layer mask - render the layer offscreen, then keep only the revealed pixels
-		if (object.ps_mask && !object.ps_mask_disabled && !object._ps_masking) {
+		//pshot: layer mask / layer styles - render the layer offscreen, keep only the
+		//revealed pixels, then add the effects
+		var ps_styles = this.Base_gui.Ps_workspace ? this.Base_gui.Ps_workspace.Styles : null;
+		var ps_masked = object.ps_mask && !object.ps_mask_disabled;
+		var ps_styled = ps_styles && ps_styles.needs_offscreen(object);
+		if ((ps_masked || ps_styled) && !object._ps_masking) {
 			var transform = ctx.getTransform();
 			var temp = document.createElement("canvas");
 			temp.width = ctx.canvas.width;
@@ -423,11 +427,14 @@ class Base_layers_class {
 			} finally {
 				object._ps_masking = false;
 			}
-			tctx.globalCompositeOperation = "destination-in";
-			tctx.drawImage(object.ps_mask, object.x - object.ps_mask_x, object.y - object.ps_mask_y);
+			if (ps_masked) {
+				tctx.globalCompositeOperation = "destination-in";
+				tctx.drawImage(object.ps_mask, object.x - object.ps_mask_x, object.y - object.ps_mask_y);
+			}
+			var result = ps_styled ? ps_styles.compose(temp, object, Math.abs(transform.a) || 1) : temp;
 			ctx.save();
 			ctx.setTransform(1, 0, 0, 1, 0, 0);
-			ctx.drawImage(temp, 0, 0);
+			ctx.drawImage(result, 0, 0);
 			ctx.restore();
 			return;
 		}

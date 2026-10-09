@@ -60,17 +60,21 @@ function adjustment_items(include_fill) {
 }
 
 function layer_style_items() {
-	var names = ['Bevel & Emboss...', 'Stroke...', 'Inner Shadow...', 'Inner Glow...', 'Satin...', 'Color Overlay...',
-		'Gradient Overlay...', 'Pattern Overlay...', 'Outer Glow...'];
-	var items = [
-		{ name: 'Blending Options...', action: () => run_target('layer/composition.composition') },
+	var open = (key) => () => app.GUI.Ps_workspace.Styles.open(null, key);
+	return [
+		{ name: 'Blending Options...', action: open('blending') },
 		{ divider: true },
+		{ name: 'Bevel & Emboss...' },
+		{ name: 'Stroke...', action: open('stroke') },
+		{ name: 'Inner Shadow...', action: open('inner_shadow') },
+		{ name: 'Inner Glow...', action: open('inner_glow') },
+		{ name: 'Satin...' },
+		{ name: 'Color Overlay...', action: open('color_overlay') },
+		{ name: 'Gradient Overlay...', action: open('gradient_overlay') },
+		{ name: 'Pattern Overlay...' },
+		{ name: 'Outer Glow...', action: open('outer_glow') },
+		{ name: 'Drop Shadow...', action: open('drop_shadow') },
 	];
-	for (var name of names) {
-		items.push({ name: name });
-	}
-	items.push({ name: 'Drop Shadow...', action: () => run_target('effects/common/shadow.shadow') });
-	return items;
 }
 
 export { ADJUSTMENTS, adjustment_items, layer_style_items, run_target };

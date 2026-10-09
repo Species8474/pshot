@@ -85,9 +85,14 @@ Phase 1 (CS6 workspace) is built:
   - Crop commits with Enter.
 - **Startup**: the first document always has a white Background (miniPaint's transparency cookie is ignored).
 
+- **Layer styles** (`ps/styles.js`):
+  - The CS6 Layer Style dialog (list plus settings) covers Drop Shadow, Inner Shadow, Outer Glow, Inner Glow, Stroke, Color Overlay, Gradient Overlay and Blending Options (blend, opacity, Fill Opacity).
+  - Effects are drawn at render time from the layer's alpha. They show in the panel's Effects list, and double-clicking a layer opens the dialog.
+  - Copy, Paste and Clear Layer Style work, and effects survive PSD open and save.
+
 ### Known gaps (next)
 - Quick Selection and Magnetic Lasso. The bucket, eraser, blur and clone tools don't respect the selection yet.
-- Layer groups, masks, adjustment layers, layer styles beyond Drop Shadow.
+- Adjustment layers; Bevel & Emboss, Satin and Pattern Overlay styles; vector masks.
 - Real Levels and Curves dialogs.
 - Brush hardness, opacity and flow (the controls exist but are greyed out).
 - Free Transform handles for pixel layers.

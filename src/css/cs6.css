@@ -1306,3 +1306,22 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 .ps_group_toggle.open::before { border-top: 5px solid #d8d8d8; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: none; }
 .ps_folder { line-height: 0; margin: 0 6px 0 2px; }
 .ps_group_row .ps_eye { height: 100%; }
+
+/* Layer Style dialog */
+#popups .popup.ps_fx_dialog { max-width: 640px; width: 640px; }
+.ps_fx { display: flex; gap: 12px; min-height: 360px; }
+.ps_fx_list { width: 190px; flex: none; border: 1px solid #2a2a2a; background: #4a4a4a; }
+.ps_fx_title { padding: 6px 8px; font-weight: bold; border-bottom: 1px solid #3a3a3a; }
+.ps_fx_item { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; cursor: default; }
+.ps_fx_item.active { background: var(--ps-select); color: #fff; }
+.ps_fx_item.disabled { color: #8a8a8a; }
+.ps_fx_item input { margin: 0; }
+.ps_fx_panel { flex: 1; }
+.ps_fx_head { font-size: 13px; margin-bottom: 6px; }
+.ps_fx_group { margin: 8px 0 6px; color: #cfcfcf; border-bottom: 1px solid #444; padding-bottom: 3px; }
+.ps_fx_row { display: flex; align-items: center; gap: 6px; margin: 5px 0; }
+.ps_fx_row > label { width: 92px; text-align: right; }
+.ps_fx_row input[type="number"] { width: 58px; }
+.ps_fx_unit { color: #bbb; width: 18px; }
+.ps_fx_swatch { width: 26px; height: 18px; padding: 0; border: 1px solid #111; box-shadow: inset 0 0 0 1px #888; margin-left: 4px; }
+.ps_fx_check { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }

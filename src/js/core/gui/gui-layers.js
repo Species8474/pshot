@@ -63,8 +63,8 @@ var template = `
 		<span class="ps_lock disabled" title="Lock image pixels">${ICON.lock_image}</span>
 		<span class="ps_lock disabled" title="Lock position">${ICON.lock_position}</span>
 		<span class="ps_lock disabled" title="Lock all">${ICON.lock_all}</span>
-		<label class="ps_fill_label disabled">Fill:</label>
-		<input type="text" class="ps_pct" value="100%" disabled />
+		<label class="ps_fill_label" for="ps_layer_fill">Fill:</label>
+		<input type="text" id="ps_layer_fill" class="ps_pct" value="100%" />
 	</div>
 	<div class="layers_list" id="layers"></div>
 	<div class="ps_layers_footer">
@@ -170,6 +170,9 @@ class GUI_layers_class {
 			else if (action == 'delete_filter') {
 				app.State.do_action(new app.Actions.Delete_layer_filter_action(target.dataset.pid, target.dataset.id));
 			}
+			else if (action == 'edit_style') {
+				app.GUI.Ps_workspace.Styles.open(_this.Base_layers.get_layer(target.dataset.pid), target.dataset.key);
+			}
 			else if (action == 'edit_filter') {
 				_this.edit_filter(target.dataset.pid, target.dataset.id, target.dataset.filter);
 			}
@@ -192,7 +195,7 @@ class GUI_layers_class {
 			}
 			if (row && !event.target.closest('[data-action]')) {
 				//CS6: double-click the layer row opens Layer Style > Blending Options
-				app.GUI.modules['layer/composition'].composition();
+				app.GUI.Ps_workspace.Styles.open(_this.Base_layers.get_layer(row.dataset.id), 'blending');
 			}
 		});
 
@@ -203,6 +206,21 @@ class GUI_layers_class {
 			app.State.do_action(new app.Actions.Bundle_action('blending_change', 'Blending Change', [
 				new app.Actions.Update_layer_action(config.layer.id, {composition: this.value})
 			]));
+		});
+
+		var fill = document.getElementById('ps_layer_fill');
+		fill.addEventListener('change', function () {
+			var value = Math.max(0, Math.min(100, parseInt(this.value, 10)));
+			if (isNaN(value)) {
+				_this.render_controls();
+				return;
+			}
+			app.State.do_action(new app.Actions.Bundle_action('fill_change', 'Fill Opacity Change', [
+				new app.Actions.Update_layer_action(config.layer.id, {ps_fill: value})
+			]));
+		});
+		fill.addEventListener('keydown', function (event) {
+			if (event.key == 'Enter') this.blur();
 		});
 
 		var opacity = document.getElementById('ps_layer_opacity');
@@ -343,6 +361,7 @@ class GUI_layers_class {
 		}
 		select.value = composition;
 		document.getElementById('ps_layer_opacity').value = Math.round(config.layer.opacity) + '%';
+		document.getElementById('ps_layer_fill').value = (config.layer.ps_fill == null ? 100 : config.layer.ps_fill) + '%';
 	}
 
 	draw_thumbnail(canvas, layer) {
@@ -416,7 +435,9 @@ class GUI_layers_class {
 				if (value.id == config.layer.id) classes += ' active';
 				if (value.visible != true) classes += ' hidden_layer';
 
-				var has_filters = value.filters && value.filters.length > 0;
+				var Styles = app.GUI && app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Styles : null;
+				var style_names = Styles ? Styles.enabled_names(value) : [];
+				var has_filters = (value.filters && value.filters.length > 0) || style_names.length > 0;
 				html += '<div class="' + classes + '" data-id="' + value.id + '" draggable="true">';
 				html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
 				html += indent;
@@ -443,6 +464,11 @@ class GUI_layers_class {
 				if (has_filters) {
 					html += '<div class="ps_effects">';
 					html += '<div class="ps_effect_head">' + ICON.eye + '<span>Effects</span></div>';
+					for (var sn of style_names) {
+						html += '<div class="ps_effect">';
+						html += '<span class="ps_effect_name" data-action="edit_style" data-pid="' + value.id + '" data-key="' + sn[0] + '">' + sn[1] + '</span>';
+						html += '</div>';
+					}
 					for (var filter of value.filters) {
 						var title = this.Helper.ucfirst(filter.name).replace(/-/g, ' ');
 						html += '<div class="ps_effect">';
