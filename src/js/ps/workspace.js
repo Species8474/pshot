@@ -95,6 +95,7 @@ class Ps_workspace_class {
 		this.hook_state();
 		this.Keymap.install();
 		this.Guides.install();
+		this.Groups.install_group_move();
 		install_pixel_layer_guard();
 		install_move_selection();
 		this.render_document_tab();

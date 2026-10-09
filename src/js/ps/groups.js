@@ -261,6 +261,52 @@ class Ps_groups_class {
 		config.need_render = true;
 	}
 
+	/**
+	 * Move tool on a selected group moves all of its members (CS6)
+	 */
+	install_group_move() {
+		var job = null;
+		var world = (e) => {
+			var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+			return app.Layers.get_world_coords(e.clientX - rect.left, e.clientY - rect.top);
+		};
+		document.addEventListener('mousedown', (e) => {
+			if (config.TOOL.name != 'select' || e.button != 0 || !this.is_group(config.layer)) return;
+			if (e.target.id != 'canvas_minipaint' && e.target.id != 'main_wrapper') return;
+			var members = this.descendants(config.layer).filter(l => l.type != 'ps_group' && l.x != null);
+			if (members.length == 0) return;
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			job = { start: world(e), members: members, origin: members.map(l => ({ x: l.x, y: l.y })) };
+		}, true);
+		document.addEventListener('mousemove', (e) => {
+			if (!job) return;
+			e.stopImmediatePropagation();
+			var p = world(e);
+			var dx = Math.round(p.x - job.start.x), dy = Math.round(p.y - job.start.y);
+			job.members.forEach((l, i) => { l.x = job.origin[i].x + dx; l.y = job.origin[i].y + dy; });
+			config.need_render = true;
+		}, true);
+		document.addEventListener('mouseup', (e) => {
+			if (!job) return;
+			e.stopImmediatePropagation();
+			var j = job;
+			job = null;
+			var actions = [];
+			j.members.forEach((l, i) => {
+				var x = l.x, y = l.y;
+				l.x = j.origin[i].x;
+				l.y = j.origin[i].y;
+				if (x != l.x || y != l.y) {
+					actions.push(new app.Actions.Update_layer_action(l.id, { x: x, y: y }));
+				}
+			});
+			if (actions.length) {
+				app.State.do_action(new app.Actions.Bundle_action('move', 'Move', actions));
+			}
+		}, true);
+	}
+
 	toggle_collapsed(group) {
 		group.ps_collapsed = !group.ps_collapsed;
 		app.GUI.GUI_layers.render_layers();
