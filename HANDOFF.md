@@ -127,6 +127,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Guides from the rulers. Pixel Grid at 500%+ (View > Show > Pixel Grid).
   - Type > Create Work Path (traces the glyphs).
   - Move tool: Alt+drag duplicates the layer and moves the copy; arrows nudge 1 px (Shift 10 px) — the selected pixels when there is a selection; selection tools nudge the outline.
+  - Temporary tools: Alt with Brush/Pencil/Bucket/Gradient/shapes samples the foreground color (all layers); Ctrl+drag with painting/selection tools moves with the Move tool and returns.
   - Hand, Zoom and Space-to-pan.
   - CS6 zoom steps.
   - Ctrl+Z toggles a single undo; Alt+Ctrl+Z and Shift+Ctrl+Z step through History.

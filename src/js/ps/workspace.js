@@ -116,6 +116,8 @@ class Ps_workspace_class {
 		install_move_selection();
 		install_shape_modes();
 		this.install_alt_drag_duplicate();
+		this.install_alt_eyedropper();
+		this.install_ctrl_move();
 		this.render_document_tab();
 		this.render_history();
 		this.render_channels();
@@ -739,6 +741,85 @@ class Ps_workspace_class {
 		var el = document.getElementById(area == 'options' ? 'ps_options' : 'ps_toolbox');
 		el.classList.toggle('closed');
 		this.relayout();
+	}
+
+	/**
+	 * CS6: holding Ctrl with most tools drags with the Move tool, then returns
+	 */
+	install_ctrl_move() {
+		var TOOLS = ['brush', 'pencil', 'erase', 'ps_select', 'clone', 'retouch', 'dodge_burn', 'gradient', 'fill', 'blur', 'sharpen', 'desaturate', 'magic_erase', 'ps_measure'];
+		var restore = null;
+		var find = (id) => {
+			for (var gi = 0; gi < this.groups.length; gi++) {
+				var mi = this.groups[gi].members.findIndex(m => m.id == id);
+				if (mi >= 0) return [gi, mi];
+			}
+			return null;
+		};
+		document.addEventListener('mousedown', (e) => {
+			if (!(e.ctrlKey || e.metaKey) || e.button != 0 || e.ps_synthetic || !TOOLS.includes(config.TOOL.name)) return;
+			if (e.target.id != 'canvas_minipaint' && e.target.id != 'main_wrapper') return;
+			var prev = this.active_member;
+			var gpos = find(prev.id), mpos = find('move');
+			if (!gpos || !mpos) return;
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			restore = gpos;
+			this.select_member(mpos[0], mpos[1]);
+			var target = e.target, x = e.clientX, y = e.clientY;
+			setTimeout(() => {
+				var again = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: 1 });
+				again.ps_synthetic = true;
+				target.dispatchEvent(again);
+			}, 30);
+		}, true);
+		window.addEventListener('mouseup', () => {
+			if (!restore) return;
+			var back = restore;
+			restore = null;
+			//after the Move tool has finished its own mouseup
+			setTimeout(() => this.select_member(back[0], back[1]), 60);
+		});
+	}
+
+	/**
+	 * painting tools: Alt+click / Alt+drag samples the foreground color (temporary Eyedropper)
+	 */
+	install_alt_eyedropper() {
+		var TOOLS = ['brush', 'pencil', 'fill', 'gradient', 'rectangle', 'ellipse', 'pentagon', 'line'];
+		var sampling = false, composite = null;
+		var sample = (e) => {
+			var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+			var p = app.Layers.get_world_coords(e.clientX - rect.left, e.clientY - rect.top);
+			var x = Math.floor(p.x), y = Math.floor(p.y);
+			if (x < 0 || y < 0 || x >= config.WIDTH || y >= config.HEIGHT) return;
+			var d = composite.getContext('2d').getImageData(x, y, 1, 1).data;
+			this.set_fg(this.Helper.rgbToHex(d[0], d[1], d[2]));
+		};
+		document.addEventListener('mousedown', (e) => {
+			if (!e.altKey || e.button != 0 || !TOOLS.includes(config.TOOL.name)) return;
+			if (e.target.id != 'canvas_minipaint' && e.target.id != 'main_wrapper') return;
+			if (config.TOOL.name == 'retouch') return;
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			composite = document.createElement('canvas');
+			composite.width = config.WIDTH;
+			composite.height = config.HEIGHT;
+			app.Layers.convert_layers_to_canvas(composite.getContext('2d', { willReadFrequently: true }), null, false);
+			sampling = true;
+			sample(e);
+		}, true);
+		document.addEventListener('mousemove', (e) => {
+			if (!sampling) return;
+			e.stopImmediatePropagation();
+			sample(e);
+		}, true);
+		document.addEventListener('mouseup', (e) => {
+			if (!sampling) return;
+			e.stopImmediatePropagation();
+			sampling = false;
+			composite = null;
+		}, true);
 	}
 
 	/**
