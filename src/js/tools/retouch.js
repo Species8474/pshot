@@ -13,6 +13,20 @@ import { inpaint } from './../ps/inpaint.js';
 import { alert_box } from './../ps/pixel-layer.js';
 import Patterns from './../ps/patterns.js';
 
+//Art History Brush styles: stroke length (fraction of Area), direction randomness, curl (radians per stroke)
+const ART_STYLES = {
+	'Tight Short': { length: 0.15, loose: 0.3, curl: 0 },
+	'Tight Medium': { length: 0.3, loose: 0.3, curl: 0 },
+	'Tight Long': { length: 0.6, loose: 0.3, curl: 0 },
+	'Loose Medium': { length: 0.3, loose: 1.6, curl: 0.3 },
+	'Loose Long': { length: 0.6, loose: 1.6, curl: 0.3 },
+	'Dab': { length: 0, loose: 0, curl: 0, dab: true },
+	'Tight Curl': { length: 0.25, loose: 0.3, curl: 4 },
+	'Tight Curl Long': { length: 0.5, loose: 0.3, curl: 4 },
+	'Loose Curl': { length: 0.25, loose: 1.6, curl: 5 },
+	'Loose Curl Long': { length: 0.5, loose: 1.6, curl: 5 },
+};
+
 class Retouch_class extends Base_tools_class {
 
 	constructor(ctx) {
@@ -56,7 +70,7 @@ class Retouch_class extends Base_tools_class {
 			var pl = config.layer;
 			this.history_source = Patterns.tiled(this.getParams().pattern, pl.width_original, pl.height_original, 100, pl.x, pl.y);
 		}
-		if (mode == 'history') {
+		if (mode == 'history' || mode == 'art_history') {
 			this.history_source = app.GUI.Ps_workspace.Documents.snapshot_for_layer(config.layer);
 			if (!this.history_source) {
 				alert_box('Could not use the history brush because the history state does not contain a corresponding layer.');
@@ -108,6 +122,12 @@ class Retouch_class extends Base_tools_class {
 			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
 			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
 			this.history_dab(this.last);
+		}
+		if (mode == 'art_history') {
+			var actx = this.canvas.getContext('2d', { willReadFrequently: true });
+			this.original = actx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+			this.art_dab(this.last);
 		}
 		if (this.getParams().mode == 'spot_healing') {
 			//the stroke marks the area to heal
@@ -161,6 +181,17 @@ class Retouch_class extends Base_tools_class {
 				this.last = hp;
 			}
 		}
+		else if (mode == 'art_history') {
+			var astep = Math.max(2, size / 2);
+			if (dist >= astep) {
+				var ap = this.last;
+				for (var ta = astep; ta <= dist; ta += astep) {
+					ap = { x: this.last.x + dx * ta / dist, y: this.last.y + dy * ta / dist };
+					this.art_dab(ap);
+				}
+				this.last = ap;
+			}
+		}
 		else if (mode == 'healing') {
 			if (dist >= step) {
 				var hfrom = this.last;
@@ -205,7 +236,7 @@ class Retouch_class extends Base_tools_class {
 				extra.push(new app.Actions.Update_layer_action(config.layer.id, { name: 'Layer 0' }));
 			}
 		}
-		var labels = { bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		].concat(extra)));
@@ -358,6 +389,68 @@ class Retouch_class extends Base_tools_class {
 			}
 		}
 		ctx.putImageData(img, x0, y0);
+	}
+
+	/**
+	 * Art History Brush dab: a few stylized strokes around p within Area, each in
+	 * the snapshot's color at its start, running along the edges (perpendicular
+	 * to the luminance gradient). Tolerance limits strokes to areas that differ
+	 * from the snapshot.
+	 */
+	art_dab(p) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var s = layer.width_original / layer.width;
+		var r = Math.max(0.5, params.size / 2 * s);
+		var area = Math.max(1, (params.area == null ? 50 : params.area) * s);
+		var opacity = (params.opacity == null ? 100 : params.opacity) / 100;
+		var tol = (params.tolerance || 0) / 100 * 255 * 3;
+		var spec = ART_STYLES[params.art_style] || ART_STYLES['Tight Short'];
+		var w = this.canvas.width, h = this.canvas.height, S = this.source_data, O = this.original.data;
+		var lum = (x, y) => {
+			x = Math.max(0, Math.min(w - 1, Math.round(x)));
+			y = Math.max(0, Math.min(h - 1, Math.round(y)));
+			var i = (y * w + x) * 4;
+			return S[i] * 0.299 + S[i + 1] * 0.587 + S[i + 2] * 0.114;
+		};
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		ctx.save();
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = r * 2;
+		ctx.globalAlpha = opacity;
+		var count = Math.max(2, Math.min(12, Math.round(area / Math.max(2, r))));
+		for (var n = 0; n < count; n++) {
+			var a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * area;
+			var qx = p.x + Math.cos(a) * d, qy = p.y + Math.sin(a) * d;
+			var ix = Math.round(qx), iy = Math.round(qy);
+			if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+			var i = (iy * w + ix) * 4;
+			if (S[i + 3] == 0) continue;
+			if (tol > 0 && Math.abs(S[i] - O[i]) + Math.abs(S[i + 1] - O[i + 1]) + Math.abs(S[i + 2] - O[i + 2]) < tol) continue;
+			ctx.strokeStyle = 'rgba(' + S[i] + ',' + S[i + 1] + ',' + S[i + 2] + ',' + (S[i + 3] / 255) + ')';
+			//along the edge, with some randomness for the loose styles
+			var gx = lum(qx + 2, qy) - lum(qx - 2, qy), gy = lum(qx, qy + 2) - lum(qx, qy - 2);
+			var dir = (gx || gy) ? Math.atan2(gy, gx) + Math.PI / 2 : Math.random() * Math.PI * 2;
+			dir += (Math.random() - 0.5) * spec.loose;
+			var len = Math.max(r * 2, area * spec.length) * (0.6 + Math.random() * 0.8);
+			ctx.beginPath();
+			ctx.moveTo(qx, qy);
+			if (spec.dab) {
+				ctx.lineTo(qx + 0.01, qy);
+			}
+			else {
+				var cx = qx, cy = qy, steps = 6, turn = spec.curl * (Math.random() < 0.5 ? -1 : 1) / steps;
+				for (var k = 1; k <= steps; k++) {
+					dir += turn;
+					cx += Math.cos(dir) * len / steps;
+					cy += Math.sin(dir) * len / steps;
+					ctx.lineTo(cx, cy);
+				}
+			}
+			ctx.stroke();
+		}
+		ctx.restore();
 	}
 
 	/**

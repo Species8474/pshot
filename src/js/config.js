@@ -137,6 +137,8 @@ config.TOOLS = [
 			sampling: 'Continuous',
 			limits: 'Contiguous',
 			tolerance: 30,
+			art_style: 'Tight Short',
+			area: 50,
 		},
 	},
 	{

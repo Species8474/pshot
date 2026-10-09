@@ -139,6 +139,8 @@ const SHAPE_COMMON = (extra) => [
 	...extra,
 ];
 
+const ART_STYLES = ['Tight Short', 'Tight Medium', 'Tight Long', 'Loose Medium', 'Loose Long', 'Dab', 'Tight Curl', 'Tight Curl Long', 'Loose Curl', 'Loose Curl Long'];
+
 const LAYOUTS = {
 	move: [
 		{ type: 'check', label: 'Auto-Select:', bind: 'auto_select' },
@@ -421,6 +423,18 @@ const LAYOUTS = {
 		{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
 		{ type: 'pct', label: 'Flow:', value: 100 },
 		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
+	],
+	art_history_brush: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Mode:', values: MODES },
+		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
+		{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
+		{ type: 'select', label: 'Style:', values: ART_STYLES, bind: 'art_style', map: Object.fromEntries(ART_STYLES.map(v => [v, v])) },
+		{ type: 'num', label: 'Area:', bind: 'area', unit: 'px', width: 40 },
+		{ type: 'pct', label: 'Tolerance:', bind: 'tolerance' },
 		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
 	],
 	spot_healing: [

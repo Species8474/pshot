@@ -133,7 +133,7 @@ const groups = [
 	]},
 	{ members: [
 		{ id: 'history_brush', name: 'History Brush Tool', key: 'Y', tool: 'retouch', preset: { mode: 'history' }, icon: I.history_brush },
-		{ id: 'art_history_brush', name: 'Art History Brush Tool', key: 'Y', tool: null, icon: I.art_history_brush },
+		{ id: 'art_history_brush', name: 'Art History Brush Tool', key: 'Y', tool: 'retouch', preset: { mode: 'art_history', tolerance: 0 }, icon: I.art_history_brush },
 	]},
 	{ members: [
 		{ id: 'eraser', name: 'Eraser Tool', key: 'E', tool: 'erase', icon: I.eraser },
