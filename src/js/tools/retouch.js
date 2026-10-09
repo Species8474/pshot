@@ -14,6 +14,10 @@ import { alert_box } from './../ps/pixel-layer.js';
 import Patterns from './../ps/patterns.js';
 
 //Art History Brush styles: stroke length (fraction of Area), direction randomness, curl (radians per stroke)
+function hex_to_rgb(hex) {
+	return [parseInt(hex.substr(1, 2), 16), parseInt(hex.substr(3, 2), 16), parseInt(hex.substr(5, 2), 16)];
+}
+
 const ART_STYLES = {
 	'Tight Short': { length: 0.15, loose: 0.3, curl: 0 },
 	'Tight Medium': { length: 0.3, loose: 0.3, curl: 0 },
@@ -77,6 +81,19 @@ class Retouch_class extends Base_tools_class {
 				return;
 			}
 		}
+		if (mode == 'mixer' && e.altKey) {
+			//CS6: Alt+click loads the brush with the color under the pointer
+			var lc = document.createElement('canvas');
+			lc.width = config.WIDTH;
+			lc.height = config.HEIGHT;
+			app.Layers.convert_layers_to_canvas(lc.getContext('2d'), null, false);
+			var ld = lc.getContext('2d').getImageData(Math.max(0, Math.min(config.WIDTH - 1, Math.round(mouse.x))), Math.max(0, Math.min(config.HEIGHT - 1, Math.round(mouse.y))), 1, 1).data;
+			this.reservoir = [ld[0], ld[1], ld[2]];
+			this.getParams().load_each = false;
+			app.GUI.Ps_workspace.status_message('Mixer Brush loaded with rgb(' + this.reservoir.join(', ') + ')');
+			app.GUI.Ps_workspace.Options_bar.render();
+			return;
+		}
 		if (mode == 'healing') {
 			if (e.altKey) {
 				//CS6: Alt+click defines the source point
@@ -122,6 +139,14 @@ class Retouch_class extends Base_tools_class {
 			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
 			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
 			this.history_dab(this.last);
+		}
+		if (mode == 'mixer') {
+			var mp = this.getParams();
+			//Load the brush after each stroke (or when it is empty)
+			if (mp.load_each !== false || !this.reservoir) this.reservoir = hex_to_rgb(config.COLOR);
+			if (mp.clean_each !== false) this.picked = null;
+			this.paint = 1;
+			this.mixer_dab(this.last);
 		}
 		if (mode == 'art_history') {
 			var actx = this.canvas.getContext('2d', { willReadFrequently: true });
@@ -181,6 +206,17 @@ class Retouch_class extends Base_tools_class {
 				this.last = hp;
 			}
 		}
+		else if (mode == 'mixer') {
+			var mstep = Math.max(1, size / 6);
+			if (dist >= mstep) {
+				var mpnt = this.last;
+				for (var tm = mstep; tm <= dist; tm += mstep) {
+					mpnt = { x: this.last.x + dx * tm / dist, y: this.last.y + dy * tm / dist };
+					this.mixer_dab(mpnt);
+				}
+				this.last = mpnt;
+			}
+		}
 		else if (mode == 'art_history') {
 			var astep = Math.max(2, size / 2);
 			if (dist >= astep) {
@@ -236,7 +272,7 @@ class Retouch_class extends Base_tools_class {
 				extra.push(new app.Actions.Update_layer_action(config.layer.id, { name: 'Layer 0' }));
 			}
 		}
-		var labels = { bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		].concat(extra)));
@@ -451,6 +487,57 @@ class Retouch_class extends Base_tools_class {
 			ctx.stroke();
 		}
 		ctx.restore();
+	}
+
+	/**
+	 * Mixer Brush dab: the brush's paint (reservoir) mixes with the canvas color
+	 * under it (Mix), picks some of it up (Wet) and runs out over the stroke (Load)
+	 */
+	mixer_dab(p) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var r = Math.max(1, params.size / 2 * (layer.width_original / layer.width));
+		var w = this.canvas.width, h = this.canvas.height;
+		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
+		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
+		if (x1 <= x0 || y1 <= y0) return;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0), d = img.data;
+		//canvas color under the brush
+		var cr = 0, cg = 0, cb = 0, ca = 0;
+		for (var i = 0; i < d.length; i += 4) { var a = d[i + 3]; cr += d[i] * a; cg += d[i + 1] * a; cb += d[i + 2] * a; ca += a; }
+		var wet = (params.wet == null ? 50 : params.wet) / 100, mix = (params.mix == null ? 50 : params.mix) / 100;
+		var load = Math.max(1, params.load == null ? 50 : params.load), flow = (params.flow == null ? 100 : params.flow) / 100;
+		var res = this.reservoir || [0, 0, 0];
+		var color = res.slice();
+		if (ca > 0 && wet > 0) {
+			var under = [cr / ca, cg / ca, cb / ca];
+			color = res.map((v, k) => v + (under[k] - v) * mix * wet);
+			//the brush picks up some of the canvas paint
+			this.reservoir = res.map((v, k) => v + (under[k] - v) * wet * 0.08);
+		}
+		//paint runs out: Load is how many dabs' worth the brush holds
+		var amount = this.paint * flow;
+		this.paint = Math.max(0, this.paint - 1 / (load * 3));
+		if (wet == 0 && this.paint <= 0) return;
+		amount = Math.max(wet > 0 ? 0.15 * flow : 0, amount);
+		for (var y = y0; y < y1; y++) {
+			for (var x = x0; x < x1; x++) {
+				var dd = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / r;
+				if (dd > 1) continue;
+				var f = amount * (dd < 0.7 ? 1 : (1 - dd) / 0.3);
+				var j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
+				for (var c = 0; c < 3; c++) d[j + c] = d[j + c] + (color[c] - d[j + c]) * f;
+				d[j + 3] = d[j + 3] + (255 - d[j + 3]) * f;
+			}
+		}
+		ctx.putImageData(img, x0, y0);
+		app.GUI.Ps_workspace.Options_bar.update_readouts && this.update_swatch();
+	}
+
+	update_swatch() {
+		var sw = document.getElementById('ps_mixer_load');
+		if (sw && this.reservoir) sw.style.background = 'rgb(' + this.reservoir.map(Math.round).join(',') + ')';
 	}
 
 	/**

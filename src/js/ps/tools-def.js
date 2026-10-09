@@ -125,7 +125,7 @@ const groups = [
 		{ id: 'brush', name: 'Brush Tool', key: 'B', tool: 'brush', icon: I.brush },
 		{ id: 'pencil', name: 'Pencil Tool', key: 'B', tool: 'pencil', icon: I.pencil },
 		{ id: 'color_replacement', name: 'Color Replacement Tool', key: 'B', tool: 'retouch', preset: { mode: 'color_replace' }, icon: I.color_replacement },
-		{ id: 'mixer_brush', name: 'Mixer Brush Tool', key: 'B', tool: null, icon: I.mixer_brush },
+		{ id: 'mixer_brush', name: 'Mixer Brush Tool', key: 'B', tool: 'retouch', preset: { mode: 'mixer' }, icon: I.mixer_brush },
 	]},
 	{ members: [
 		{ id: 'clone_stamp', name: 'Clone Stamp Tool', key: 'S', tool: 'clone', icon: I.clone_stamp },

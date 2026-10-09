@@ -147,6 +147,13 @@ config.TOOLS = [
 			tolerance: 30,
 			art_style: 'Tight Short',
 			area: 50,
+			wet: 50,
+			load: 50,
+			mix: 50,
+			flow: 100,
+			load_each: true,
+			clean_each: true,
+			mixer_preset: 'Custom',
 		},
 	},
 	{

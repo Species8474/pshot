@@ -140,6 +140,13 @@ const SHAPE_COMMON = (extra) => [
 	...extra,
 ];
 
+//CS6 Mixer Brush presets: [wet, load, mix]
+const MIXER_PRESETS = {
+	'Custom': null, 'Dry': [0, 50, 0], 'Dry, Light Load': [0, 1, 0], 'Dry, Heavy Load': [0, 100, 0], 'Moist': [10, 5, 50], 'Moist, Light Mix': [10, 5, 20],
+	'Moist, Heavy Mix': [10, 5, 90], 'Wet': [50, 50, 50], 'Wet, Light Mix': [50, 50, 20], 'Wet, Heavy Mix': [50, 50, 90], 'Very Wet': [100, 50, 50],
+	'Very Wet, Light Mix': [100, 50, 20], 'Very Wet, Heavy Mix': [100, 50, 90],
+};
+
 const ART_STYLES = ['Tight Short', 'Tight Medium', 'Tight Long', 'Loose Medium', 'Loose Long', 'Dab', 'Tight Curl', 'Tight Curl Long', 'Loose Curl', 'Loose Curl Long'];
 
 const LAYOUTS = {
@@ -431,6 +438,22 @@ const LAYOUTS = {
 		{ type: 'pct', label: 'Flow:', value: 100 },
 		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
 		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
+	],
+	mixer_brush: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
+		{ type: 'sep' },
+		{ type: 'mixer_load' },
+		{ type: 'check', label: 'Load', bind: 'load_each', title: 'Load the brush after each stroke' },
+		{ type: 'check', label: 'Clean', bind: 'clean_each', title: 'Clean the brush after each stroke' },
+		{ type: 'sep' },
+		{ type: 'select', values: Object.keys(MIXER_PRESETS), bind: 'mixer_preset', map: Object.fromEntries(Object.keys(MIXER_PRESETS).map(k => [k, k])) },
+		{ type: 'pct', label: 'Wet:', bind: 'wet' },
+		{ type: 'pct', label: 'Load:', bind: 'load' },
+		{ type: 'pct', label: 'Mix:', bind: 'mix' },
+		{ type: 'pct', label: 'Flow:', bind: 'flow' },
+		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'check', label: 'Sample All Layers', value: false },
 	],
 	art_history_brush: [
 		{ type: 'brush', bind: 'size' },
@@ -827,6 +850,12 @@ class Ps_options_bar_class {
 			wrap.appendChild(ro);
 			return wrap;
 		}
+		if (c.type == 'mixer_load') {
+			var mt = app.GUI.GUI_tools.tools_modules.retouch.object;
+			var res = mt.reservoir || [parseInt(config.COLOR.substr(1, 2), 16), parseInt(config.COLOR.substr(3, 2), 16), parseInt(config.COLOR.substr(5, 2), 16)];
+			wrap.innerHTML = '<span class="ps_opt_swatch" id="ps_mixer_load" title="Current brush load (Alt+click the canvas to load)" style="background:rgb(' + res.map(Math.round).join(',') + ')"></span>';
+			return wrap;
+		}
 		if (c.type == 'text') {
 			wrap.innerHTML = '<span class="ps_opt_label">' + c.label + '</span>';
 			var ti = document.createElement('input');
@@ -935,7 +964,17 @@ class Ps_options_bar_class {
 				select.appendChild(option);
 			}
 			if (bound && c.map) {
-				select.addEventListener('change', () => this.set(c.bind, c.map[select.value]));
+				select.addEventListener('change', () => {
+					this.set(c.bind, c.map[select.value]);
+					//Mixer Brush presets set Wet / Load / Mix
+					if (c.bind == 'mixer_preset' && MIXER_PRESETS[select.value]) {
+						var pv = MIXER_PRESETS[select.value];
+						this.set('wet', pv[0]);
+						this.set('load', pv[1]);
+						this.set('mix', pv[2]);
+						this.render();
+					}
+				});
 			}
 			else if (!c.disabled_values) {
 				select.disabled = true;
