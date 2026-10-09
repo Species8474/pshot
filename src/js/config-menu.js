@@ -64,7 +64,7 @@ const M = [
 		'Fill...|Shift+F5|ps/commands.fill',
 		'Stroke...|ps/commands.stroke',
 		'-',
-		'Content-Aware Scale|Alt+Shift+Ctrl+C',
+		'Content-Aware Scale|Alt+Shift+Ctrl+C|ps/commands.content_aware_scale',
 		'Puppet Warp',
 		'Free Transform|Ctrl+T|ps/commands.free_transform',
 		['Transform', [

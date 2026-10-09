@@ -68,6 +68,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - The dock: Color, Swatches, Adjustments, Styles, Layers, Channels, Paths. The icon strip holds History and Properties; Navigator and Info open from the Window menu.
   - Character and Paragraph panels (Window menu, Type > Panels): font, style, size, leading, tracking, colour, faux styles, alignment. With a type layer selected but not being edited, changes apply to all its text.
   - Screen modes (F) and Tab to hide panels.
+  - Content-Aware Scale (Alt+Shift+Ctrl+C, `ps/seam-carve.js`): Free Transform box, applied by seam carving (removing or duplicating the lowest-energy seams) on commit. There is no Protect alpha / Protect Skin Tones, and the preview while dragging is a plain scale.
   - Actions panel (Alt+F9, `ps/actions-panel.js`): sets, record/stop/play, new/delete; records menu commands and shortcuts (hook in `ps/commands.remember_filter`); filters replay with their recorded settings, other dialogs open during playback; stored in localStorage; Default Actions set.
   - Histogram panel (Window > Histogram: channel, source, Mean/Std Dev/Median/Pixels).
   - Workspaces (Window > Workspace and the switcher): Essentials, Painting, Photography, Typography.

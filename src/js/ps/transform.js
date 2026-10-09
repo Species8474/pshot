@@ -18,6 +18,7 @@ import config from './../config.js';
 import zoomView from './../libs/zoomView.js';
 import { ensure_pixel_layer } from './pixel-layer.js';
 import { Base_action } from './../actions/base.js';
+import { seam_carve } from './seam-carve.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 const HANDLES = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
@@ -677,7 +678,7 @@ class Ps_transform_class {
 			//Ctrl = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective (pixels only)
 			var ctrl = e.ctrlKey || e.metaKey;
 			var shape = this.job.mode_override || (ctrl ? (e.shiftKey && e.altKey ? 'perspective' : (e.shiftKey ? 'skew' : 'distort')) : null);
-			if (h.mode == 'scale' && (shape || this.job.quad) && (this.job.kind == 'pixels' || this.job.kind == 'selection')) {
+			if (h.mode == 'scale' && !this.job.content_aware && (shape || this.job.quad) && (this.job.kind == 'pixels' || this.job.kind == 'selection')) {
 				this.ensure_quad();
 				h.mode = shape || 'distort';
 			}
@@ -1007,6 +1008,22 @@ class Ps_transform_class {
 		if (this.job) this.job.mode_override = mode;
 	}
 
+	/**
+	 * Edit > Content-Aware Scale (Alt+Shift+Ctrl+C): a Free Transform box whose
+	 * scaling is applied by seam carving on commit
+	 */
+	start_content_aware() {
+		var layer = config.layer;
+		if (layer && layer.type != 'image' && layer.type != null || layer && layer.ps_smart) {
+			alertify.error('Could not complete the Content-Aware Scale command because the layer is not a pixel layer.');
+			return;
+		}
+		this.start();
+		if (!this.job) return;
+		this.job.content_aware = true;
+		app.GUI.Ps_workspace.status_message('Content-Aware Scale: drag handles to scale. Enter commits, Esc cancels.');
+	}
+
 	commit() {
 		var job = this.job;
 		if (!job) return;
@@ -1021,6 +1038,14 @@ class Ps_transform_class {
 			return;
 		}
 		if (job.kind == 'pixels') {
+			if (job.content_aware) {
+				//Content-Aware Scale: seams are removed/duplicated to the box size, then only rotation is left
+				var b = job.box, tw = Math.max(1, Math.round(b.w)), th = Math.max(1, Math.round(b.h));
+				job.piece = seam_carve(job.piece, tw, th);
+				if (job.mask_piece) job.mask_piece = seam_carve(job.mask_piece, tw, th);
+				job.w0 = tw;
+				job.h0 = th;
+			}
 			var result = this.result_canvas(true);
 			delete job.layer.link_canvas;
 			Object.assign(job.layer, job.geometry);
@@ -1048,7 +1073,7 @@ class Ps_transform_class {
 		}
 		this.remember(job);
 		this.cleanup();
-		app.State.do_action(new app.Actions.Bundle_action('free_transform', job.warp ? 'Warp' : 'Free Transform', actions));
+		app.State.do_action(new app.Actions.Bundle_action('free_transform', job.content_aware ? 'Content-Aware Scale' : (job.warp ? 'Warp' : 'Free Transform'), actions));
 	}
 }
 
