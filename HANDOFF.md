@@ -106,7 +106,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Image and Canvas Size, rotation, crop, trim.
 - **Filters**: Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
-  - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key).
+  - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Again. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
   - Guides from the rulers.
   - Hand, Zoom and Space-to-pan.
   - CS6 zoom steps.
@@ -114,7 +114,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
+- Warp transform. Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.

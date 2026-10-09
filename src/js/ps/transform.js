@@ -6,6 +6,11 @@
  * move, handle = scale (Shift keeps proportions, Alt scales from the center),
  * outside the box = rotate (Shift snaps to 15 degrees). Enter / double-click
  * commits, Esc cancels.
+ *
+ * Pixel layers can also be skewed / distorted / put in perspective (Ctrl,
+ * Ctrl+Shift, Ctrl+Alt+Shift dragging a handle, or Edit > Transform). The box
+ * then becomes a free quad (job.quad, corners TL TR BR BL) drawn through a
+ * homography.
  */
 
 import app from './../app.js';
@@ -40,6 +45,127 @@ function doc_canvas() {
 	c.width = config.WIDTH;
 	c.height = config.HEIGHT;
 	return c;
+}
+
+/**
+ * homography mapping the unit square to quad q (TL, TR, BR, BL)
+ */
+function square_to_quad(q) {
+	var x0 = q[0].x, y0 = q[0].y, x1 = q[1].x, y1 = q[1].y, x2 = q[2].x, y2 = q[2].y, x3 = q[3].x, y3 = q[3].y;
+	var dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+	var sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+	var g = 0, h = 0;
+	if (sx != 0 || sy != 0) {
+		var den = dx1 * dy2 - dx2 * dy1;
+		g = (sx * dy2 - dx2 * sy) / den;
+		h = (dx1 * sy - sx * dy1) / den;
+	}
+	var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0;
+	var d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+	return (u, v) => {
+		var w = g * u + h * v + 1;
+		return { x: (a * u + b * v + c) / w, y: (d * u + e * v + f) / w };
+	};
+}
+
+/**
+ * draws `img` mapped onto quad q, as a mesh of affine triangles
+ */
+function draw_quad(ctx, img, q) {
+	var H = square_to_quad(q);
+	var W = img.width, Hh = img.height;
+	var n = Math.max(4, Math.min(24, Math.round(Math.max(W, Hh) / 40)));
+	var tri = (s0, s1, s2, d0, d1, d2) => {
+		//slightly enlarged clip hides the seams between triangles
+		var cx = (d0.x + d1.x + d2.x) / 3, cy = (d0.y + d1.y + d2.y) / 3;
+		var grow = (p) => { var dx = p.x - cx, dy = p.y - cy, l = Math.hypot(dx, dy) || 1; return { x: p.x + dx / l * 0.6, y: p.y + dy / l * 0.6 }; };
+		var g0 = grow(d0), g1 = grow(d1), g2 = grow(d2);
+		ctx.save();
+		ctx.beginPath();
+		ctx.moveTo(g0.x, g0.y); ctx.lineTo(g1.x, g1.y); ctx.lineTo(g2.x, g2.y);
+		ctx.closePath();
+		ctx.clip();
+		var den = (s1.x - s0.x) * (s2.y - s0.y) - (s2.x - s0.x) * (s1.y - s0.y);
+		if (Math.abs(den) < 1e-9) { ctx.restore(); return; }
+		var a = ((d1.x - d0.x) * (s2.y - s0.y) - (d2.x - d0.x) * (s1.y - s0.y)) / den;
+		var b = ((d1.y - d0.y) * (s2.y - s0.y) - (d2.y - d0.y) * (s1.y - s0.y)) / den;
+		var c = ((d2.x - d0.x) * (s1.x - s0.x) - (d1.x - d0.x) * (s2.x - s0.x)) / den;
+		var d = ((d2.y - d0.y) * (s1.x - s0.x) - (d1.y - d0.y) * (s2.x - s0.x)) / den;
+		var e = d0.x - a * s0.x - c * s0.y, f = d0.y - b * s0.x - d * s0.y;
+		ctx.transform(a, b, c, d, e, f);
+		ctx.drawImage(img, 0, 0);
+		ctx.restore();
+	};
+	for (var j = 0; j < n; j++) {
+		for (var i = 0; i < n; i++) {
+			var u0 = i / n, u1 = (i + 1) / n, v0 = j / n, v1 = (j + 1) / n;
+			var s00 = { x: u0 * W, y: v0 * Hh }, s10 = { x: u1 * W, y: v0 * Hh }, s01 = { x: u0 * W, y: v1 * Hh }, s11 = { x: u1 * W, y: v1 * Hh };
+			var d00 = H(u0, v0), d10 = H(u1, v0), d01 = H(u0, v1), d11 = H(u1, v1);
+			tri(s00, s10, s11, d00, d10, d11);
+			tri(s00, s11, s01, d00, d11, d01);
+		}
+	}
+}
+
+/**
+ * exact rendering for the final result: every destination pixel is sampled
+ * (bilinear) through the inverse homography
+ */
+function draw_quad_exact(ctx, img, q) {
+	var W = img.width, H = img.height;
+	var x0 = q[0].x, y0 = q[0].y, x1 = q[1].x, y1 = q[1].y, x2 = q[2].x, y2 = q[2].y, x3 = q[3].x, y3 = q[3].y;
+	var dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+	var sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+	var g = 0, h = 0;
+	if (sx != 0 || sy != 0) {
+		var den = dx1 * dy2 - dx2 * dy1;
+		g = (sx * dy2 - dx2 * sy) / den;
+		h = (dx1 * sy - sx * dy1) / den;
+	}
+	var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0;
+	var d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+	//inverse of [a b c; d e f; g h 1]
+	var A = e - f * h, B = c * h - b, C = b * f - c * e;
+	var D = f * g - d, E = a - c * g, F = c * d - a * f;
+	var G = d * h - e * g, Hh = b * g - a * h, I = a * e - b * d;
+	var minx = Math.max(0, Math.floor(Math.min(x0, x1, x2, x3))), maxx = Math.min(ctx.canvas.width, Math.ceil(Math.max(x0, x1, x2, x3)));
+	var miny = Math.max(0, Math.floor(Math.min(y0, y1, y2, y3))), maxy = Math.min(ctx.canvas.height, Math.ceil(Math.max(y0, y1, y2, y3)));
+	var w = maxx - minx, hh = maxy - miny;
+	if (w <= 0 || hh <= 0) return;
+	var src = img.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+	var out = new ImageData(w, hh);
+	var o = out.data;
+	for (var py = 0; py < hh; py++) {
+		for (var px = 0; px < w; px++) {
+			var X = minx + px + 0.5, Y = miny + py + 0.5;
+			var z = G * X + Hh * Y + I;
+			var u = (A * X + B * Y + C) / z, v = (D * X + E * Y + F) / z;
+			if (u < 0 || v < 0 || u > 1 || v > 1) continue;
+			var fx = u * W - 0.5, fy = v * H - 0.5;
+			var ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
+			var k = (py * w + px) * 4;
+			for (var ch = 0; ch < 4; ch++) {
+				var s00 = src[((Math.max(0, iy) * W) + Math.max(0, ix)) * 4 + ch];
+				var s10 = src[((Math.max(0, iy) * W) + Math.min(W - 1, ix + 1)) * 4 + ch];
+				var s01 = src[((Math.min(H - 1, iy + 1) * W) + Math.max(0, ix)) * 4 + ch];
+				var s11 = src[((Math.min(H - 1, iy + 1) * W) + Math.min(W - 1, ix + 1)) * 4 + ch];
+				o[k + ch] = (s00 * (1 - tx) + s10 * tx) * (1 - ty) + (s01 * (1 - tx) + s11 * tx) * ty;
+			}
+		}
+	}
+	var tmp = document.createElement('canvas');
+	tmp.width = w;
+	tmp.height = hh;
+	tmp.getContext('2d').putImageData(out, 0, 0);
+	ctx.drawImage(tmp, minx, miny);
+}
+
+function point_in_quad(p, q) {
+	var inside = false;
+	for (var i = 0, j = 3; i < 4; j = i++) {
+		if (((q[i].y > p.y) != (q[j].y > p.y)) && (p.x < (q[j].x - q[i].x) * (p.y - q[i].y) / (q[j].y - q[i].y) + q[i].x)) inside = !inside;
+	}
+	return inside;
 }
 
 class Ps_transform_class {
@@ -83,6 +209,7 @@ class Ps_transform_class {
 		if (!this.job) {
 			return;
 		}
+		this.job.box0 = Object.assign({}, this.job.box);
 		app.GUI.Ps_workspace.status_message('Free Transform: drag handles to scale, outside to rotate. Enter commits, Esc cancels.');
 		sel.decorate = (ctx, scale) => this.draw_box(ctx, scale);
 		sel.draw_overlay();
@@ -177,7 +304,15 @@ class Ps_transform_class {
 
 	// ---------- rendering ----------
 
-	draw_piece(ctx, piece) {
+	draw_piece(ctx, piece, exact) {
+		if (this.job.quad) {
+			ctx.save();
+			ctx.imageSmoothingQuality = 'high';
+			if (exact) draw_quad_exact(ctx, piece, this.job.quad);
+			else draw_quad(ctx, piece, this.job.quad);
+			ctx.restore();
+			return;
+		}
 		var b = this.job.box;
 		ctx.save();
 		ctx.translate(b.cx, b.cy);
@@ -188,11 +323,11 @@ class Ps_transform_class {
 		ctx.restore();
 	}
 
-	result_canvas() {
+	result_canvas(exact) {
 		var out = doc_canvas();
 		var ctx = out.getContext('2d');
 		ctx.drawImage(this.job.hole, 0, 0);
-		this.draw_piece(ctx, this.job.piece);
+		this.draw_piece(ctx, this.job.piece, exact);
 		return out;
 	}
 
@@ -214,6 +349,10 @@ class Ps_transform_class {
 	}
 
 	corners() {
+		if (this.job.quad) {
+			var q = this.job.quad, mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+			return [q[0], mid(q[0], q[1]), q[1], mid(q[1], q[2]), q[2], mid(q[2], q[3]), q[3], mid(q[3], q[0])];
+		}
 		var b = this.job.box;
 		var cos = Math.cos(b.angle), sin = Math.sin(b.angle);
 		return HANDLES.map(([hx, hy]) => {
@@ -270,6 +409,9 @@ class Ps_transform_class {
 				return { mode: 'scale', handle: i };
 			}
 		}
+		if (this.job.quad) {
+			return { mode: point_in_quad(p, this.job.quad) ? 'move' : 'rotate' };
+		}
 		var l = this.to_local(p);
 		var b = this.job.box;
 		if (Math.abs(l.x) <= b.w / 2 && Math.abs(l.y) <= b.h / 2) {
@@ -292,7 +434,14 @@ class Ps_transform_class {
 			e.preventDefault();
 			var p = this.world(e);
 			var h = this.hit(p);
-			this.drag = Object.assign(h, { start: p, box: Object.assign({}, this.job.box) });
+			//Ctrl = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective (pixels only)
+			var ctrl = e.ctrlKey || e.metaKey;
+			var shape = this.job.mode_override || (ctrl ? (e.shiftKey && e.altKey ? 'perspective' : (e.shiftKey ? 'skew' : 'distort')) : null);
+			if (h.mode == 'scale' && (shape || this.job.quad) && this.job.kind == 'pixels') {
+				this.ensure_quad();
+				h.mode = shape || 'distort';
+			}
+			this.drag = Object.assign(h, { start: p, box: Object.assign({}, this.job.box), quad: this.job.quad ? this.job.quad.map(c => ({ x: c.x, y: c.y })) : null });
 		}, true);
 
 		document.addEventListener('mousemove', (e) => {
@@ -337,8 +486,76 @@ class Ps_transform_class {
 		}, true);
 	}
 
+	ensure_quad() {
+		if (this.job.quad) return;
+		var c = this.corners();
+		this.job.quad = [c[0], c[2], c[4], c[6]].map(p => ({ x: p.x, y: p.y }));
+	}
+
+	/**
+	 * Skew / Distort / Perspective drags on the quad
+	 */
+	apply_quad_drag(p, e) {
+		var d = this.drag, q = this.job.quad, s = d.quad;
+		var dx = p.x - d.start.x, dy = p.y - d.start.y;
+		if (d.mode == 'move') {
+			for (var i = 0; i < 4; i++) { q[i].x = s[i].x + dx; q[i].y = s[i].y + dy; }
+			return;
+		}
+		if (d.mode == 'rotate') {
+			var cx = (s[0].x + s[1].x + s[2].x + s[3].x) / 4, cy = (s[0].y + s[1].y + s[2].y + s[3].y) / 4;
+			var a = Math.atan2(p.y - cy, p.x - cx) - Math.atan2(d.start.y - cy, d.start.x - cx);
+			if (e.shiftKey) a = Math.round(a / (Math.PI / 12)) * (Math.PI / 12);
+			var cos = Math.cos(a), sin = Math.sin(a);
+			for (var k = 0; k < 4; k++) {
+				var rx = s[k].x - cx, ry = s[k].y - cy;
+				q[k].x = cx + rx * cos - ry * sin;
+				q[k].y = cy + rx * sin + ry * cos;
+			}
+			return;
+		}
+		var handle = d.handle;
+		if (handle % 2 == 0) {
+			//corner
+			var ci = handle / 2;
+			if (d.mode == 'perspective') {
+				//the corner on the same side moves the opposite way
+				var horizontal = Math.abs(dx) >= Math.abs(dy);
+				var partner = horizontal ? [1, 0, 3, 2][ci] : [3, 2, 1, 0][ci];
+				for (var k2 = 0; k2 < 4; k2++) { q[k2].x = s[k2].x; q[k2].y = s[k2].y; }
+				if (horizontal) { q[ci].x = s[ci].x + dx; q[partner].x = s[partner].x - dx; }
+				else { q[ci].y = s[ci].y + dy; q[partner].y = s[partner].y - dy; }
+			}
+			else if (d.mode == 'skew') {
+				//a corner slides along one axis only
+				q[ci].x = s[ci].x + (Math.abs(dx) >= Math.abs(dy) ? dx : 0);
+				q[ci].y = s[ci].y + (Math.abs(dx) >= Math.abs(dy) ? 0 : dy);
+			}
+			else {
+				q[ci].x = s[ci].x + dx;
+				q[ci].y = s[ci].y + dy;
+			}
+			return;
+		}
+		//side handle: its two corners
+		var side = [[0, 1], [1, 2], [2, 3], [3, 0]][(handle - 1) / 2];
+		var ax = s[side[1]].x - s[side[0]].x, ay = s[side[1]].y - s[side[0]].y, al = Math.hypot(ax, ay) || 1;
+		var mx = dx, my = dy;
+		if (d.mode == 'skew' || d.mode == 'perspective') {
+			//along the side only
+			var t = (dx * ax + dy * ay) / al;
+			mx = ax / al * t;
+			my = ay / al * t;
+		}
+		for (var k3 = 0; k3 < 4; k3++) { q[k3].x = s[k3].x; q[k3].y = s[k3].y; }
+		for (var c of side) { q[c].x = s[c].x + mx; q[c].y = s[c].y + my; }
+	}
+
 	apply_drag(p, e) {
 		var d = this.drag;
+		if (this.job.quad) {
+			return this.apply_quad_drag(p, e);
+		}
 		var b = this.job.box;
 		var start = d.box;
 		if (d.mode == 'move') {
@@ -428,12 +645,61 @@ class Ps_transform_class {
 		this.cleanup();
 	}
 
+	/**
+	 * Transform Again needs the last transform relative to its starting bounds
+	 */
+	remember(job) {
+		var b0 = { x: job.box0.cx - job.box0.w / 2, y: job.box0.cy - job.box0.h / 2, w: job.box0.w, h: job.box0.h };
+		var corners = this.corners();
+		var quad = job.quad || [corners[0], corners[2], corners[4], corners[6]];
+		this.last = quad.map(c => ({ u: (c.x - b0.x) / b0.w, v: (c.y - b0.y) / b0.h }));
+	}
+
+	/**
+	 * Edit > Transform > Again (Shift+Ctrl+T)
+	 */
+	again() {
+		if (!this.last) return;
+		var rel = this.last;
+		this.start();
+		if (!this.job) return;
+		var b = this.job.box;
+		var x = b.cx - b.w / 2, y = b.cy - b.h / 2;
+		var quad = rel.map(r => ({ x: x + r.u * b.w, y: y + r.v * b.h }));
+		if (this.job.kind == 'pixels') {
+			this.job.quad = quad;
+		}
+		else {
+			//vector layers: scale/rotate/move only
+			var cx = (quad[0].x + quad[2].x) / 2, cy = (quad[0].y + quad[2].y) / 2;
+			b.angle = Math.atan2(quad[1].y - quad[0].y, quad[1].x - quad[0].x);
+			b.w = Math.hypot(quad[1].x - quad[0].x, quad[1].y - quad[0].y);
+			b.h = Math.hypot(quad[3].x - quad[0].x, quad[3].y - quad[0].y);
+			b.cx = cx;
+			b.cy = cy;
+		}
+		this.commit();
+	}
+
+	/**
+	 * Edit > Transform > Skew / Distort / Perspective
+	 */
+	start_mode(mode) {
+		var layer = config.layer;
+		if (layer && layer.type != 'image' && layer.type != null) {
+			alertify.error('Could not complete the ' + mode[0].toUpperCase() + mode.slice(1) + ' command because the layer is not a pixel layer.');
+			return;
+		}
+		this.start();
+		if (this.job) this.job.mode_override = mode;
+	}
+
 	commit() {
 		var job = this.job;
 		if (!job) return;
 		var actions = [];
 		if (job.kind == 'pixels') {
-			var result = this.result_canvas();
+			var result = this.result_canvas(true);
 			delete job.layer.link_canvas;
 			Object.assign(job.layer, job.geometry);
 			actions.push(new app.Actions.Update_layer_action(job.layer.id, {
@@ -442,7 +708,7 @@ class Ps_transform_class {
 			actions.push(new app.Actions.Update_layer_image_action(result, job.layer.id));
 			if (job.mask_piece) {
 				var mask = doc_canvas();
-				this.draw_piece(mask.getContext('2d'), job.mask_piece);
+				this.draw_piece(mask.getContext('2d'), job.mask_piece, true);
 				actions.push(new Set_mask_action(this.selection(), mask));
 			}
 		}
@@ -452,6 +718,7 @@ class Ps_transform_class {
 			Object.assign(job.layer, job.original);
 			actions.push(new app.Actions.Update_layer_action(job.layer.id, settings));
 		}
+		this.remember(job);
 		this.cleanup();
 		app.State.do_action(new app.Actions.Bundle_action('free_transform', 'Free Transform', actions));
 	}
