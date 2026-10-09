@@ -201,7 +201,7 @@ class Ps_keymap_class {
 				return true;
 			}
 			if (key == '[' || key == ']') {
-				return this.change_brush_size(key == ']' ? 1 : -1);
+				return event.shiftKey ? this.change_brush_hardness(key == ']' ? 1 : -1) : this.change_brush_size(key == ']' ? 1 : -1);
 			}
 			if (/^[0-9]$/.test(key)) {
 				return this.set_tool_opacity(key);
@@ -241,6 +241,19 @@ class Ps_keymap_class {
 		else {
 			attrs[key] = value;
 		}
+		app.GUI.GUI_tools.show_action_attributes();
+		return true;
+	}
+
+	/**
+	 * Shift+[ / Shift+]: brush hardness in 25% steps
+	 */
+	change_brush_hardness(direction) {
+		var attrs = config.TOOL.attributes;
+		if (!('hardness' in attrs)) {
+			return false;
+		}
+		attrs.hardness = Math.max(0, Math.min(100, Math.round((attrs.hardness + direction * 25) / 25) * 25));
 		app.GUI.GUI_tools.show_action_attributes();
 		return true;
 	}

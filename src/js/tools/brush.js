@@ -356,7 +356,13 @@ class Brush_class extends Base_tools_class {
 		ctx.save();
 		ctx.fillStyle = layer.color;
 		ctx.strokeStyle = layer.color;
-		ctx.lineWidth = params.size;
+		//pshot: hardness < 100 gives a soft edge (narrower core + blur, in device pixels)
+		var hardness = params.hardness == null ? 100 : params.hardness;
+		var width_k = 0.6 + 0.4 * hardness / 100;
+		if (hardness < 100) {
+			ctx.filter = 'blur(' + (size * (1 - hardness / 100) / 8 * ctx.getTransform().a) + 'px)';
+		}
+		ctx.lineWidth = params.size * width_k;
 		ctx.lineCap = 'round';
 		ctx.lineJoin = 'round';
 
@@ -388,16 +394,16 @@ class Brush_class extends Base_tools_class {
 						else {
 							//line
 
-							ctx.lineWidth = group_data[i][2];
+							ctx.lineWidth = group_data[i][2] * width_k;
 
 							if (group_data[i - 1] == null && group_data[i + 1] == null) {
 								//exception - point
-								ctx.arc(group_data[i][0], group_data[i][1], size / 2, 0, 2 * Math.PI, false);
+								ctx.arc(group_data[i][0], group_data[i][1], size * width_k / 2, 0, 2 * Math.PI, false);
 								ctx.fill();
 							}
 							else if (group_data[i - 1] != null) {
 								//lines
-								ctx.lineWidth = group_data[i][2];
+								ctx.lineWidth = group_data[i][2] * width_k;
 								ctx.beginPath();
 								ctx.moveTo(group_data[i - 1][0], group_data[i - 1][1]);
 								ctx.lineTo(group_data[i][0], group_data[i][1]);
@@ -408,7 +414,7 @@ class Brush_class extends Base_tools_class {
 					if (group_data[1] == null) {
 						//point
 						ctx.beginPath();
-						ctx.arc(group_data[0][0], group_data[0][1], size / 2, 0, 2 * Math.PI, false);
+						ctx.arc(group_data[0][0], group_data[0][1], size * width_k / 2, 0, 2 * Math.PI, false);
 						ctx.fill();
 					}
 				}
@@ -435,7 +441,7 @@ class Brush_class extends Base_tools_class {
 			//point
 			var point = data[0];
 			ctx.beginPath();
-			ctx.arc(point[0], point[1], point[2] / 2, 0, 2 * Math.PI, false);
+			ctx.arc(point[0], point[1], ctx.lineWidth / 2, 0, 2 * Math.PI, false);
 			ctx.fill();
 			return;
 		}

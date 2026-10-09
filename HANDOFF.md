@@ -98,13 +98,13 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Hand, Zoom and Space-to-pan.
   - CS6 zoom steps.
   - Ctrl+Z toggles a single undo; Alt+Ctrl+Z and Shift+Ctrl+Z step through History.
-  - Number keys set brush opacity; [ and ] change brush size.
+  - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
 - Magnetic Lasso, Color Replacement, Mixer Brush, History Brush, Pen paths and the Paths panel, Slice tools, 3D.
 - Adjustment kinds: Selective Color, Color Lookup, Shadows/Highlights, HDR Toning.
 - Styles: Bevel & Emboss, Satin, Pattern Overlay. Vector masks. Smart Objects.
-- Brush hardness, flow and the Brush panel.
+- Brush flow and the Brush panel.
 - Multiple layer selection (Shift-click) is not supported: miniPaint has one active layer.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 

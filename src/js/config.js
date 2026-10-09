@@ -154,6 +154,7 @@ config.TOOLS = [
 		name: 'brush',
 		attributes: {
 			size: 4,
+			hardness: 100,
 			pressure: false,
 			opacity: 100,
 			blend: 'Normal',

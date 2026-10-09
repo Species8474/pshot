@@ -11,6 +11,21 @@ import app from './../app.js';
 import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 
+//Type tool alignment buttons: act on the active type layer
+function text_align(align) {
+	var layer = () => (config.layer && config.layer.type == 'text' ? config.layer : null);
+	return {
+		is_pressed: () => (layer() && layer().params ? layer().params.halign || 'left' : 'left') == align,
+		action: () => {
+			var l = layer();
+			if (!l) return;
+			app.State.do_action(new app.Actions.Bundle_action('paragraph', 'Paragraph Alignment', [
+				new app.Actions.Update_layer_action(l.id, { params: Object.assign({}, l.params, { halign: align }) }),
+			])).then(() => app.GUI.GUI_tools.show_action_attributes());
+		},
+	};
+}
+
 const MODES = ['Normal', 'Dissolve', 'Behind', 'Clear', 'Darken', 'Multiply', 'Color Burn', 'Linear Burn', 'Darker Color',
 	'Lighten', 'Screen', 'Color Dodge', 'Linear Dodge (Add)', 'Lighter Color', 'Overlay', 'Soft Light', 'Hard Light',
 	'Vivid Light', 'Linear Light', 'Pin Light', 'Hard Mix', 'Difference', 'Exclusion', 'Subtract', 'Divide',
@@ -363,10 +378,10 @@ const LAYOUTS = {
 		{ type: 'num', bind: 'size', unit: 'pt', width: 52 },
 		{ type: 'select', values: ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth'], value: 'Sharp' },
 		{ type: 'sep' },
-		{ type: 'icons', items: [{ icon: IC.align_text_l, title: 'Left align text', active: true }, { icon: IC.align_text_c, title: 'Center text' }, { icon: IC.align_text_r, title: 'Right align text' }] },
+		{ type: 'icons', items: [{ icon: IC.align_text_l, title: 'Left align text', ...text_align('left') }, { icon: IC.align_text_c, title: 'Center text', ...text_align('center') }, { icon: IC.align_text_r, title: 'Right align text', ...text_align('right') }] },
 		{ type: 'swatch', label: '', bind: 'fill', title: 'Set the text color' },
 		{ type: 'icon', icon: IC.warp, title: 'Create warped text' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Character and Paragraph panels' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Character and Paragraph panels', action: () => app.GUI.Ps_workspace.toggle_panel('character') },
 	],
 	hand: [{ type: 'check', label: 'Scroll All Windows', value: false }, { type: 'sep' }, ...ZOOM_BUTTONS],
 	zoom: [
@@ -505,6 +520,9 @@ class Ps_options_bar_class {
 				}
 				else if (item.action) {
 					ib.addEventListener('click', item.action);
+					if (item.is_pressed) {
+						ib.classList.toggle('pressed', item.is_pressed());
+					}
 				}
 				else if (item.active) {
 					ib.classList.add('pressed');
@@ -699,8 +717,10 @@ class Ps_options_bar_class {
 		var pop = document.createElement('div');
 		pop.className = 'ps_brush_picker';
 		var size = this.get(key);
+		var hard = this.has('hardness');
+		var hardness = hard ? this.get('hardness') : 100;
 		pop.innerHTML = '<div class="ps_bp_row"><span>Size:</span><input type="range" min="1" max="500" value="' + size + '"><input type="text" class="ps_opt_field" value="' + size + ' px"></div>'
-			+ '<div class="ps_bp_row disabled"><span>Hardness:</span><input type="range" disabled value="100"><input type="text" class="ps_opt_field" disabled value="100%"></div>';
+			+ '<div class="ps_bp_row' + (hard ? '' : ' disabled') + '"><span>Hardness:</span><input type="range" class="ps_bp_hard" min="0" max="100"' + (hard ? '' : ' disabled') + ' value="' + hardness + '"><input type="text" class="ps_opt_field ps_bp_hard_field"' + (hard ? '' : ' disabled') + ' value="' + hardness + '%"></div>';
 		document.body.appendChild(pop);
 		var rect = anchor.getBoundingClientRect();
 		pop.style.left = rect.left + 'px';
@@ -715,6 +735,19 @@ class Ps_options_bar_class {
 			var tip = document.querySelector('.ps_brush_size');
 			if (tip) tip.textContent = v;
 		};
+		if (hard) {
+			var hrange = pop.querySelector('.ps_bp_hard');
+			var hfield = pop.querySelector('.ps_bp_hard_field');
+			var apply_hard = (v) => {
+				v = Math.max(0, Math.min(100, Math.round(v)));
+				this.set('hardness', v);
+				hrange.value = v;
+				hfield.value = v + '%';
+			};
+			hrange.addEventListener('input', () => apply_hard(parseFloat(hrange.value)));
+			hfield.addEventListener('change', () => apply_hard(parseFloat(hfield.value) || 0));
+			hfield.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter' || e.key == 'Escape') close(); });
+		}
 		range.addEventListener('input', () => apply(parseFloat(range.value)));
 		field.addEventListener('change', () => apply(parseFloat(field.value) || 1));
 		field.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter' || e.key == 'Escape') close(); });
