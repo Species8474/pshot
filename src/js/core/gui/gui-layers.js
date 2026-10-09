@@ -59,10 +59,10 @@ var template = `
 	</div>
 	<div class="ps_layers_row">
 		<span class="ps_lock_label">Lock:</span>
-		<span class="ps_lock disabled" title="Lock transparent pixels">${ICON.lock_transparent}</span>
-		<span class="ps_lock disabled" title="Lock image pixels">${ICON.lock_image}</span>
-		<span class="ps_lock disabled" title="Lock position">${ICON.lock_position}</span>
-		<span class="ps_lock disabled" title="Lock all">${ICON.lock_all}</span>
+		<span class="ps_lock" data-lock="transparent" title="Lock transparent pixels">${ICON.lock_transparent}</span>
+		<span class="ps_lock" data-lock="image" title="Lock image pixels">${ICON.lock_image}</span>
+		<span class="ps_lock" data-lock="position" title="Lock position">${ICON.lock_position}</span>
+		<span class="ps_lock" data-lock="all" title="Lock all">${ICON.lock_all}</span>
 		<label class="ps_fill_label" for="ps_layer_fill">Fill:</label>
 		<input type="text" id="ps_layer_fill" class="ps_pct" value="100%" />
 	</div>
@@ -116,6 +116,15 @@ class GUI_layers_class {
 		var base = document.getElementById('layers_base');
 
 		base.addEventListener('click', function (event) {
+			var lock = event.target.closest('.ps_lock[data-lock]');
+			if (lock && config.layer) {
+				var locks = Object.assign({}, config.layer.ps_lock || {});
+				locks[lock.dataset.lock] = !locks[lock.dataset.lock];
+				app.State.do_action(new app.Actions.Bundle_action('lock', 'Lock Layer', [
+					new app.Actions.Update_layer_action(config.layer.id, { ps_lock: locks }),
+				])).then(() => _this.render_layers());
+				return;
+			}
 			var target = event.target.closest('[data-action], button[id], .ps_layer_row');
 			if (!target) {
 				return;
@@ -368,6 +377,10 @@ class GUI_layers_class {
 		select.value = composition;
 		document.getElementById('ps_layer_opacity').value = Math.round(config.layer.opacity) + '%';
 		document.getElementById('ps_layer_fill').value = (config.layer.ps_fill == null ? 100 : config.layer.ps_fill) + '%';
+		var locks = config.layer.ps_lock || {};
+		document.querySelectorAll('#layers_base .ps_lock[data-lock]').forEach((el) => {
+			el.classList.toggle('pressed', !!locks[el.dataset.lock]);
+		});
 	}
 
 	draw_thumbnail(canvas, layer) {
@@ -475,8 +488,12 @@ class GUI_layers_class {
 				}
 				var is_background = value.name == 'Background' && value === layers[layers.length - 1];
 				html += '<span class="ps_layer_name' + (is_background ? ' background' : '') + '" data-id="' + value.id + '">' + this.Helper.escapeHtml(value.name) + '</span>';
-				if (is_background) {
-					html += '<span class="ps_layer_lock" title="Background layer">' + ICON.lock_all + '</span>';
+				var lk = value.ps_lock || {};
+				if (is_background || lk.all) {
+					html += '<span class="ps_layer_lock" title="Locked">' + ICON.lock_all + '</span>';
+				}
+				else if (lk.transparent || lk.image || lk.position) {
+					html += '<span class="ps_layer_lock partial" title="Partially locked">' + ICON.lock_all + '</span>';
 				}
 				if (has_filters) {
 					html += '<span class="ps_layer_fx" title="Layer effects">fx</span>';

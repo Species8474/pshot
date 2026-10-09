@@ -89,15 +89,32 @@ function install_pixel_layer_guard() {
 		}
 		var tool = config.TOOL.name;
 		if ((PAINT_TOOLS.includes(tool) || PIXEL_TOOLS.includes(tool)) && config.layer && config.layer.type == 'ps_group') {
-			event.stopPropagation();
+			event.stopImmediatePropagation();
 			event.preventDefault();
 			blocked = true;
 			var group_member = app.GUI.Ps_workspace.active_member;
 			alert_box('Could not use the ' + (group_member ? group_member.name : 'tool') + ' because the target layer is a group.');
 			return;
 		}
+		var locks = (config.layer && config.layer.ps_lock) || {};
+		if ((PAINT_TOOLS.includes(tool) || tool == 'selection') && tool != 'selection' && (locks.all || locks.image)
+			&& !(config.layer.ps_mask_editing && config.layer.ps_mask)) {
+			event.stopImmediatePropagation();
+			event.preventDefault();
+			blocked = true;
+			var locked_member = app.GUI.Ps_workspace.active_member;
+			alert_box('Could not use the ' + (locked_member ? locked_member.name : 'tool') + ' because the layer is locked.');
+			return;
+		}
+		if (tool == 'select' && (locks.all || locks.position)) {
+			event.stopImmediatePropagation();
+			event.preventDefault();
+			blocked = true;
+			alert_box('Could not complete your request because the layer is locked.');
+			return;
+		}
 		if (PAINT_TOOLS.includes(tool) && config.layer && config.layer.visible == false) {
-			event.stopPropagation();
+			event.stopImmediatePropagation();
 			event.preventDefault();
 			blocked = true;
 			var member = app.GUI.Ps_workspace.active_member;
@@ -106,14 +123,14 @@ function install_pixel_layer_guard() {
 		}
 		if ((PAINT_TOOLS.includes(tool) || PIXEL_TOOLS.includes(tool)) && config.layer && config.layer.type == 'ps_adjust'
 			&& !(config.layer.ps_mask_editing && ['brush', 'pencil', 'gradient'].includes(tool))) {
-			event.stopPropagation();
+			event.stopImmediatePropagation();
 			event.preventDefault();
 			blocked = true;
 			alert_box('Could not complete your request because the target is an adjustment layer. Paint on its layer mask with the Brush, Pencil or Gradient tool.');
 			return;
 		}
 		if (PAINT_TOOLS.includes(tool) && config.layer && KIND[config.layer.type]) {
-			event.stopPropagation();
+			event.stopImmediatePropagation();
 			event.preventDefault();
 			blocked = true;
 			ask_rasterize(KIND[config.layer.type]);
@@ -125,4 +142,4 @@ function install_pixel_layer_guard() {
 	}, true);
 }
 
-export { ensure_pixel_layer, install_pixel_layer_guard };
+export { ensure_pixel_layer, install_pixel_layer_guard, alert_box };

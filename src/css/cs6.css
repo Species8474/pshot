@@ -1325,3 +1325,8 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 .ps_fx_unit { color: #bbb; width: 18px; }
 .ps_fx_swatch { width: 26px; height: 18px; padding: 0; border: 1px solid #111; box-shadow: inset 0 0 0 1px #888; margin-left: 4px; }
 .ps_fx_check { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }
+
+.ps_lock { cursor: default; border: 1px solid transparent; border-radius: 2px; color: #cfcfcf; }
+.ps_lock:hover { background: #5f5f5f; }
+.ps_lock.pressed { background: #3a3a3a; border-color: #262626; color: #fff; }
+.ps_layer_lock.partial { opacity: 0.55; }

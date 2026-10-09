@@ -85,6 +85,10 @@ async function commit_stroke(tool, pending, label) {
 	ctx.setTransform(sx, 0, 0, sy, -target.x * sx, -target.y * sy);
 	ctx.globalAlpha = (temp.opacity == null ? 100 : temp.opacity) / 100;
 	ctx.globalCompositeOperation = BLEND_OPS[temp.params && temp.params.blend] || 'source-over';
+	if (target.ps_lock && target.ps_lock.transparent) {
+		//Lock transparent pixels: paint only where the layer already has pixels
+		ctx.globalCompositeOperation = 'source-atop';
+	}
 	ctx.drawImage(stroke, 0, 0);
 
 	await app.State.do_action(

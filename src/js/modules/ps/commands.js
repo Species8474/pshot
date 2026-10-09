@@ -79,6 +79,11 @@ class Ps_commands_class {
 	}
 
 	require_image_layer() {
+		var locks = (config.layer && config.layer.ps_lock) || {};
+		if (locks.all || locks.image) {
+			alertify.error('Could not complete your request because the layer is locked.');
+			return false;
+		}
 		ensure_pixel_layer();
 		if (config.layer.type != 'image') {
 			alertify.error('Could not complete your request because the layer is not a pixel layer. Rasterize it first (Layer > Rasterize > Layer).');
@@ -211,6 +216,9 @@ class Ps_commands_class {
 			pctx.drawImage(sel.mask_for_layer(config.layer), 0, 0);
 		}
 		ctx.globalAlpha = alpha;
+		if (config.layer.ps_lock && config.layer.ps_lock.transparent) {
+			ctx.globalCompositeOperation = 'source-atop';
+		}
 		ctx.drawImage(paint, 0, 0);
 		app.State.do_action(
 			new app.Actions.Bundle_action('fill', description, [
@@ -304,6 +312,11 @@ class Ps_commands_class {
 	}
 
 	free_transform() {
+		var locks = (config.layer && config.layer.ps_lock) || {};
+		if (locks.all || locks.position || locks.image) {
+			alertify.error('Could not complete the Free Transform command because the layer is locked.');
+			return;
+		}
 		app.GUI.Ps_workspace.Transform.start();
 	}
 
