@@ -1437,3 +1437,25 @@ body.theme-cs6 #popups .popup.ps_liquify { width: auto; max-width: none; max-hei
 .ps_comp_row { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-bottom: 1px solid #3a3a3a; }
 .ps_comp_row.applied { background: var(--ps-select); color: #fff; }
 .ps_comp_mark { width: 12px; font-size: 9px; }
+
+/* Save for Web */
+body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none; max-height: none; top: 3vh; padding: 34px 10px 10px; }
+.ps_sfw_body { display: flex; gap: 10px; height: min(640px, 78vh); }
+.ps_sfw_left { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ps_sfw_tabs { display: flex; gap: 2px; }
+.ps_sfw_tabs button { height: 22px; padding: 0 12px; background: #4a4a4a; color: #ddd; border: 1px solid #333; border-bottom: none; border-radius: 3px 3px 0 0; font-size: 11px; }
+.ps_sfw_tabs button.active { background: #6a6a6a; color: #fff; }
+.ps_sfw_tabs button.disabled { color: #888; }
+.ps_sfw_views { flex: 1; display: flex; gap: 4px; background: #2a2a2a; border: 1px solid #1e1e1e; padding: 4px; min-height: 0; }
+.ps_sfw_pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ps_sfw_img { flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #6b6b6b; }
+.ps_sfw_img img { max-width: 100%; max-height: 100%; background: #fff repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 0 0 / 16px 16px; }
+.ps_sfw_info { display: flex; flex-direction: column; padding: 4px 6px; background: #535353; color: #ddd; font-size: 11px; }
+.ps_sfw_right { width: 250px; display: flex; flex-direction: column; gap: 6px; }
+.ps_sfw_row { display: flex; align-items: center; gap: 6px; }
+.ps_sfw_row select { flex: 1; }
+.ps_sfw_row input[type="number"] { width: 64px; }
+.ps_sfw_group { color: #ddd; border-bottom: 1px solid #444; padding-top: 8px; }
+.ps_sfw_matte { width: 40px; height: 16px; border: 1px solid #111; padding: 0; }
+.ps_sfw_buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.ps_sfw_buttons .button { min-width: 80px; }

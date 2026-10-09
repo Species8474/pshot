@@ -26,7 +26,7 @@ const M = [
 		'Save|Ctrl+S|ps/commands.save',
 		'Save As...|Shift+Ctrl+S|file/save.save',
 		'Check In...',
-		'Save for Web...|Alt+Shift+Ctrl+S|file/save.export',
+		'Save for Web...|Alt+Shift+Ctrl+S|ps/commands.save_for_web',
 		'Revert|F12|ps/commands.revert',
 		'-',
 		'Place...|ps/commands.place',

@@ -14,6 +14,7 @@ import { show_new_dialog } from './../../ps/new-dialog.js';
 import Ps_size_dialogs_class from './../../ps/size-dialogs.js';
 import Patterns from './../../ps/patterns.js';
 import Ps_liquify_class from './../../ps/liquify.js';
+import Ps_save_for_web_class from './../../ps/save-for-web.js';
 import { inpaint } from './../../ps/inpaint.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
@@ -1477,6 +1478,11 @@ class Ps_commands_class {
 		return app.State.do_action(new app.Actions.Bundle_action('refine_edge', 'Refine Edge', [
 			new app.Actions.Insert_layer_action(settings),
 		])).then(() => sel.deselect());
+	}
+
+	save_for_web() {
+		this.Save_for_web = this.Save_for_web || new Ps_save_for_web_class();
+		this.Save_for_web.open();
 	}
 
 	liquify() {
