@@ -971,6 +971,9 @@ class Ps_workspace_class {
 			}
 			return this.open_popout == panel;
 		}
+		if (key.indexOf('snap_to:') === 0) {
+			return config.ps_snap_to[key.substr(8)] == true;
+		}
 		if (key.indexOf('aa:') === 0) {
 			return config.layer && config.layer.type == 'text' && this.Text_aa.current() == key.substr(3);
 		}

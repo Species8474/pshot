@@ -14,6 +14,7 @@ config.BG_COLOR = '#ffffff';
 config.ALPHA = 255;
 config.ZOOM = 1;
 config.SNAP = true;
+config.ps_snap_to = { guides: true, grid: true, layers: true, bounds: true };
 config.pixabay_key = '3ca2cd8af3fde33af218bea02-9021417';
 config.safe_search_can_be_disabled = true;
 config.google_webfonts_key = 'AIzaSyBES3AipG'+'YVYNLtS,Vk-hJ11bbhJ9sTpRbA'.replace(',', '');

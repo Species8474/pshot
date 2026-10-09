@@ -2716,6 +2716,19 @@ class Ps_commands_class {
 		config.SNAP = !config.SNAP;
 	}
 
+	/**
+	 * View > Snap To > Guides / Grid / Layers / Document Bounds, All, None
+	 */
+	snap_to(kind) {
+		var s = config.ps_snap_to;
+		if (kind == 'all' || kind == 'none') {
+			for (var k in s) s[k] = kind == 'all';
+		}
+		else {
+			s[kind] = !s[kind];
+		}
+	}
+
 	toggle_extras() {
 		var ws = app.GUI.Ps_workspace;
 		ws.extras = !ws.extras;

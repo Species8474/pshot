@@ -575,19 +575,28 @@ class Base_tools_class {
 	}
 
 	get_snap_positions(exclude_id) {
+		//pshot: View > Snap To (Guides, Grid, Layers, Document Bounds)
+		var snap_to = config.ps_snap_to || { guides: true, grid: true, layers: true, bounds: true };
 		var snap_positions = {
-			x: [
+			x: snap_to.bounds ? [
 				0,
 				config.WIDTH/2,
 				config.WIDTH,
-			],
-			y: [
+			] : [],
+			y: snap_to.bounds ? [
 				0,
 				config.HEIGHT/2,
 				config.HEIGHT,
-			],
+			] : [],
 		};
-		if(config.guides_enabled == true){
+		if(snap_to.grid && this.Base_gui.grid){
+			var gap = this.Base_gui.grid_size;
+			for(var gx = gap[0]; gx < config.WIDTH; gx += gap[0])
+				snap_positions.x.push(gx);
+			for(var gy = gap[1]; gy < config.HEIGHT; gy += gap[1])
+				snap_positions.y.push(gy);
+		}
+		if(config.guides_enabled == true && snap_to.guides){
 			//use guides
 			for(var i in config.guides){
 				var guide = config.guides[i];
@@ -598,6 +607,8 @@ class Base_tools_class {
 			}
 		}
 		for(var i in config.layers){
+			if(!snap_to.layers)
+				break;
 			if(exclude_id != null && exclude_id == config.layers[i].id){
 				continue;
 			}
