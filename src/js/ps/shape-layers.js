@@ -43,7 +43,7 @@ class Ps_shape_layers_class {
 	 */
 	current_subpaths(layer) {
 		var m = this.mapper(layer);
-		return layer.ps_shape.subpaths.map(sp => ({
+		return layer.ps_shape.subpaths.map(sp => Object.assign(sp.op ? { op: sp.op } : {}, {
 			closed: sp.closed,
 			pts: sp.pts.map(p => {
 				var a = m(p.x, p.y), i = m(p.ix, p.iy), o = m(p.ox, p.oy);
@@ -68,12 +68,49 @@ class Ps_shape_layers_class {
 		return p;
 	}
 
+	/**
+	 * subpaths split into components: a subpath with `op` (combine, subtract,
+	 * intersect, exclude) starts a new one that is combined with what is below
+	 */
+	components(subpaths) {
+		var comps = [];
+		subpaths.forEach((sp, i) => {
+			if (i == 0 || sp.op) comps.push({ op: i == 0 ? 'combine' : sp.op, subpaths: [] });
+			comps[comps.length - 1].subpaths.push(sp);
+		});
+		return comps;
+	}
+
 	render(ctx, layer) {
 		var sh = layer.ps_shape;
 		if (!sh) return;
-		var path = this.path2d(this.current_subpaths(layer));
+		var subpaths = this.current_subpaths(layer);
+		var path = this.path2d(subpaths);
+		var comps = this.components(subpaths);
 		ctx.save();
-		if (sh.fill) {
+		if (sh.fill && comps.length > 1) {
+			//Combine Shapes: the components composited in order, then filled with the color
+			var temp = document.createElement('canvas');
+			temp.width = ctx.canvas.width;
+			temp.height = ctx.canvas.height;
+			var tctx = temp.getContext('2d');
+			tctx.setTransform(ctx.getTransform());
+			var GCO = { combine: 'source-over', subtract: 'destination-out', intersect: 'destination-in', exclude: 'xor' };
+			for (var comp of comps) {
+				tctx.globalCompositeOperation = GCO[comp.op] || 'source-over';
+				tctx.fillStyle = '#000';
+				tctx.fill(this.path2d(comp.subpaths), sh.fill_rule || 'nonzero');
+			}
+			tctx.globalCompositeOperation = 'source-in';
+			tctx.fillStyle = sh.fill;
+			tctx.setTransform(1, 0, 0, 1, 0, 0);
+			tctx.fillRect(0, 0, temp.width, temp.height);
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.drawImage(temp, 0, 0);
+			ctx.restore();
+			ctx.save();
+		}
+		else if (sh.fill) {
 			ctx.fillStyle = sh.fill;
 			ctx.fill(path, sh.fill_rule || 'nonzero');
 		}
@@ -132,6 +169,45 @@ class Ps_shape_layers_class {
 		app.GUI.GUI_layers.render_layers();
 	}
 
+	/**
+	 * Layer > Combine Shapes: the selected shape layers become the top one,
+	 * each upper shape combined with those below by `op`
+	 */
+	async combine_layers(op) {
+		var list = app.GUI.Ps_workspace.Multi.selected().filter(l => l.type == 'ps_shape' && l.ps_shape);
+		if (list.length < 2) {
+			app.GUI.Ps_workspace.status_message('Combine Shapes needs two or more selected shape layers.');
+			return;
+		}
+		//bottom first (config.layers[0] is the bottom layer)
+		list.sort((a, b) => config.layers.indexOf(a) - config.layers.indexOf(b));
+		var subpaths = [];
+		list.forEach((l, li) => {
+			this.current_subpaths(l).forEach((sp, i) => {
+				//each layer keeps its own components; its first one is combined by op
+				if (i == 0) {
+					if (li == 0) delete sp.op;
+					else sp.op = op;
+				}
+				subpaths.push(sp);
+			});
+		});
+		var top = list[list.length - 1];
+		var xs = [], ys = [];
+		subpaths.forEach(sp => sp.pts.forEach(p => { xs.push(p.x); ys.push(p.y); }));
+		var bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys);
+		var bw = Math.max(1, Math.max.apply(null, xs) - bx), bh = Math.max(1, Math.max.apply(null, ys) - by);
+		var names = { combine: 'Unite Shapes', subtract: 'Subtract Front Shape', intersect: 'Unite Shapes at Overlap', exclude: 'Subtract Shapes at Overlap' };
+		var actions = [new app.Actions.Update_layer_action(top.id, {
+			x: bx, y: by, width: bw, height: bh, rotate: 0,
+			ps_shape: Object.assign({}, top.ps_shape, { subpaths: subpaths, bx: bx, by: by, bw: bw, bh: bh }),
+		})];
+		list.slice(0, -1).forEach(l => actions.push(new app.Actions.Delete_layer_action(l.id, true)));
+		await app.State.do_action(new app.Actions.Bundle_action('combine_shapes', names[op] || 'Combine Shapes', actions));
+		app.GUI.GUI_layers.render_layers();
+		app.GUI.Ps_workspace.Paths.changed();
+	}
+
 	next_name(base) {
 		var n = 0;
 		var re = new RegExp('^' + base + ' (\\d+)$');
@@ -164,8 +240,7 @@ class Ps_shape_layers_class {
 		ctx.fillStyle = '#9a9a9a';
 		ctx.fillRect(0, 0, w, h);
 		ctx.setTransform(s, 0, 0, s, (w - config.WIDTH * s) / 2, (h - config.HEIGHT * s) / 2);
-		ctx.fillStyle = '#ffffff';
-		ctx.fill(this.path2d(this.current_subpaths(layer)), layer.ps_shape.fill_rule || 'nonzero');
+		this.render(ctx, Object.assign({}, layer, { ps_shape: Object.assign({}, layer.ps_shape, { fill: '#ffffff', stroke: null }) }));
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 	}
 
@@ -174,6 +249,8 @@ class Ps_shape_layers_class {
 	to_psd(layer) {
 		var sh = layer.ps_shape;
 		var subpaths = this.current_subpaths(layer);
+		var ops = [];
+		this.components(subpaths).forEach(c => c.subpaths.forEach(() => ops.push(c.op)));
 		return {
 			vectorFill: sh.fill ? { type: 'color', color: hex_rgb(sh.fill) } : undefined,
 			vectorStroke: sh.stroke ? {
@@ -181,8 +258,8 @@ class Ps_shape_layers_class {
 				lineAlignment: 'center', content: { type: 'color', color: hex_rgb(sh.stroke.color) }, opacity: 1,
 			} : { strokeEnabled: false, fillEnabled: !!sh.fill },
 			vectorMask: {
-				paths: subpaths.map(sp => ({
-					open: !sp.closed, fillRule: sh.fill_rule == 'evenodd' ? 'even-odd' : 'non-zero', operation: 'combine',
+				paths: subpaths.map((sp, i) => ({
+					open: !sp.closed, fillRule: sh.fill_rule == 'evenodd' ? 'even-odd' : 'non-zero', operation: ops[i],
 					knots: sp.pts.map(p => ({ linked: false, points: [p.ix, p.iy, p.x, p.y, p.ox, p.oy] })),
 				})),
 			},
@@ -194,10 +271,18 @@ class Ps_shape_layers_class {
 	 */
 	from_psd(child) {
 		if (!child.vectorMask || !child.vectorFill || child.vectorFill.type != 'color') return null;
-		var subpaths = (child.vectorMask.paths || []).map(bp => ({
-			closed: !bp.open,
-			pts: (bp.knots || []).map(k => ({ ix: k.points[0], iy: k.points[1], x: k.points[2], y: k.points[3], ox: k.points[4], oy: k.points[5] })),
-		})).filter(sp => sp.pts.length);
+		var prev_op = 'combine';
+		var subpaths = (child.vectorMask.paths || []).filter(bp => bp.knots && bp.knots.length).map((bp, i) => {
+			var sp = {
+				closed: !bp.open,
+				pts: bp.knots.map(k => ({ ix: k.points[0], iy: k.points[1], x: k.points[2], y: k.points[3], ox: k.points[4], oy: k.points[5] })),
+			};
+			//a change of operation starts a new component
+			var op = bp.operation || 'combine';
+			if (i > 0 && op != prev_op) sp.op = op;
+			prev_op = op;
+			return sp;
+		});
 		if (!subpaths.length) return null;
 		var xs = [], ys = [];
 		subpaths.forEach(sp => sp.pts.forEach(p => { xs.push(p.x); ys.push(p.y); }));

@@ -173,7 +173,12 @@ const M = [
 		'Hide Layers|Ctrl+,|layer/visibility.toggle',
 		'-',
 		['Arrange', ['Bring to Front|Shift+Ctrl+]|ps/commands.bring_to_front', 'Bring Forward|Ctrl+]|layer/move.up', 'Send Backward|Ctrl+[|layer/move.down', 'Send to Back|Shift+Ctrl+[|ps/commands.send_to_back', '-', 'Reverse|ps/commands.arrange_reverse']],
-		['Combine Shapes', ['Unite Shapes', 'Subtract Front Shape', 'Unite Shapes at Overlap', 'Subtract Shapes at Overlap']],
+		['Combine Shapes', [
+			{ name: 'Unite Shapes', target: 'ps/commands.combine_shapes', parameter: 'combine' },
+			{ name: 'Subtract Front Shape', target: 'ps/commands.combine_shapes', parameter: 'subtract' },
+			{ name: 'Unite Shapes at Overlap', target: 'ps/commands.combine_shapes', parameter: 'intersect' },
+			{ name: 'Subtract Shapes at Overlap', target: 'ps/commands.combine_shapes', parameter: 'exclude' },
+		]],
 		'-',
 		['Align', ['Top Edges|ps/commands.align_top', 'Vertical Centers|ps/commands.align_vcenter', 'Bottom Edges|ps/commands.align_bottom', '-', 'Left Edges|ps/commands.align_left', 'Horizontal Centers|ps/commands.align_hcenter', 'Right Edges|ps/commands.align_right']],
 		['Distribute', ['Top Edges|ps/commands.distribute_top', 'Vertical Centers|ps/commands.distribute_vcenter', 'Bottom Edges|ps/commands.distribute_bottom', '-', 'Left Edges|ps/commands.distribute_left', 'Horizontal Centers|ps/commands.distribute_hcenter', 'Right Edges|ps/commands.distribute_right']],
