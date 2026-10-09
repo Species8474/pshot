@@ -56,6 +56,14 @@ class Retouch_class extends Base_tools_class {
 		this.show_mouse_cursor(mouse.x, mouse.y, this.getParams().size, 'circle');
 	}
 
+	/**
+	 * Eraser with Erase to History works as the History Brush
+	 */
+	effective_mode() {
+		var params = this.getParams();
+		return params.mode == 'erase' && (params.to_history || this.alt_erase) ? 'history' : params.mode;
+	}
+
 	to_layer(point) {
 		var layer = config.layer;
 		var sx = layer.width_original / layer.width, sy = layer.height_original / layer.height;
@@ -68,7 +76,9 @@ class Retouch_class extends Base_tools_class {
 		if (mouse.click_valid == false || config.layer.type != 'image' || !config.layer.link) {
 			return;
 		}
-		var mode = this.getParams().mode;
+		//CS6: Alt-dragging the Eraser erases to the history state
+		this.alt_erase = this.getParams().mode == 'erase' && e.altKey;
+		var mode = this.effective_mode();
 		if (mode == 'pattern_stamp') {
 			//pattern aligned to the document (CS6 "Aligned")
 			var pl = config.layer;
@@ -163,6 +173,14 @@ class Retouch_class extends Base_tools_class {
 			Clone.painting = true;
 			this.clone_dab(this.last);
 		}
+		if (mode == 'erase') {
+			this.original = this.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height);
+			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
+			//CS6: on the Background layer the eraser paints the background color
+			var ordered_layers = app.GUI.Ps_workspace.Groups.ordered();
+			this.erase_bg = config.layer.name == 'Background' && ordered_layers[ordered_layers.length - 1] === config.layer ? hex_to_rgb(config.BG_COLOR) : null;
+			this.erase_dab(this.last);
+		}
 		if (mode == 'mixer') {
 			var mp = this.getParams();
 			//Load the brush after each stroke (or when it is empty)
@@ -177,7 +195,7 @@ class Retouch_class extends Base_tools_class {
 			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
 			this.art_dab(this.last);
 		}
-		if (this.getParams().mode == 'spot_healing') {
+		if (this.effective_mode() == 'spot_healing') {
 			//the stroke marks the area to heal
 			this.spot = new Uint8Array(this.canvas.width * this.canvas.height);
 			this.mark(this.last);
@@ -196,7 +214,7 @@ class Retouch_class extends Base_tools_class {
 		var dx = p.x - this.last.x, dy = p.y - this.last.y;
 		var dist = Math.hypot(dx, dy);
 		var step = Math.max(1, size / 8);
-		var mode = this.getParams().mode;
+		var mode = this.effective_mode();
 		if (mode == 'spot_healing') {
 			//mark every point along the stroke, including short moves
 			for (var t = step; t < dist; t += step) {
@@ -217,6 +235,17 @@ class Retouch_class extends Base_tools_class {
 					this.replace_dab(cp);
 				}
 				this.last = cp;
+			}
+		}
+		else if (mode == 'erase') {
+			var estep = Math.max(1, (this.getParams().eraser_mode == 'Block' ? 16 / config.ZOOM * p.s : size) / 6);
+			if (dist >= estep) {
+				var ep = this.last;
+				for (var te = estep; te <= dist; te += estep) {
+					ep = { x: this.last.x + dx * te / dist, y: this.last.y + dy * te / dist };
+					this.erase_dab(ep);
+				}
+				this.last = ep;
 			}
 		}
 		else if (mode == 'history' || mode == 'pattern_stamp' || mode == 'clone') {
@@ -279,7 +308,7 @@ class Retouch_class extends Base_tools_class {
 			return;
 		}
 		this.started = false;
-		var mode = this.getParams().mode;
+		var mode = this.effective_mode();
 		if (mode == 'clone') {
 			app.GUI.Ps_workspace.Clone_source.painting = false;
 		}
@@ -299,7 +328,7 @@ class Retouch_class extends Base_tools_class {
 				extra.push(new app.Actions.Update_layer_action(config.layer.id, { name: 'Layer 0' }));
 			}
 		}
-		var labels = { clone: 'Clone Stamp', bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { erase: 'Eraser', clone: 'Clone Stamp', bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', art_history: 'Art History Brush', mixer: 'Mixer Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		].concat(extra)));
@@ -448,6 +477,52 @@ class Retouch_class extends Base_tools_class {
 				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
 				for (var c = 0; c < 4; c++) {
 					img.data[j + c] = O[i + c] + (S[i + c] - O[i + c]) * f;
+				}
+			}
+		}
+		ctx.putImageData(img, x0, y0);
+	}
+
+	/**
+	 * Eraser dab (Brush: soft by hardness, Pencil: hard, Block: 16 screen pixels
+	 * square). Opacity caps what one stroke removes; Flow builds up to it.
+	 */
+	erase_dab(p) {
+		var params = this.getParams();
+		var layer = config.layer;
+		var s = layer.width_original / layer.width;
+		var block = params.eraser_mode == 'Block';
+		var r = block ? 8 / config.ZOOM * s : Math.max(0.5, params.size / 2 * s);
+		var hard = params.eraser_mode == 'Pencil' ? 1 : (params.hardness == null ? 100 : params.hardness) / 100;
+		var opacity = block ? 1 : (params.opacity == null ? 100 : params.opacity) / 100;
+		var flow = block ? 1 : (params.flow == null ? 100 : params.flow) / 100;
+		var w = this.canvas.width, h = this.canvas.height;
+		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
+		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
+		if (x1 <= x0 || y1 <= y0) return;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
+		var O = this.original.data, M = this.history_mask, bg = this.erase_bg;
+		for (var y = y0; y < y1; y++) {
+			for (var x = x0; x < x1; x++) {
+				var cov;
+				if (block) cov = 1;
+				else {
+					var d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / r;
+					if (d > 1) continue;
+					cov = hard >= 1 ? 1 : (d <= hard ? 1 : (1 - d) / (1 - hard));
+				}
+				var k = y * w + x;
+				var target = opacity * cov;
+				if (target <= M[k]) continue;
+				M[k] = M[k] + (target - M[k]) * flow;
+				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4, m = M[k];
+				if (bg) {
+					for (var c = 0; c < 3; c++) img.data[j + c] = O[i + c] + (bg[c] - O[i + c]) * m;
+					img.data[j + 3] = O[i + 3];
+				}
+				else {
+					img.data[j + 3] = O[i + 3] * (1 - m);
 				}
 			}
 		}

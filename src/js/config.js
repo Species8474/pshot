@@ -158,6 +158,9 @@ config.TOOLS = [
 			mixer_preset: 'Custom',
 			aligned: true,
 			sample: 'Current Layer',
+			hardness: 100,
+			eraser_mode: 'Brush',
+			to_history: false,
 		},
 	},
 	{

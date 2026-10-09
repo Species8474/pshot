@@ -136,7 +136,7 @@ const groups = [
 		{ id: 'art_history_brush', name: 'Art History Brush Tool', key: 'Y', tool: 'retouch', preset: { mode: 'art_history', tolerance: 0 }, icon: I.art_history_brush },
 	]},
 	{ members: [
-		{ id: 'eraser', name: 'Eraser Tool', key: 'E', tool: 'erase', icon: I.eraser },
+		{ id: 'eraser', name: 'Eraser Tool', key: 'E', tool: 'retouch', preset: { mode: 'erase' }, icon: I.eraser },
 		{ id: 'background_eraser', name: 'Background Eraser Tool', key: 'E', tool: 'retouch', preset: { mode: 'bg_erase', tolerance: 50, limits: 'Contiguous', sampling: 'Continuous' }, icon: I.background_eraser },
 		{ id: 'magic_eraser', name: 'Magic Eraser Tool', key: 'E', tool: 'magic_erase', icon: I.magic_eraser },
 	]},
