@@ -6,6 +6,7 @@ pshot is a Photopea-style image editor. It's a fork of [miniPaint](https://githu
 
 ## Hard rules
 - **pshot must be an identical clone of Photoshop CS6**: UI placement, features and functionality. CS6 itself is the spec, not Photopea, and no Photopea comparison is needed. Josh is a Photoshop expert, so any drift in layout, naming, tool order, shortcuts or behaviour is a defect.
+- Unbuilt CS6 menu items, tools and panels still appear in their exact CS6 position, **greyed out**, until they are implemented.
 - **Desktop only. Mobile is not a goal**, which overrides the global responsive-by-default rule.
 - Keep miniPaint's `MIT-LICENSE.txt` and attribution.
 
