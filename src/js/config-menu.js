@@ -346,8 +346,11 @@ const M = [
 	['Window', [
 		['Arrange', ['Tile All Vertically', 'Tile All Horizontally', '2-up Horizontal', '2-up Vertical', '3-up Horizontal', '3-up Vertical', '3-up Stacked', '4-up', '6-up', 'Consolidate All to Tabs', '-', 'Cascade', 'Tile', 'Float in Window', 'Float All in Windows', '-', 'Match Zoom', 'Match Location', 'Match Rotation', 'Match All', '-', 'New Window for Untitled-1']],
 		['Workspace', [
-			{ name: 'Essentials (Default)', checked: true, target: 'ps/commands.reset_workspace' },
-			'3D', 'Motion', 'Painting', 'Photography', 'Typography', '-',
+			{ name: 'Essentials (Default)', checked: 'workspace_essentials', target: 'ps/commands.workspace', parameter: 'Essentials' },
+			'3D', 'Motion',
+			{ name: 'Painting', checked: 'workspace_painting', target: 'ps/commands.workspace', parameter: 'Painting' },
+			{ name: 'Photography', checked: 'workspace_photography', target: 'ps/commands.workspace', parameter: 'Photography' },
+			{ name: 'Typography', checked: 'workspace_typography', target: 'ps/commands.workspace', parameter: 'Typography' }, '-',
 			'Reset Essentials|ps/commands.reset_workspace', 'New Workspace...', 'Delete Workspace...', '-',
 			'Keyboard Shortcuts & Menus...|help/shortcuts.shortcuts',
 		]],

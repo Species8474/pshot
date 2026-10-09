@@ -489,11 +489,15 @@ class Ps_workspace_class {
 	init_options_bar() {
 		var button = document.getElementById('ps_workspace_button');
 		button.addEventListener('click', () => {
+			var ws = this.workspace_name || 'Essentials';
 			var items = [
-				{ name: 'Essentials (Default)', checked: true, action: () => this.reset_workspace() },
-				{ name: '3D' }, { name: 'Motion' }, { name: 'Painting' }, { name: 'Photography' }, { name: 'Typography' },
+				{ name: 'Essentials (Default)', checked: ws == 'Essentials', action: () => this.apply_workspace('Essentials') },
+				{ name: '3D' }, { name: 'Motion' },
+				{ name: 'Painting', checked: ws == 'Painting', action: () => this.apply_workspace('Painting') },
+				{ name: 'Photography', checked: ws == 'Photography', action: () => this.apply_workspace('Photography') },
+				{ name: 'Typography', checked: ws == 'Typography', action: () => this.apply_workspace('Typography') },
 				{ divider: true },
-				{ name: 'Reset Essentials', action: () => this.reset_workspace() },
+				{ name: 'Reset ' + ws, action: () => this.apply_workspace(ws) },
 				{ name: 'New Workspace...' }, { name: 'Delete Workspace...' },
 			];
 			show_popup_menu(button, items, {placement: 'below'});
@@ -714,6 +718,34 @@ class Ps_workspace_class {
 		this.relayout();
 	}
 
+	/**
+	 * Window > Workspace: CS6 panel arrangements
+	 */
+	apply_workspace(name) {
+		var presets = {
+			Essentials: { strip: ['history', 'properties'], tabs: { color: 'color', adjustments: 'adjustments', layers: 'layers' }, closed: [] },
+			Painting: { strip: ['brush', 'history', 'navigator'], tabs: { color: 'swatches', layers: 'layers' }, closed: ['adjustments'] },
+			Photography: { strip: ['history', 'properties', 'info'], tabs: { color: 'color', adjustments: 'adjustments', layers: 'layers' }, closed: [] },
+			Typography: { strip: ['character', 'paragraph', 'history'], tabs: { color: 'swatches', layers: 'layers' }, closed: ['adjustments'] },
+		};
+		var p = presets[name] || presets.Essentials;
+		this.reset_workspace();
+		this.workspace_name = name;
+		this.strip_panels = p.strip.slice();
+		this.render_iconstrip();
+		for (var panel in p.tabs) {
+			var group = this.find_dock_group(panel);
+			if (group) this.activate_tab(group, p.tabs[panel]);
+		}
+		for (var c of p.closed) {
+			var g = this.find_dock_group(c);
+			if (g) g.classList.add('closed');
+		}
+		var button = document.getElementById('ps_workspace_button');
+		if (button) button.innerHTML = this.Helper.escapeHtml(name) + ' <span class="ps_caret">&#9662;</span>';
+		this.relayout();
+	}
+
 	reset_workspace() {
 		this.close_popout();
 		this.strip_panels = ['history', 'properties'];
@@ -737,6 +769,10 @@ class Ps_workspace_class {
 			return this.open_popout == panel;
 		}
 		switch (key) {
+			case 'workspace_essentials': return (this.workspace_name || 'Essentials') == 'Essentials';
+			case 'workspace_painting': return this.workspace_name == 'Painting';
+			case 'workspace_photography': return this.workspace_name == 'Photography';
+			case 'workspace_typography': return this.workspace_name == 'Typography';
 			case 'screen_mode_standard': return this.screen_mode == 'standard';
 			case 'screen_mode_menu': return this.screen_mode == 'menu';
 			case 'screen_mode_full': return this.screen_mode == 'full';
@@ -998,6 +1034,10 @@ class Ps_workspace_class {
 		var state = app.State;
 		var html = '<div class="ps_history_snapshot' + (state.action_history_index == 0 ? ' active' : '') + '" data-index="0">'
 			+ '<span class="ps_history_brush"></span><span class="ps_history_thumb"></span><span>' + this.document_name() + '</span></div>';
+		var snaps = this.Documents.current().snapshots || [];
+		snaps.forEach((snap, i) => {
+			html += '<div class="ps_history_snapshot ps_user_snapshot" data-snapshot="' + i + '"><span class="ps_history_brush"></span><span class="ps_history_thumb"></span><span>' + this.Helper.escapeHtml(snap.name) + '</span></div>';
+		});
 		html += '<div class="ps_history_list">';
 		state.action_history.forEach((action, i) => {
 			var classes = 'ps_history_item';
@@ -1007,18 +1047,85 @@ class Ps_workspace_class {
 				+ this.Helper.escapeHtml(action.action_description) + '</div>';
 		});
 		html += '</div>';
-		html += '<div class="ps_panel_footer"><button type="button" class="disabled" title="Create new document from current state"></button>'
-			+ '<button type="button" class="disabled" title="Create new snapshot"></button>'
+		html += '<div class="ps_panel_footer"><button type="button" class="ps_history_newdoc" title="Create new document from current state"></button>'
+			+ '<button type="button" class="ps_history_snap" title="Create new snapshot"></button>'
 			+ '<button type="button" class="ps_history_delete" title="Delete current state"></button></div>';
 		el.innerHTML = html;
 		el.querySelectorAll('[data-index]').forEach((row) => {
 			row.addEventListener('click', () => this.goto_history(parseInt(row.dataset.index)));
 		});
+		el.querySelectorAll('[data-snapshot]').forEach((row) => {
+			row.addEventListener('click', () => this.restore_snapshot(parseInt(row.dataset.snapshot)));
+		});
+		el.querySelector('.ps_history_snap').addEventListener('click', () => this.create_snapshot());
+		el.querySelector('.ps_history_newdoc').addEventListener('click', () => app.GUI.modules['ps/commands'].duplicate_document());
 		var list = el.querySelector('.ps_history_list');
 		var active = el.querySelector('.ps_history_item.active');
 		if (active) {
 			list.scrollTop = active.offsetTop - list.clientHeight + active.offsetHeight * 2;
 		}
+	}
+
+	/**
+	 * History panel: snapshots keep a full copy of the document's layers
+	 */
+	layer_copies() {
+		var copies = [];
+		for (var l of this.Groups.ordered().slice().reverse()) {
+			var copy = {};
+			for (var k in l) {
+				if (['id', 'link', 'link_canvas', 'order'].includes(k) || k.startsWith('_')) continue;
+				copy[k] = l[k];
+			}
+			if (l.type == 'image' && l.link) {
+				var c = document.createElement('canvas');
+				c.width = l.width_original;
+				c.height = l.height_original;
+				c.getContext('2d').drawImage(l.link, 0, 0);
+				copy.data = c;
+			}
+			copy._old_id = l.id;
+			copy._old_parent = l.ps_parent;
+			copies.push(copy);
+		}
+		return { width: config.WIDTH, height: config.HEIGHT, layers: copies };
+	}
+
+	create_snapshot() {
+		var doc = this.Documents.current();
+		doc.snapshots = doc.snapshots || [];
+		var snap = this.layer_copies();
+		snap.name = 'Snapshot ' + (doc.snapshots.length + 1);
+		doc.snapshots.push(snap);
+		this.render_history();
+	}
+
+	async restore_snapshot(index) {
+		var snap = (this.Documents.current().snapshots || [])[index];
+		if (!snap) return;
+		var actions = [
+			new app.Actions.Prepare_canvas_action('undo'),
+			new app.Actions.Update_config_action({ WIDTH: snap.width, HEIGHT: snap.height }),
+			new app.Actions.Reset_layers_action(),
+		];
+		snap.layers.forEach((settings, i) => {
+			var s = Object.assign({}, settings);
+			delete s._old_id;
+			delete s._old_parent;
+			if (s.data instanceof HTMLCanvasElement) s.data = s.data.toDataURL('image/png');
+			s.ps_parent = null;
+			s.order = i + 1;
+			actions.push(new app.Actions.Insert_layer_action(s, false));
+		});
+		actions.push(new app.Actions.Prepare_canvas_action('do'));
+		await app.State.do_action(new app.Actions.Bundle_action('snapshot', snap.name, actions));
+		var by_old = {};
+		snap.layers.forEach((s, i) => { by_old[s._old_id] = config.layers.find(l => l.order == i + 1); });
+		snap.layers.forEach((s, i) => {
+			var layer = config.layers.find(l => l.order == i + 1);
+			if (layer && s._old_parent && by_old[s._old_parent]) layer.ps_parent = by_old[s._old_parent].id;
+		});
+		this.Groups.after_change();
 	}
 
 	async goto_history(index) {

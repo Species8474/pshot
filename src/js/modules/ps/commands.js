@@ -953,6 +953,8 @@ class Ps_commands_class {
 		app.GUI.GUI_layers.render_layers();
 	}
 
+	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
+
 	toggle_pixel_grid() {
 		var ws = app.GUI.Ps_workspace;
 		ws.pixel_grid = ws.pixel_grid === false;

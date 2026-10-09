@@ -68,6 +68,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - The dock: Color, Swatches, Adjustments, Styles, Layers, Channels, Paths. The icon strip holds History and Properties; Navigator and Info open from the Window menu.
   - Character and Paragraph panels (Window menu, Type > Panels): font, style, size, leading, tracking, colour, faux styles, alignment. With a type layer selected but not being edited, changes apply to all its text.
   - Screen modes (F) and Tab to hide panels.
+  - Workspaces (Window > Workspace and the switcher): Essentials, Painting, Photography, Typography.
+  - History panel: snapshots (full layer copies; click to restore as a History step) and Create New Document from Current State.
 - **Documents**
   - Tabs.
   - File > New (CS6 dialog).
