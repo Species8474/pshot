@@ -1611,6 +1611,37 @@ class Ps_commands_class {
 	}
 
 	/**
+	 * Type > Convert to Shape: the text outline becomes a shape layer filled with the text color
+	 */
+	async type_to_shape() {
+		var layer = config.layer;
+		if (!layer || layer.type != 'text') return;
+		var mask = document.createElement('canvas');
+		mask.width = config.WIDTH;
+		mask.height = config.HEIGHT;
+		this.Base_layers.render_object(mask.getContext('2d'), layer);
+		var subpaths = app.GUI.Ps_workspace.Paths.trace_mask(mask, 0.75);
+		if (!subpaths.length) return;
+		var span = layer.data && layer.data[0] && layer.data[0][0];
+		var fill = (span && span.meta && span.meta.fill_color) || config.COLOR;
+		var xs = [], ys = [];
+		subpaths.forEach(sp => sp.pts.forEach(p => { xs.push(p.x); ys.push(p.y); }));
+		var bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys);
+		var bw = Math.max(1, Math.max.apply(null, xs) - bx), bh = Math.max(1, Math.max.apply(null, ys) - by);
+		await app.State.do_action(new app.Actions.Bundle_action('convert_to_shape', 'Convert to Shape', [
+			//the layer keeps its id, effects and masks
+			new app.Actions.Update_layer_action(layer.id, {
+				type: 'ps_shape', x: bx, y: by, width: bw, height: bh, rotate: 0, is_vector: true,
+				render_function: null, data: null, params: {}, ps_warp: null, ps_aa: null,
+				ps_shape: { subpaths: subpaths, bx: bx, by: by, bw: bw, bh: bh, fill: fill, stroke: null, fill_rule: 'evenodd' },
+			}),
+		]));
+		app.GUI.GUI_layers.render_layers();
+		config.ps_path_active = 'layer';
+		app.GUI.Ps_workspace.Paths.changed();
+	}
+
+	/**
 	 * Select > Refine Edge (Alt+Ctrl+R): Smooth, Feather, Contrast, Shift Edge;
 	 * view modes; output to selection, layer mask or new layer
 	 */

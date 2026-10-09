@@ -198,7 +198,7 @@ const M = [
 		'Extrude to 3D',
 		'-',
 		'Create Work Path|ps/commands.type_work_path',
-		'Convert to Shape',
+		'Convert to Shape|ps/commands.type_to_shape',
 		'-',
 		'Rasterize Type Layer|layer/raster.raster',
 		'Convert to Paragraph Text',

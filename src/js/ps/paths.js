@@ -406,7 +406,16 @@ class Ps_paths_class {
 	async from_selection(tolerance, source_mask) {
 		var Selection = app.GUI.Ps_workspace.Selection;
 		if (!source_mask && !Selection.has()) return;
-		var mask = source_mask || Selection.mask;
+		var paths = clone(config.ps_paths).filter(p => !p.work);
+		paths.push({ name: 'Work Path', work: true, subpaths: this.trace_mask(source_mask || Selection.mask, tolerance) });
+		await this.commit(paths, paths.length - 1, 'Make Work Path');
+		if (!source_mask) Selection.deselect();
+	}
+
+	/**
+	 * the outline of a mask's opaque pixels as closed subpaths
+	 */
+	trace_mask(mask, tolerance) {
 		var w = mask.width, h = mask.height;
 		var d = mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
 		var inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > 127;
@@ -457,10 +466,7 @@ class Ps_paths_class {
 			dp(pts.concat([pts[0]]), mid, pts.length, out);
 			return out;
 		};
-		var paths = clone(config.ps_paths).filter(p => !p.work);
-		paths.push({ name: 'Work Path', work: true, subpaths: loops.map(l => ({ closed: true, pts: simplify(l).map(p => point(p.x, p.y)) })) });
-		await this.commit(paths, paths.length - 1, 'Make Work Path');
-		if (!source_mask) Selection.deselect();
+		return loops.map(l => ({ closed: true, pts: simplify(l).map(p => point(p.x, p.y)) }));
 	}
 
 	// ---------- panel ----------
