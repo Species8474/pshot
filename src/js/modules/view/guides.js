@@ -22,13 +22,14 @@ class View_guides_class {
 		var resolution = this.Tools_settings.get_setting('resolution');
 
 		//convert units
-		var position = 20;
-		var position = this.Helper.get_user_unit(position, units, resolution);
+		var position = this.Helper.get_user_unit(0, units, resolution);
 
+		//pshot: CS6 New Guide dialog
 		var settings = {
-			title: 'Insert guides',
+			title: 'New Guide',
 			params: [
-				{name: "type", title: "Type:", values: ["Vertical", "Horizontal"], value :"Vertical"},
+				{title: "Orientation"},
+				{name: "type", title: "", values: ["Horizontal", "Vertical"], value: "Horizontal"},
 				{name: "position", title: "Position:",  value: position},
 			],
 			on_finish: function (params) {
