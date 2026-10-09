@@ -12,6 +12,7 @@ import Base_layers_class from './../core/base-layers.js';
 import { inpaint } from './../ps/inpaint.js';
 import { alert_box } from './../ps/pixel-layer.js';
 import Patterns from './../ps/patterns.js';
+import { blend_rgb } from './../ps/blend.js';
 
 //Art History Brush styles: stroke length (fraction of Area), direction randomness, curl (radians per stroke)
 function hex_to_rgb(hex) {
@@ -80,9 +81,10 @@ class Retouch_class extends Base_tools_class {
 		this.alt_erase = this.getParams().mode == 'erase' && e.altKey;
 		var mode = this.effective_mode();
 		if (mode == 'pattern_stamp') {
-			//pattern aligned to the document (CS6 "Aligned")
-			var pl = config.layer;
-			this.history_source = Patterns.tiled(this.getParams().pattern, pl.width_original, pl.height_original, 100, pl.x, pl.y);
+			//Aligned: the pattern is aligned to the document, otherwise it starts at each stroke
+			var pl = config.layer, aligned = this.getParams().pattern_aligned !== false;
+			this.history_source = Patterns.tiled(this.getParams().pattern, pl.width_original, pl.height_original, 100,
+				aligned ? pl.x : pl.x - Math.round(mouse.x), aligned ? pl.y : pl.y - Math.round(mouse.y));
 		}
 		if (mode == 'history' || mode == 'art_history') {
 			this.history_source = app.GUI.Ps_workspace.Documents.snapshot_for_layer(config.layer);
@@ -494,6 +496,8 @@ class Retouch_class extends Base_tools_class {
 		var layer = config.layer;
 		var r = Math.max(1, params.size / 2 * (layer.width_original / layer.width));
 		var opacity = (params.opacity == null ? 100 : params.opacity) / 100;
+		var flow = (params.flow == null ? 100 : params.flow) / 100;
+		var mode = params.blend;
 		var w = this.canvas.width, h = this.canvas.height;
 		var x0 = Math.max(0, Math.floor(p.x - r)), y0 = Math.max(0, Math.floor(p.y - r));
 		var x1 = Math.min(w, Math.ceil(p.x + r)), y1 = Math.min(h, Math.ceil(p.y + r));
@@ -508,14 +512,28 @@ class Retouch_class extends Base_tools_class {
 				var k = y * w + x;
 				var f = opacity * (d < 0.8 ? 1 : (1 - d) / 0.2);
 				if (f <= M[k]) continue;
-				M[k] = f;
+				//Flow builds up to the Opacity within a stroke
+				M[k] = M[k] + (f - M[k]) * flow;
 				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
-				for (var c = 0; c < 4; c++) {
-					img.data[j + c] = O[i + c] + (S[i + c] - O[i + c]) * f;
-				}
+				this.mix(O, i, S, i, M[k], mode, img.data, j);
 			}
 		}
 		ctx.putImageData(img, x0, y0);
+	}
+
+	/**
+	 * a stamp pixel: source S over original O at strength m in the Mode
+	 */
+	mix(O, i, S, si, m, mode, out, j) {
+		if (!mode || mode == 'Normal') {
+			for (var c = 0; c < 4; c++) out[j + c] = O[i + c] + (S[si + c] - O[i + c]) * m;
+			return;
+		}
+		var sa = S[si + 3] / 255 * m;
+		var b = [O[i] / 255, O[i + 1] / 255, O[i + 2] / 255], s = [S[si] / 255, S[si + 1] / 255, S[si + 2] / 255];
+		var bl = O[i + 3] ? blend_rgb(mode, b, s) : s;
+		for (var c2 = 0; c2 < 3; c2++) out[j + c2] = O[i + c2] + (Math.max(0, Math.min(1, bl[c2])) * 255 - O[i + c2]) * sa;
+		out[j + 3] = O[i + 3] + (255 - O[i + 3]) * sa;
 	}
 
 	/**
@@ -652,6 +670,7 @@ class Retouch_class extends Base_tools_class {
 		if (x1 <= x0 || y1 <= y0) return;
 		var Clone = app.GUI.Ps_workspace.Clone_source;
 		var smooth = Clone.transformed();
+		var flow = (params.flow == null ? 100 : params.flow) / 100;
 		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
 		var O = this.original.data, S = this.source_data, M = this.history_mask;
@@ -682,10 +701,14 @@ class Retouch_class extends Base_tools_class {
 				var src = Clone.map({ x: layer.x + (x + 0.5) / sx, y: layer.y + (y + 0.5) / sy });
 				var sp = fetch(src.x, src.y);
 				if (!sp) continue;
-				M[k] = f;
+				M[k] = M[k] + (f - M[k]) * flow;
 				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
-				//source-over of the sampled pixel at strength f
-				var sa = sp[3] / 255 * f, da = O[i + 3] / 255, oa = sa + da * (1 - sa);
+				if (params.blend && params.blend != 'Normal') {
+					this.mix(O, i, sp, 0, M[k], params.blend, img.data, j);
+					continue;
+				}
+				//source-over of the sampled pixel at strength M
+				var sa = sp[3] / 255 * M[k], da = O[i + 3] / 255, oa = sa + da * (1 - sa);
 				if (oa <= 0) { img.data[j + 3] = 0; continue; }
 				for (var c = 0; c < 3; c++) {
 					img.data[j + c] = (sp[c] * sa + O[i + c] * da * (1 - sa)) / oa;

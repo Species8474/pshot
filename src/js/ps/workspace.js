@@ -186,6 +186,7 @@ class Ps_workspace_class {
 		this.Notes.install();
 		this.Clone_source.install();
 		this.Tool_presets.install();
+		this.snapshot_tool_defaults();
 
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());
@@ -381,8 +382,22 @@ class Ps_workspace_class {
 			this.highlight_active();
 			return;
 		}
-		this.active_member = member;
+		//CS6: every tool keeps its own options, also tools that share one engine
+		//(retouch, dodge/burn, selection...): remember the old member's, restore this one's
+		var prev = this.active_member;
 		var tool_config = config.TOOLS.find(t => t.name == member.tool);
+		if (prev && prev !== member) {
+			var prev_config = config.TOOLS.find(t => t.name == prev.tool);
+			if (prev_config && this.shared_tool(prev.tool)) {
+				try { prev._opts = JSON.parse(JSON.stringify(prev_config.attributes)); } catch (e) { prev._opts = null; }
+			}
+		}
+		if (tool_config && prev !== member && this.shared_tool(member.tool)) {
+			this.tool_defaults = this.tool_defaults || {};
+			var base = member._opts || this.tool_defaults[member.tool];
+			if (base) Object.assign(tool_config.attributes, JSON.parse(JSON.stringify(base)));
+		}
+		this.active_member = member;
 		if (member.preset && tool_config) {
 			for (var key in member.preset) {
 				var attr = tool_config.attributes[key];
@@ -400,6 +415,25 @@ class Ps_workspace_class {
 			app.GUI.GUI_tools.show_action_attributes();
 		});
 		this.highlight_active();
+	}
+
+	/**
+	 * a tool engine used by more than one toolbox member
+	 */
+	shared_tool(tool) {
+		var n = 0;
+		for (var g of this.groups) for (var m of g.members) if (m.tool == tool) n++;
+		return n > 1;
+	}
+
+	/**
+	 * the options every tool starts with (taken before anything is changed)
+	 */
+	snapshot_tool_defaults() {
+		this.tool_defaults = {};
+		for (var t of config.TOOLS) {
+			try { this.tool_defaults[t.name] = JSON.parse(JSON.stringify(t.attributes)); } catch (e) { /* not cloneable */ }
+		}
 	}
 
 	/**

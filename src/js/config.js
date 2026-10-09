@@ -161,6 +161,8 @@ config.TOOLS = [
 			hardness: 100,
 			eraser_mode: 'Brush',
 			to_history: false,
+			blend: 'Normal',
+			pattern_aligned: true,
 			focus_mode: 'Normal',
 			sample_all: false,
 			protect_detail: true,
