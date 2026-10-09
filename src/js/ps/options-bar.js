@@ -337,6 +337,19 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Aligned', value: true },
 		{ type: 'check', label: 'Impressionist', value: false },
 	],
+	background_eraser: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'sep' },
+		{ type: 'icons', items: [
+			{ icon: IC.sample_cont, title: 'Sampling: Continuous', bind: 'sampling', bind_value: 'Continuous' },
+			{ icon: IC.sample_once, title: 'Sampling: Once', bind: 'sampling', bind_value: 'Once' },
+			{ icon: IC.sample_bg, title: 'Sampling: Background Swatch', bind: 'sampling', bind_value: 'Background Swatch' },
+		] },
+		{ type: 'select', label: 'Limits:', values: ['Discontiguous', 'Contiguous', 'Find Edges'], bind: 'limits', map: { Discontiguous: 'Discontiguous', Contiguous: 'Contiguous', 'Find Edges': 'Contiguous' } },
+		{ type: 'pct', label: 'Tolerance:', bind: 'tolerance' },
+		{ type: 'check', label: 'Protect Foreground Color', bind: 'protect_fg' },
+		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
+	],
 	color_replacement: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'sep' },

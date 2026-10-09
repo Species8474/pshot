@@ -97,7 +97,7 @@ class Retouch_class extends Base_tools_class {
 		if (mode == 'red_eye') {
 			this.box_start = this.last;
 		}
-		if (mode == 'color_replace') {
+		if (mode == 'color_replace' || mode == 'bg_erase') {
 			var cctx = this.canvas.getContext('2d', { willReadFrequently: true });
 			this.original = cctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 			this.replace_target = this.sample_at(this.last);
@@ -140,7 +140,7 @@ class Retouch_class extends Base_tools_class {
 		else if (mode == 'red_eye') {
 			this.box_end = p;
 		}
-		else if (mode == 'color_replace') {
+		else if (mode == 'color_replace' || mode == 'bg_erase') {
 			if (dist >= step) {
 				var cp = this.last;
 				for (var tc = step; tc <= dist; tc += step) {
@@ -197,10 +197,18 @@ class Retouch_class extends Base_tools_class {
 			this.box_end = null;
 		}
 		delete config.layer.link_canvas;
-		var labels = { pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var extra = [];
+		if (mode == 'bg_erase') {
+			//CS6: erasing the Background turns it into a normal layer
+			var ordered = app.GUI.Ps_workspace.Groups.ordered();
+			if (config.layer.name == 'Background' && ordered[ordered.length - 1] === config.layer) {
+				extra.push(new app.Actions.Update_layer_action(config.layer.id, { name: 'Layer 0' }));
+			}
+		}
+		var labels = { bg_erase: 'Background Eraser', pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
-		]));
+		].concat(extra)));
 		this.canvas = null;
 		this.spot = null;
 		this.original = null;
@@ -267,9 +275,18 @@ class Retouch_class extends Base_tools_class {
 			}
 			match = keep;
 		}
+		var erase = params.mode == 'bg_erase';
 		for (var j = 0; j < match.length; j++) {
 			if (!match[j]) continue;
 			var px = x0 + (j % bw), py = y0 + ((j / bw) | 0), oi = (py * w + px) * 4, di = j * 4;
+			if (erase) {
+				if (params.protect_fg && Math.abs(O[oi] - fr) + Math.abs(O[oi + 1] - fgc) + Math.abs(O[oi + 2] - fb) <= tol) continue;
+				//soft edge of the brush
+				var dd = Math.hypot(px + 0.5 - p.x, py + 0.5 - p.y) / r;
+				var keep = dd < 0.8 ? 0 : (dd - 0.8) / 0.2;
+				D[di + 3] = Math.min(D[di + 3], O[oi + 3] * keep);
+				continue;
+			}
 			var c = this.hsl(O[oi], O[oi + 1], O[oi + 2]);
 			var hh = c[0], ss = c[1], ll = c[2];
 			if (mode == 'Color') { hh = fh[0]; ss = fh[1]; }

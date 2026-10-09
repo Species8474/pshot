@@ -117,6 +117,7 @@ config.TOOLS = [
 			strength: 50,
 			opacity: 100,
 			pattern: 'Checkerboard',
+			protect_fg: false,
 			replace_mode: 'Color',
 			sampling: 'Continuous',
 			limits: 'Contiguous',

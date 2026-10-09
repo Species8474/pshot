@@ -137,7 +137,7 @@ const groups = [
 	]},
 	{ members: [
 		{ id: 'eraser', name: 'Eraser Tool', key: 'E', tool: 'erase', icon: I.eraser },
-		{ id: 'background_eraser', name: 'Background Eraser Tool', key: 'E', tool: null, icon: I.background_eraser },
+		{ id: 'background_eraser', name: 'Background Eraser Tool', key: 'E', tool: 'retouch', preset: { mode: 'bg_erase', tolerance: 50, limits: 'Contiguous', sampling: 'Continuous' }, icon: I.background_eraser },
 		{ id: 'magic_eraser', name: 'Magic Eraser Tool', key: 'E', tool: 'magic_erase', icon: I.magic_eraser },
 	]},
 	{ members: [
