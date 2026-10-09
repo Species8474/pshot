@@ -1595,3 +1595,25 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_notes_text { margin: 0 6px; min-height: 150px; resize: vertical; box-sizing: border-box; background: var(--ps-field); color: var(--ps-text); border: 1px solid var(--ps-field-border); padding: 4px; font: inherit; }
 #ps_notes .ps_panel_footer { align-items: center; }
 .ps_notes_count { flex: 1; text-align: right; padding-right: 6px; color: var(--ps-text-dim); }
+
+/* Filter > Filter Gallery */
+#popups .popup.ps_fgallery { width: auto; max-width: 98vw; }
+.ps_fg_body { display: flex; gap: 10px; padding: 0 10px 10px; align-items: stretch; }
+.ps_fg_preview { position: relative; background: var(--ps-well); border: 1px solid #1e1e1e; display: flex; align-items: center; justify-content: center; min-width: 300px; min-height: 300px; }
+.ps_fg_preview canvas { display: block; }
+.ps_fg_zoom { position: absolute; left: 4px; bottom: 2px; font-size: 11px; color: var(--ps-text-dim); }
+.ps_fg_tree { width: 270px; max-height: 560px; overflow-y: auto; background: var(--ps-field); border: 1px solid var(--ps-field-border); padding: 4px; }
+.ps_fg_cat { padding: 3px 4px; cursor: default; display: flex; align-items: center; gap: 4px; }
+.ps_fg_thumbs { display: grid; grid-template-columns: repeat(3, 80px); gap: 6px 4px; padding: 4px 4px 8px 14px; }
+.ps_fg_thumb { display: flex; flex-direction: column; align-items: center; font-size: 10px; text-align: center; cursor: default; }
+.ps_fg_thumb canvas { width: 74px; height: 50px; border: 1px solid #111; }
+.ps_fg_thumb.active canvas { outline: 2px solid var(--ps-select-light); }
+.ps_fg_side { width: 250px; display: flex; flex-direction: column; gap: 8px; }
+.ps_fg_buttons { display: flex; flex-direction: column; gap: 6px; }
+.ps_fg_params { display: flex; flex-direction: column; gap: 6px; }
+.ps_fg_params .ps_adj_slider input[type="range"] { width: 220px; }
+.ps_fg_layers { margin-top: auto; border: 1px solid var(--ps-border); background: var(--ps-panel); }
+.ps_fg_layer_list { min-height: 90px; max-height: 140px; overflow-y: auto; }
+.ps_fg_layer { display: flex; align-items: center; gap: 6px; padding: 3px 6px; cursor: default; }
+.ps_fg_layer.active { background: var(--ps-select); color: #fff; }
+.ps_fg_eye { width: 16px; text-align: center; font-size: 11px; }

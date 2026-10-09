@@ -247,7 +247,7 @@ const M = [
 		'-',
 		'Convert for Smart Filters',
 		'-',
-		'Filter Gallery...|effects/browser.browser',
+		'Filter Gallery...|ps/commands.filter_gallery',
 		'Adaptive Wide Angle...|Alt+Shift+Ctrl+A',
 		'Lens Correction...|Shift+Ctrl+R',
 		'Liquify...|Shift+Ctrl+X|ps/commands.liquify',

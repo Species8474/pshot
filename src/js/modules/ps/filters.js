@@ -1111,4 +1111,5 @@ class Ps_filters_class {
 	}
 }
 
+export { gaussian, rank_filter, clouds, sample };
 export default Ps_filters_class;
