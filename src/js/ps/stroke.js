@@ -8,6 +8,7 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import { composite as blend_composite } from './blend.js';
 
 // options bar Mode -> canvas composite operation
 const BLEND_OPS = {
@@ -101,12 +102,28 @@ async function commit_stroke(tool, pending, label) {
 	var sy = target.height_original / target.height;
 	ctx.setTransform(sx, 0, 0, sy, -target.x * sx, -target.y * sy);
 	ctx.globalAlpha = (temp.opacity == null ? 100 : temp.opacity) / 100;
-	ctx.globalCompositeOperation = BLEND_OPS[temp.params && temp.params.blend] || 'source-over';
+	var mode = temp.params && temp.params.blend;
+	ctx.globalCompositeOperation = BLEND_OPS[mode] || 'source-over';
 	if (target.ps_lock && target.ps_lock.transparent) {
 		//Lock transparent pixels: paint only where the layer already has pixels
 		ctx.globalCompositeOperation = 'source-atop';
 	}
-	ctx.drawImage(stroke, 0, 0);
+	if (mode && !BLEND_OPS[mode] && !(target.ps_lock && target.ps_lock.transparent)) {
+		//modes canvas lacks (Dissolve, Linear Burn, Vivid Light...): per pixel
+		var layer_stroke = document.createElement('canvas');
+		layer_stroke.width = canvas.width;
+		layer_stroke.height = canvas.height;
+		var lctx = layer_stroke.getContext('2d');
+		lctx.setTransform(sx, 0, 0, sy, -target.x * sx, -target.y * sy);
+		lctx.drawImage(stroke, 0, 0);
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		var base = ctx.getImageData(0, 0, canvas.width, canvas.height);
+		blend_composite(base.data, lctx.getImageData(0, 0, canvas.width, canvas.height).data, mode, ctx.globalAlpha, canvas.width);
+		ctx.putImageData(base, 0, 0);
+	}
+	else {
+		ctx.drawImage(stroke, 0, 0);
+	}
 
 	await app.State.do_action(
 		new app.Actions.Bundle_action(tool.name + '_tool', label, [

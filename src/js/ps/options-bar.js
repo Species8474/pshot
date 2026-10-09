@@ -127,10 +127,9 @@ const LASSO_LAYOUT = [
 	{ type: 'sep' },
 	{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 ];
-const PAINT_MODES = ['Normal', 'Behind', 'Clear', 'Darken', 'Multiply', 'Color Burn', 'Lighten', 'Screen', 'Color Dodge',
-	'Linear Dodge (Add)', 'Overlay', 'Soft Light', 'Hard Light', 'Difference', 'Exclusion', 'Hue', 'Saturation', 'Color', 'Luminosity'];
+//every CS6 mode paints (the ones canvas lacks are blended per pixel when the stroke is committed)
 const MODE_MAP = {};
-for (const m of PAINT_MODES) MODE_MAP[m] = m;
+for (const m of MODES) MODE_MAP[m] = m;
 const BRUSH_COMMON = [
 	{ type: 'brush', bind: 'size' },
 	{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
