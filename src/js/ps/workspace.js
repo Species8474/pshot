@@ -24,6 +24,7 @@ import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
+import Ps_alpha_channels_class from './alpha-channels.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
@@ -70,6 +71,7 @@ class Ps_workspace_class {
 		this.Groups = new Ps_groups_class();
 		this.Multi = new Ps_multi_select_class();
 		this.Paths = new Ps_paths_class();
+		this.Alpha = new Ps_alpha_channels_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Guides = new Ps_guides_class();
@@ -1014,10 +1016,13 @@ class Ps_workspace_class {
 		});
 	}
 
-	render_channels() {
+	render_channels(force) {
 		var el = document.getElementById('ps_channels');
 		if (!el) {
 			return;
+		}
+		if (force) {
+			delete el.dataset.ready;
 		}
 		if (!el.dataset.ready) {
 			var rows = [['RGB', 'Ctrl+2', null], ['Red', 'Ctrl+3', 0], ['Green', 'Ctrl+4', 1], ['Blue', 'Ctrl+5', 2]];
@@ -1028,12 +1033,46 @@ class Ps_workspace_class {
 					+ '<canvas class="ps_thumb" width="32" height="32" data-channel="' + (row[2] === null ? 'rgb' : row[2]) + '"></canvas>'
 					+ '<span class="ps_layer_name">' + row[0] + '</span><span class="ps_channel_key">' + row[1] + '</span></div>';
 			}
-			html += '<div class="ps_panel_footer"><button type="button" class="disabled" title="Load channel as selection"></button>'
-				+ '<button type="button" class="disabled" title="Save selection as channel"></button>'
-				+ '<button type="button" class="disabled" title="Create new channel"></button>'
-				+ '<button type="button" class="disabled" title="Delete current channel"></button></div>';
+			//alpha channels (Save Selection)
+			var alpha = config.ps_alpha || [];
+			alpha.forEach((ch, i) => {
+				html += '<div class="ps_channel_row ps_alpha_row' + (i == config.ps_alpha_active ? ' active selected' : '') + '" data-alpha="' + i + '">'
+					+ '<span class="ps_eye"></span>'
+					+ '<canvas class="ps_alpha_thumb" width="32" height="32" data-alpha="' + i + '" title="Ctrl+click to load as a selection"></canvas>'
+					+ '<span class="ps_layer_name">' + this.Helper.escapeHtml(ch.name) + '</span><span class="ps_channel_key">Ctrl+' + (6 + i) + '</span></div>';
+			});
+			var S18 = (body) => '<svg viewBox="0 0 18 18" width="16" height="16">' + body + '</svg>';
+			var has_alpha = config.ps_alpha_active != null && config.ps_alpha_active >= 0 && alpha[config.ps_alpha_active];
+			html += '<div class="ps_panel_footer">'
+				+ '<button type="button" data-ch="load"' + (has_alpha ? '' : ' class="disabled"') + ' title="Load channel as selection">' + S18('<circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 1.5"/>') + '</button>'
+				+ '<button type="button" data-ch="save"' + (this.Selection.has() ? '' : ' class="disabled"') + ' title="Save selection as channel">' + S18('<rect x="2.5" y="3.5" width="13" height="11" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="9" cy="9" r="3" fill="currentColor"/>') + '</button>'
+				+ '<button type="button" data-ch="new" title="Create new channel">' + S18('<rect x="4" y="3" width="10" height="12" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M11 3v3h3" fill="none" stroke="currentColor" stroke-width="1.2"/>') + '</button>'
+				+ '<button type="button" data-ch="delete"' + (has_alpha ? '' : ' class="disabled"') + ' title="Delete current channel">' + S18('<path d="M5 5h8l-.8 10H5.8zM4 5h10M7.5 3h3" fill="none" stroke="currentColor" stroke-width="1.2"/>') + '</button></div>';
 			el.innerHTML = html;
 			el.dataset.ready = '1';
+			this.channels_signature = config.ps_alpha;
+			this.channels_has_selection = this.Selection.has();
+			el.querySelectorAll('canvas.ps_alpha_thumb').forEach((c) => this.Alpha.thumb(c, alpha[c.dataset.alpha].mask));
+			el.querySelectorAll('.ps_alpha_row').forEach((row) => row.addEventListener('click', (e) => {
+				var i = parseInt(row.dataset.alpha);
+				if ((e.ctrlKey || e.metaKey) && e.target.matches('canvas')) {
+					this.Alpha.load(i, e.shiftKey ? 'add' : (e.altKey ? 'subtract' : 'new'));
+					return;
+				}
+				config.ps_alpha_active = i == config.ps_alpha_active ? -1 : i;
+				this.render_channels(true);
+			}));
+			el.querySelectorAll('[data-ch]').forEach((b) => b.addEventListener('click', () => {
+				if (b.classList.contains('disabled')) return;
+				var k = b.dataset.ch;
+				if (k == 'load') this.Alpha.load(config.ps_alpha_active, 'new');
+				else if (k == 'save') this.Alpha.save_selection(true);
+				else if (k == 'new') this.Alpha.new_channel();
+				else if (k == 'delete') this.Alpha.delete_channel();
+			}));
+		}
+		else if (this.channels_signature !== config.ps_alpha || this.channels_has_selection !== this.Selection.has()) {
+			return this.render_channels(true);
 		}
 		//channel thumbnails from the composited canvas
 		var source = document.createElement('canvas');

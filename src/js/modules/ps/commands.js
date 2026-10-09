@@ -1018,6 +1018,410 @@ class Ps_commands_class {
 		});
 	}
 
+	modify_smooth() {
+		var sel = this.selection();
+		if (!sel.has()) return;
+		this.POP.show({
+			title: 'Smooth Selection',
+			params: [{ name: 'amount', title: 'Sample Radius: (pixels)', value: 2, range: [1, 100] }],
+			on_finish: (params) => sel.smooth(params.amount),
+		});
+	}
+
+	grow() { this.selection().grow(false); }
+	similar() { this.selection().grow(true); }
+	transform_selection() { app.GUI.Ps_workspace.Transform.start_selection(); }
+	save_selection() { app.GUI.Ps_workspace.Alpha.save_selection(); }
+	load_selection() { app.GUI.Ps_workspace.Alpha.load_selection(); }
+
+	/**
+	 * Select > Color Range: sample in the preview (click), Fuzziness, Invert
+	 */
+	color_range() {
+		var Selection = this.selection();
+		var src = Selection.sample_source(true);
+		var W = config.WIDTH, H = config.HEIGHT;
+		var state = this.color_range_state || { mode: 'Sampled Colors', fuzziness: 40, invert: false, color: null, view: 'Selection' };
+		if (!state.color) {
+			var fg = config.COLOR;
+			state.color = [parseInt(fg.substr(1, 2), 16), parseInt(fg.substr(3, 2), 16), parseInt(fg.substr(5, 2), 16)];
+		}
+		var modes = ['Sampled Colors', 'Reds', 'Yellows', 'Greens', 'Cyans', 'Blues', 'Magentas', 'Highlights', 'Midtones', 'Shadows'];
+		var scale = Math.min(220 / W, 180 / H);
+		var pw = Math.max(1, Math.round(W * scale)), ph = Math.max(1, Math.round(H * scale));
+		var html = '<div class="ps_cr">'
+			+ '<div class="ps_adj_row"><span>Select:</span><select id="cr_mode">' + modes.map(m => '<option>' + m + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_slider"><span>Fuzziness:</span><input type="number" id="cr_fuzz_n" min="0" max="200"><span class="ps_adj_unit"></span><input type="range" id="cr_fuzz" min="0" max="200"></div>'
+			+ '<canvas id="cr_preview" class="ps_cr_preview" width="' + pw + '" height="' + ph + '" title="Click to sample a color"></canvas>'
+			+ '<div class="ps_adj_row"><label class="ps_adj_check"><input type="radio" name="cr_view" value="Selection"> Selection</label><label class="ps_adj_check"><input type="radio" name="cr_view" value="Image"> Image</label></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="cr_invert"> Invert</label></div>';
+		var compute = () => {
+			var arr = Selection.color_range_mask(src, state.mode, state.color, state.fuzziness);
+			if (state.invert) for (var i = 0; i < arr.length; i++) arr[i] = 255 - arr[i];
+			return arr;
+		};
+		var image = document.createElement('canvas');
+		image.width = W;
+		image.height = H;
+		image.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(src), W, H), 0, 0);
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Color Range',
+			className: 'ps_adjust_dialog',
+			params: [{ function() { return html; } }],
+			on_finish: () => {
+				this.color_range_state = state;
+				Selection.commit(Selection.array_to_mask(compute()), 'Color Range');
+			},
+		});
+		var root = document.querySelector('#popups .popup .ps_cr');
+		var preview = root.querySelector('#cr_preview');
+		var draw = () => {
+			var pctx = preview.getContext('2d');
+			if (state.view == 'Image') {
+				pctx.drawImage(image, 0, 0, pw, ph);
+				return;
+			}
+			var arr = compute();
+			var mask = document.createElement('canvas');
+			mask.width = W;
+			mask.height = H;
+			var mctx = mask.getContext('2d');
+			var img = mctx.createImageData(W, H);
+			for (var i = 0; i < arr.length; i++) {
+				img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = arr[i];
+				img.data[i * 4 + 3] = 255;
+			}
+			mctx.putImageData(img, 0, 0);
+			pctx.drawImage(mask, 0, 0, pw, ph);
+		};
+		var mode = root.querySelector('#cr_mode'), fz = root.querySelector('#cr_fuzz'), fzn = root.querySelector('#cr_fuzz_n');
+		mode.value = state.mode;
+		fz.value = fzn.value = state.fuzziness;
+		var sync = () => { fz.disabled = fzn.disabled = state.mode != 'Sampled Colors'; };
+		mode.addEventListener('change', () => { state.mode = mode.value; sync(); draw(); });
+		var set_fuzz = (v) => { if (isNaN(v)) return; state.fuzziness = Math.max(0, Math.min(200, v)); fz.value = fzn.value = state.fuzziness; draw(); };
+		fz.addEventListener('input', () => set_fuzz(parseFloat(fz.value)));
+		fzn.addEventListener('change', () => set_fuzz(parseFloat(fzn.value)));
+		root.querySelectorAll('input[name="cr_view"]').forEach((r) => {
+			r.checked = r.value == state.view;
+			r.addEventListener('change', () => { if (r.checked) { state.view = r.value; draw(); } });
+		});
+		var inv = root.querySelector('#cr_invert');
+		inv.checked = state.invert;
+		inv.addEventListener('change', () => { state.invert = inv.checked; draw(); });
+		preview.addEventListener('click', (e) => {
+			var rect = preview.getBoundingClientRect();
+			var x = Math.floor((e.clientX - rect.left) / rect.width * W), y = Math.floor((e.clientY - rect.top) / rect.height * H);
+			var i = (Math.max(0, Math.min(H - 1, y)) * W + Math.max(0, Math.min(W - 1, x))) * 4;
+			state.color = [src[i], src[i + 1], src[i + 2]];
+			state.mode = 'Sampled Colors';
+			mode.value = state.mode;
+			sync();
+			draw();
+		});
+		sync();
+		draw();
+	}
+
+	// ---------- layer selection (Select menu) ----------
+
+	select_all_layers() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		var ordered = app.GUI.Ps_workspace.Groups.ordered();
+		//CS6: all layers except the Background
+		var list = ordered.filter((l, i) => !(i == ordered.length - 1 && l.name == 'Background'));
+		if (!list.length) return;
+		var keep = list.map(l => l.id);
+		var activate = list.includes(config.layer) ? Promise.resolve() : app.State.do_action(new app.Actions.Select_layer_action(list[0].id));
+		activate.then(() => { Multi.ids = keep; app.GUI.GUI_layers.render_layers(); });
+	}
+
+	deselect_layers() {
+		app.GUI.Ps_workspace.Multi.clear();
+		app.GUI.GUI_layers.render_layers();
+	}
+
+	similar_layers() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		var type = config.layer ? config.layer.type : null;
+		var list = config.layers.filter(l => l.type == type);
+		Multi.ids = list.map(l => l.id);
+		app.GUI.GUI_layers.render_layers();
+	}
+
+	// ---------- Layer ----------
+
+	/**
+	 * Layer > Layer Mask > From Transparency: transparency moves into a layer mask
+	 */
+	mask_from_transparency() {
+		var layer = config.layer;
+		if (!layer || layer.type != 'image' || !layer.link || layer.ps_mask) return;
+		var mask = document.createElement('canvas');
+		mask.width = config.WIDTH;
+		mask.height = config.HEIGHT;
+		this.Base_layers.render_object(mask.getContext('2d'), Object.assign(Object.create(Object.getPrototypeOf(layer)), layer, { opacity: 100, ps_mask: null, ps_styles: null }));
+		var mctx = mask.getContext('2d');
+		mctx.globalCompositeOperation = 'source-in';
+		mctx.fillStyle = '#fff';
+		mctx.fillRect(0, 0, mask.width, mask.height);
+		var opaque = document.createElement('canvas');
+		opaque.width = layer.width_original;
+		opaque.height = layer.height_original;
+		var octx = opaque.getContext('2d', { willReadFrequently: true });
+		octx.drawImage(layer.link, 0, 0);
+		var img = octx.getImageData(0, 0, opaque.width, opaque.height);
+		for (var i = 3; i < img.data.length; i += 4) img.data[i] = 255;
+		octx.putImageData(img, 0, 0);
+		app.State.do_action(new app.Actions.Bundle_action('layer_mask', 'From Transparency', [
+			new app.Actions.Update_layer_image_action(opaque, layer.id),
+			new app.Actions.Update_layer_action(layer.id, { ps_mask: mask, ps_mask_x: layer.x, ps_mask_y: layer.y, ps_mask_disabled: false, ps_mask_editing: false }),
+		])).then(() => app.GUI.GUI_layers.render_layers());
+	}
+
+	/**
+	 * Layer > New > Background from Layer
+	 */
+	async background_from_layer() {
+		var layer = config.layer;
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var ordered = Groups.ordered();
+		if (!layer || layer.type != 'image' || ordered.some((l, i) => i == ordered.length - 1 && l.name == 'Background' && l !== layer)) {
+			alertify.error('Could not complete the Background from Layer command because the document already has a Background.');
+			return;
+		}
+		var canvas = document.createElement('canvas');
+		canvas.width = config.WIDTH;
+		canvas.height = config.HEIGHT;
+		var ctx = canvas.getContext('2d');
+		ctx.fillStyle = config.BG_COLOR;
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		this.Base_layers.render_object(ctx, Object.assign(Object.create(Object.getPrototypeOf(layer)), layer, { opacity: 100 }));
+		var list = ordered.filter(l => l !== layer);
+		list.push(layer);
+		var actions = [
+			new app.Actions.Update_layer_action(layer.id, { name: 'Background', opacity: 100, composition: 'source-over', ps_parent: null, x: 0, y: 0, width: canvas.width, height: canvas.height, width_original: canvas.width, height_original: canvas.height }),
+			new app.Actions.Update_layer_image_action(canvas, layer.id),
+		].concat(Groups.restack_actions(list, {}));
+		await app.State.do_action(new app.Actions.Bundle_action('background_from_layer', 'Background from Layer', actions));
+		Groups.after_change();
+	}
+
+	/**
+	 * Layer > Arrange > Reverse (several layers selected)
+	 */
+	async arrange_reverse() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		var Groups = app.GUI.Ps_workspace.Groups;
+		var sel = Multi.selected();
+		if (sel.length < 2) return;
+		var ordered = Groups.ordered();
+		var slots = ordered.map((l, i) => sel.includes(l) ? i : -1).filter(i => i >= 0);
+		var reversed = sel.slice().reverse();
+		var list = ordered.slice();
+		slots.forEach((slot, k) => { list[slot] = reversed[k]; });
+		var keep = Multi.ids.slice();
+		await app.State.do_action(new app.Actions.Bundle_action('arrange', 'Reverse', Groups.restack_actions(list, {})));
+		Multi.ids = keep;
+		Groups.after_change();
+	}
+
+	/**
+	 * File > Scripts > Delete All Empty Layers
+	 */
+	async delete_empty_layers() {
+		var empty = config.layers.filter(l => l.type == null || (l.type == 'image' && l.link && this.Base_layers.is_layer_empty(l.id)));
+		if (!empty.length || empty.length == config.layers.length) return;
+		await app.State.do_action(new app.Actions.Bundle_action('delete_layers', 'Delete Layers', empty.map(l => new app.Actions.Delete_layer_action(l.id, true))));
+		app.GUI.Ps_workspace.Groups.after_change();
+	}
+
+	/**
+	 * Layer > Matting: Defringe / Remove Black Matte / Remove White Matte
+	 */
+	matting(kind, width) {
+		var layer = config.layer;
+		if (!layer || layer.type != 'image' || !layer.link) return;
+		var c = document.createElement('canvas');
+		c.width = layer.width_original;
+		c.height = layer.height_original;
+		var ctx = c.getContext('2d', { willReadFrequently: true });
+		ctx.drawImage(layer.link, 0, 0);
+		var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, w = c.width, h = c.height;
+		if (kind == 'defringe') {
+			//edge pixels take the color of the nearest fully opaque pixel within `width`
+			var src = new Uint8ClampedArray(d);
+			var r = Math.max(1, Math.round(width || 1));
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var i = (y * w + x) * 4;
+					if (src[i + 3] == 0 || src[i + 3] == 255) continue;
+					var best = -1, bd = 1e9;
+					for (var yy = Math.max(0, y - r); yy <= Math.min(h - 1, y + r); yy++) {
+						for (var xx = Math.max(0, x - r); xx <= Math.min(w - 1, x + r); xx++) {
+							var j = (yy * w + xx) * 4;
+							if (src[j + 3] < 255) continue;
+							var dd = (xx - x) * (xx - x) + (yy - y) * (yy - y);
+							if (dd < bd) { bd = dd; best = j; }
+						}
+					}
+					if (best >= 0) { d[i] = src[best]; d[i + 1] = src[best + 1]; d[i + 2] = src[best + 2]; }
+				}
+			}
+		}
+		else {
+			var matte = kind == 'white' ? 255 : 0;
+			for (var k = 0; k < d.length; k += 4) {
+				var a = d[k + 3] / 255;
+				if (a == 0 || a == 1) continue;
+				for (var ch = 0; ch < 3; ch++) d[k + ch] = (d[k + ch] - matte * (1 - a)) / a;
+			}
+		}
+		ctx.putImageData(img, 0, 0);
+		var names = { defringe: 'Defringe', black: 'Remove Black Matte', white: 'Remove White Matte' };
+		app.State.do_action(new app.Actions.Bundle_action('matting', names[kind], [new app.Actions.Update_layer_image_action(c, layer.id)]));
+	}
+
+	defringe() {
+		this.POP.show({
+			title: 'Defringe',
+			params: [{ name: 'width', title: 'Width: (pixels)', value: 1, range: [1, 200] }],
+			on_finish: (params) => this.matting('defringe', parseInt(params.width) || 1),
+		});
+	}
+	remove_black_matte() { this.matting('black'); }
+	remove_white_matte() { this.matting('white'); }
+
+	// ---------- Image / File ----------
+
+	/**
+	 * Image > Duplicate: the document (all layers) in a new tab
+	 */
+	async duplicate_document() {
+		var ws = app.GUI.Ps_workspace;
+		var name = ws.document_name() + ' copy';
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Duplicate Image',
+			params: [{ name: 'name', title: 'As:', value: name }, { name: 'merged', title: 'Duplicate Merged Layers Only', value: false }],
+			on_finish: async (params) => {
+				var W = config.WIDTH, H = config.HEIGHT;
+				var merged = !!params.merged;
+				var copies = [];
+				if (merged) {
+					var flat = document.createElement('canvas');
+					flat.width = W;
+					flat.height = H;
+					this.Base_layers.convert_layers_to_canvas(flat.getContext('2d'), null, false);
+					copies.push({ type: 'image', name: 'Background', x: 0, y: 0, width: W, height: H, width_original: W, height_original: H, data: flat.toDataURL('image/png') });
+				}
+				else {
+					for (var l of app.GUI.Ps_workspace.Groups.ordered().slice().reverse()) {
+						var copy = {};
+						for (var k in l) {
+							if (['id', 'link', 'link_canvas', 'order'].includes(k) || k.startsWith('_')) continue;
+							copy[k] = l[k];
+						}
+						if (l.type == 'image' && l.link) {
+							var c = document.createElement('canvas');
+							c.width = l.width_original;
+							c.height = l.height_original;
+							c.getContext('2d').drawImage(l.link, 0, 0);
+							copy.data = c.toDataURL('image/png');
+						}
+						copy._old_id = l.id;
+						copy._old_parent = l.ps_parent;
+						copy.ps_parent = null;
+						copies.push(copy);
+					}
+				}
+				ws.Documents.add(params.name || name);
+				var actions = [
+					new app.Actions.Prepare_canvas_action('undo'),
+					new app.Actions.Update_config_action({ WIDTH: W, HEIGHT: H }),
+					new app.Actions.Reset_layers_action(),
+				];
+				copies.forEach((settings, i) => {
+					var s = Object.assign({}, settings);
+					delete s._old_id;
+					delete s._old_parent;
+					s.order = i + 1;
+					actions.push(new app.Actions.Insert_layer_action(s, false));
+				});
+				actions.push(new app.Actions.Prepare_canvas_action('do'));
+				await app.State.do_action(new app.Actions.Bundle_action('open', 'Duplicate', actions));
+				//groups: reconnect members
+				if (!merged) {
+					var by_old = {};
+					copies.forEach((s, i) => { by_old[s._old_id] = config.layers.find(l => l.order == i + 1); });
+					copies.forEach((s, i) => {
+						var layer = config.layers.find(l => l.order == i + 1);
+						if (layer && s._old_parent && by_old[s._old_parent]) layer.ps_parent = by_old[s._old_parent].id;
+					});
+				}
+				app.State.action_history = [];
+				app.State.action_history_index = 0;
+				app.GUI.Ps_workspace.Groups.after_change();
+				app.GUI.GUI_preview.zoom_auto(true);
+			},
+		});
+	}
+
+	/**
+	 * Image > Reveal All: enlarge the canvas to show every layer's pixels
+	 */
+	reveal_all() {
+		var x0 = 0, y0 = 0, x1 = config.WIDTH, y1 = config.HEIGHT;
+		for (var l of config.layers) {
+			if (l.type == null || l.x == null || l.width == null) continue;
+			x0 = Math.min(x0, l.x); y0 = Math.min(y0, l.y);
+			x1 = Math.max(x1, l.x + l.width); y1 = Math.max(y1, l.y + l.height);
+		}
+		x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
+		if (x0 == 0 && y0 == 0 && x1 == config.WIDTH && y1 == config.HEIGHT) return;
+		var actions = [new app.Actions.Prepare_canvas_action('undo')];
+		for (var layer of config.layers) {
+			if (layer.x == null) continue;
+			actions.push(new app.Actions.Update_layer_action(layer.id, { x: layer.x - x0, y: layer.y - y0 }));
+			if (layer.ps_mask) actions.push(new app.Actions.Update_layer_action(layer.id, { ps_mask_x: layer.ps_mask_x - x0, ps_mask_y: layer.ps_mask_y - y0 }));
+		}
+		actions.push(new app.Actions.Update_config_action({ WIDTH: x1 - x0, HEIGHT: y1 - y0 }));
+		actions.push(new app.Actions.Prepare_canvas_action('do'));
+		app.State.do_action(new app.Actions.Bundle_action('reveal_all', 'Reveal All', actions)).then(() => app.GUI.GUI_preview.zoom_auto(true));
+	}
+
+	/**
+	 * File > Revert: back to the state the document was opened in (undoable)
+	 */
+	async revert() {
+		var history = app.State.action_history;
+		var target = history.length && history[0].action_id == 'open' ? 1 : 0;
+		if (app.State.action_history_index <= target) return;
+		await app.GUI.Ps_workspace.goto_history(target);
+	}
+
+	// ---------- Type ----------
+
+	paste_lorem_ipsum() {
+		var text = app.GUI.GUI_tools.tools_modules.text;
+		if (!text || config.TOOL.name != 'text' || !config.layer || config.layer.type != 'text') return;
+		var editor = text.object.get_editor(config.layer);
+		editor.insert_text_at_current_position('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.');
+		this.Base_layers.render();
+	}
+
+	text_orientation(vertical) {
+		var layer = config.layer;
+		if (!layer || layer.type != 'text') return;
+		var params = Object.assign({}, layer.params, { text_direction: vertical ? 'ttb' : 'ltr', wrap_direction: vertical ? 'rtl' : 'ttb' });
+		app.State.do_action(new app.Actions.Bundle_action('type_orientation', vertical ? 'Vertical Orientation' : 'Horizontal Orientation', [
+			new app.Actions.Update_layer_action(layer.id, { params: params }),
+		]));
+	}
+	text_horizontal() { this.text_orientation(false); }
+	text_vertical() { this.text_orientation(true); }
+
 	modify_border() { this.modify_selection('border'); }
 	modify_expand() { this.modify_selection('expand'); }
 	modify_contract() { this.modify_selection('contract'); }

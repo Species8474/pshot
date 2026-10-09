@@ -90,6 +90,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Selections**
   - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso, Magnetic Lasso (snaps to the strongest edge within Width; Contrast threshold; Frequency sets anchor spacing; Backspace removes back to the last anchor); Quick Selection; Magic Wand.
   - Quick Mask mode.
+  - Color Range (Sampled Colors with Fuzziness, color families, Highlights/Midtones/Shadows; click the preview to sample), Grow, Similar, Modify > Smooth, Transform Selection (all Free Transform modes), Save/Load Selection with alpha channels in the Channels panel (`ps/alpha-channels.js`; Ctrl+click a channel thumbnail loads it).
+  - Select > All Layers / Deselect Layers / Similar Layers.
   - Add, subtract and intersect; Inverse, Feather, Expand, Contract, Border; Reselect.
   - Move the selected pixels (Alt copies).
   - Fill, Clear, Cut, Copy, Copy Merged, Paste, Paste in Place, Paste Into / Paste Outside (new layer masked by the selection).
@@ -100,12 +102,13 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Masks, styles (Bevel & Emboss, Stroke, Inner Shadow, Inner Glow, Satin, Color and Gradient Overlay, Outer Glow, Drop Shadow) and Fill Opacity.
   - Adjustment layers: Brightness/Contrast, Levels, Curves, Exposure, Vibrance, Hue/Saturation, Color Balance, Black & White, Photo Filter, Channel Mixer, Invert, Posterize, Threshold, Gradient Map, Selective Color.
   - Locks; clipping mask; blend modes.
+  - Layer Mask > From Transparency; New > Background from Layer; Arrange > Reverse; Matting (Defringe, Remove Black/White Matte); Scripts > Delete All Empty Layers.
   - Duplicate layers are named "X copy"; Layer via Copy/Cut.
   - Multiple layer selection (`ps/multi-select.js`): Ctrl+click and Shift+click in the Layers panel. Move, Group (Ctrl+G), Delete, Merge Layers (Ctrl+E), Align and Distribute act on all selected layers. The set is valid only while it contains `config.layer`.
   - As in CS6, selecting a layer and toggling visibility are not History states (`base-state.js`).
 - **Image**
   - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Shadows/Highlights and Equalize (destructive here, as in CS6).
-  - Image and Canvas Size, rotation, crop, trim.
+  - Image and Canvas Size, rotation, crop, trim, Reveal All, Duplicate (new tab, optionally merged). File > Revert (back to the opened state, undoable).
 - **Filters**: Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
   - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Again. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
@@ -123,5 +126,5 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 
 ## Testing
-- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 232 targets, 0 errors at last run.
+- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 260 targets, 0 errors at last run.
 - Feature checks run through the Playwright MCP browser. Screenshots are in `docs/screens/`.

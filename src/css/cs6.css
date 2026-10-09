@@ -1389,3 +1389,7 @@ body.theme-cs6 #toggle_colors .ui_input_group input[type="range"] { min-width: 0
 .ps_adj_row.ps_adj_radios { flex-direction: column; align-items: flex-start; gap: 4px; }
 .ps_adj_row.ps_adj_radios > span:empty { display: none; }
 .ps_adj_row.ps_adj_radios > span { width: auto; min-width: 0; }
+
+/* Color Range */
+.ps_cr { display: flex; flex-direction: column; gap: 8px; }
+.ps_cr_preview { border: 1px solid #222; background: #000; cursor: crosshair; align-self: center; }

@@ -333,6 +333,15 @@ class Ps_transform_class {
 
 	preview() {
 		var job = this.job;
+		if (job.kind == 'selection') {
+			//show the transformed outline (no History until committed)
+			var mask = doc_canvas();
+			this.draw_piece(mask.getContext('2d'), job.piece);
+			this.selection().set_mask_direct(mask);
+			config.need_render = true;
+			this.selection().draw_overlay();
+			return;
+		}
 		if (job.kind == 'pixels') {
 			job.layer.link_canvas = this.result_canvas();
 		}
@@ -437,7 +446,7 @@ class Ps_transform_class {
 			//Ctrl = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective (pixels only)
 			var ctrl = e.ctrlKey || e.metaKey;
 			var shape = this.job.mode_override || (ctrl ? (e.shiftKey && e.altKey ? 'perspective' : (e.shiftKey ? 'skew' : 'distort')) : null);
-			if (h.mode == 'scale' && (shape || this.job.quad) && this.job.kind == 'pixels') {
+			if (h.mode == 'scale' && (shape || this.job.quad) && (this.job.kind == 'pixels' || this.job.kind == 'selection')) {
 				this.ensure_quad();
 				h.mode = shape || 'distort';
 			}
@@ -635,7 +644,10 @@ class Ps_transform_class {
 	cancel() {
 		var job = this.job;
 		if (!job) return;
-		if (job.kind == 'pixels') {
+		if (job.kind == 'selection') {
+			this.selection().set_mask_direct(job.original_mask);
+		}
+		else if (job.kind == 'pixels') {
 			delete job.layer.link_canvas;
 			Object.assign(job.layer, job.geometry);
 		}
@@ -682,6 +694,37 @@ class Ps_transform_class {
 	}
 
 	/**
+	 * Select > Transform Selection: transforms only the selection outline
+	 */
+	start_selection() {
+		var sel = this.selection();
+		if (this.job || !sel.has() || !sel.bounds) {
+			return;
+		}
+		var b = sel.bounds;
+		var piece = this.crop(sel.mask, b);
+		this.job = {
+			kind: 'selection',
+			layer: config.layer,
+			piece: piece,
+			original_mask: sel.mask,
+			box: { cx: b.x + b.width / 2, cy: b.y + b.height / 2, w: b.width, h: b.height, angle: 0 },
+			w0: b.width,
+			h0: b.height,
+		};
+		this.job.box0 = Object.assign({}, this.job.box);
+		sel.decorate = (ctx, scale) => this.draw_box(ctx, scale);
+		app.GUI.Ps_workspace.status_message('Transform Selection: drag handles to scale, outside to rotate. Enter commits, Esc cancels.');
+		this.preview();
+	}
+
+	selection_result() {
+		var mask = doc_canvas();
+		this.draw_piece(mask.getContext('2d'), this.job.piece, true);
+		return mask;
+	}
+
+	/**
 	 * Edit > Transform > Skew / Distort / Perspective
 	 */
 	start_mode(mode) {
@@ -698,6 +741,15 @@ class Ps_transform_class {
 		var job = this.job;
 		if (!job) return;
 		var actions = [];
+		if (job.kind == 'selection') {
+			var final_mask = this.selection_result();
+			this.selection().set_mask_direct(job.original_mask);
+			actions.push(new Set_mask_action(this.selection(), final_mask));
+			this.remember(job);
+			this.cleanup();
+			app.State.do_action(new app.Actions.Bundle_action('transform_selection', 'Transform Selection', actions));
+			return;
+		}
 		if (job.kind == 'pixels') {
 			var result = this.result_canvas(true);
 			delete job.layer.link_canvas;

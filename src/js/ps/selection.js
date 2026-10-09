@@ -361,6 +361,113 @@ class Ps_selection_class {
 	}
 
 	/**
+	 * Select > Grow (contiguous) / Similar (whole image): pixels whose color is within
+	 * the Magic Wand tolerance of the colors already selected
+	 */
+	grow(similar) {
+		if (!this.mask) {
+			return;
+		}
+		var wand = config.TOOLS.find(t => t.name == 'ps_select').attributes;
+		var tol = wand.tolerance == null ? 32 : wand.tolerance;
+		var w = config.WIDTH, h = config.HEIGHT;
+		var src = this.sample_source(wand.sample_all);
+		var m = this.mask.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+		var lo = [255, 255, 255], hi = [0, 0, 0], any = false;
+		for (var i = 0; i < w * h; i++) {
+			if (m[i * 4 + 3] < 128) continue;
+			any = true;
+			for (var c = 0; c < 3; c++) {
+				var v = src[i * 4 + c];
+				if (v < lo[c]) lo[c] = v;
+				if (v > hi[c]) hi[c] = v;
+			}
+		}
+		if (!any) return;
+		var ok = (k) => src[k] >= lo[0] - tol && src[k] <= hi[0] + tol && src[k + 1] >= lo[1] - tol && src[k + 1] <= hi[1] + tol && src[k + 2] >= lo[2] - tol && src[k + 2] <= hi[2] + tol;
+		var out = new Uint8Array(w * h);
+		if (similar) {
+			for (var j = 0; j < w * h; j++) out[j] = m[j * 4 + 3] >= 128 || ok(j * 4) ? 255 : 0;
+		}
+		else {
+			var stack = [];
+			for (var s = 0; s < w * h; s++) {
+				if (m[s * 4 + 3] >= 128) { out[s] = 255; stack.push(s); }
+			}
+			while (stack.length) {
+				var p = stack.pop(), x = p % w, y = (p / w) | 0;
+				for (var [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+					var nx = x + dx, ny = y + dy;
+					if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+					var q = ny * w + nx;
+					if (out[q] || !ok(q * 4)) continue;
+					out[q] = 255;
+					stack.push(q);
+				}
+			}
+		}
+		return this.commit(this.array_to_mask(out), similar ? 'Similar' : 'Grow');
+	}
+
+	/**
+	 * Select > Modify > Smooth: rounds off corners and removes specks (radius)
+	 */
+	smooth(radius) {
+		if (!this.mask) {
+			return;
+		}
+		radius = Math.max(1, Math.round(parseFloat(radius) || 1));
+		var w = this.mask.width, h = this.mask.height;
+		var blur = new_canvas(w, h);
+		var bctx = blur.getContext('2d', { willReadFrequently: true });
+		bctx.filter = 'blur(' + radius + 'px)';
+		bctx.drawImage(this.mask, 0, 0);
+		var d = bctx.getImageData(0, 0, w, h).data;
+		var out = new Uint8Array(w * h);
+		for (var i = 0; i < w * h; i++) out[i] = d[i * 4 + 3] >= 128 ? 255 : 0;
+		return this.commit(this.array_to_mask(out), 'Smooth');
+	}
+
+	/**
+	 * Select > Color Range: soft selection of pixels near the sampled color
+	 * (fuzziness), or of a color family / tonal range
+	 */
+	color_range_mask(src, mode, color, fuzziness) {
+		var w = config.WIDTH, h = config.HEIGHT;
+		var out = new Uint8Array(w * h);
+		var hue_of = (r, g, b) => {
+			var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+			if (d == 0) return -1;
+			var hh = max == r ? ((g - b) / d) % 6 : (max == g ? (b - r) / d + 2 : (r - g) / d + 4);
+			return (hh * 60 + 360) % 360;
+		};
+		var families = { Reds: 0, Yellows: 60, Greens: 120, Cyans: 180, Blues: 240, Magentas: 300 };
+		for (var i = 0; i < w * h; i++) {
+			var r = src[i * 4], g = src[i * 4 + 1], b = src[i * 4 + 2];
+			var v = 0;
+			if (mode == 'Sampled Colors') {
+				var dist = Math.max(Math.abs(r - color[0]), Math.abs(g - color[1]), Math.abs(b - color[2]));
+				v = dist <= fuzziness / 2 ? 1 : Math.max(0, 1 - (dist - fuzziness / 2) / Math.max(1, fuzziness / 2));
+			}
+			else if (mode in families) {
+				var hu = hue_of(r, g, b), sat = Math.max(r, g, b) - Math.min(r, g, b);
+				if (hu >= 0) {
+					var dh = Math.abs(((hu - families[mode] + 540) % 360) - 180);
+					v = Math.max(0, 1 - dh / 30) * Math.min(1, sat / 64);
+				}
+			}
+			else {
+				var l = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+				if (mode == 'Highlights') v = Math.max(0, Math.min(1, (l - 0.6) / 0.15));
+				else if (mode == 'Shadows') v = Math.max(0, Math.min(1, (0.4 - l) / 0.15));
+				else v = Math.max(0, 1 - Math.abs(l - 0.5) / 0.25);
+			}
+			out[i] = Math.round(v * 255);
+		}
+		return out;
+	}
+
+	/**
 	 * chessboard distance from every pixel to the nearest seed pixel
 	 */
 	distance(seeds, w, h) {
