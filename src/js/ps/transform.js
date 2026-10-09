@@ -23,6 +23,26 @@ import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 const HANDLES = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
 
+//CS6 warp styles: (x, y) in -1..1, bend b in -1..1 -> displaced (x, y)
+const WARP_STYLES = {
+	'None': (x, y) => [x, y],
+	'Arc': (x, y, b) => [x * (1 - b * 0.25 * y), y - b * (1 - x * x)],
+	'Arc Lower': (x, y, b) => [x, y + b * (1 - x * x) * (y + 1) / 2 * 1.4],
+	'Arc Upper': (x, y, b) => [x, y - b * (1 - x * x) * (1 - y) / 2 * 1.4],
+	'Arch': (x, y, b) => [x, y - b * (1 - x * x)],
+	'Bulge': (x, y, b) => [x, y + b * (1 - x * x) * y * 0.7],
+	'Shell Lower': (x, y, b) => [x * (1 - b * 0.4 * (1 - y) / 2), y + b * (1 - x * x) * (y + 1) / 2 * 0.8],
+	'Shell Upper': (x, y, b) => [x * (1 - b * 0.4 * (y + 1) / 2), y - b * (1 - x * x) * (1 - y) / 2 * 0.8],
+	'Flag': (x, y, b, PI) => [x, y - b * Math.sin(PI * x) * 0.5],
+	'Wave': (x, y, b, PI) => [x, y - b * Math.sin(PI * x) * 0.5 * (0.6 + 0.4 * y)],
+	'Fish': (x, y, b, PI) => [x, y * (1 + b * 0.5 * x) - b * Math.sin(PI * x) * 0.3],
+	'Rise': (x, y, b, PI) => [x, y - b * Math.sin(x * PI / 2) * 0.8],
+	'Fisheye': (x, y, b) => { var r2 = Math.min(1, (x * x + y * y) / 2), f = 1 + b * 0.6 * (1 - r2); return [x * f, y * f]; },
+	'Inflate': (x, y, b) => [x * (1 + b * 0.35 * (1 - y * y)), y * (1 + b * 0.35 * (1 - x * x))],
+	'Squeeze': (x, y, b) => [x * (1 - b * 0.35 * (1 - y * y)), y * (1 + b * 0.35 * (1 - x * x))],
+	'Twist': (x, y, b, PI) => { var r = Math.min(1, Math.sqrt(x * x + y * y) / Math.SQRT2), a = b * PI / 2 * (1 - r); return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; },
+};
+
 class Set_mask_action extends Base_action {
 	constructor(selection, mask) {
 		super('ps_selection', 'Transform Selection');
@@ -798,6 +818,10 @@ class Ps_transform_class {
 		var d = this.drag;
 		if (d.mode == 'warp') {
 			var dx = p.x - d.start.x, dy = p.y - d.start.y, g = this.job.warp;
+			if (this.job.warp_style && this.job.warp_style.style != 'Custom') {
+				this.job.warp_style = null;
+				app.GUI.Ps_workspace.Options_bar.render_transform();
+			}
 			if (d.index < 0) {
 				//dragging the surface moves the whole mesh
 				g.forEach((c, i) => { c.x = d.warp[i].x + dx; c.y = d.warp[i].y + dy; });
@@ -973,6 +997,56 @@ class Ps_transform_class {
 		var mask = doc_canvas();
 		this.draw_piece(mask.getContext('2d'), this.job.piece, true);
 		return mask;
+	}
+
+	/**
+	 * CS6 Warp styles (options bar): the style's displacement is sampled on the
+	 * bounds and fitted with the 4x4 Bezier patch. bend, h, v in -100..100.
+	 */
+	warp_preset(style, bend, h, v, vertical) {
+		var job = this.job;
+		if (!job) return;
+		job.warp_style = { style: style, bend: bend, h: h, v: v, vertical: !!vertical };
+		if (style == 'Custom') return;
+		var c = this.corners(), q = [c[0], c[2], c[4], c[6]];
+		if (job.base_quad) q = job.base_quad;
+		else job.base_quad = q.map(p => ({ x: p.x, y: p.y }));
+		var b = bend / 100, hd = h / 100, vd = v / 100, PI = Math.PI;
+		var fn = WARP_STYLES[style] || ((x, y) => [x, y]);
+		var map = (u, w) => {
+			//local -1..1 coordinates, the style works horizontally
+			var x = u * 2 - 1, y = w * 2 - 1;
+			if (vertical) { var t = x; x = y; y = t; }
+			var r = fn(x, y, b, PI);
+			x = r[0]; y = r[1];
+			if (vertical) { var t2 = x; x = y; y = t2; }
+			//horizontal / vertical distortion (perspective-like)
+			y *= 1 + hd * x * 0.5;
+			x *= 1 + vd * y * 0.5;
+			var U = (x + 1) / 2, V = (y + 1) / 2;
+			var top = { x: q[0].x + (q[1].x - q[0].x) * U, y: q[0].y + (q[1].y - q[0].y) * U };
+			var bot = { x: q[3].x + (q[2].x - q[3].x) * U, y: q[3].y + (q[2].y - q[3].y) * U };
+			return { x: top.x + (bot.x - top.x) * V, y: top.y + (bot.y - top.y) * V };
+		};
+		//points at thirds -> Bezier control points (interpolating patch)
+		var fit = (p0, pa, pb, p3) => {
+			var A = { x: 27 * pa.x - 8 * p0.x - p3.x, y: 27 * pa.y - 8 * p0.y - p3.y };
+			var B = { x: 27 * pb.x - p0.x - 8 * p3.x, y: 27 * pb.y - p0.y - 8 * p3.y };
+			return [p0, { x: (2 * A.x - B.x) / 18, y: (2 * A.y - B.y) / 18 }, { x: (2 * B.x - A.x) / 18, y: (2 * B.y - A.y) / 18 }, p3];
+		};
+		var rows = [];
+		for (var j = 0; j < 4; j++) {
+			var pts = [0, 1, 2, 3].map(i => map(i / 3, j / 3));
+			rows.push(fit(pts[0], pts[1], pts[2], pts[3]));
+		}
+		var grid = new Array(16);
+		for (var i = 0; i < 4; i++) {
+			var col = fit(rows[0][i], rows[1][i], rows[2][i], rows[3][i]);
+			for (var k = 0; k < 4; k++) grid[k * 4 + i] = col[k];
+		}
+		job.warp = grid;
+		job.quad = null;
+		this.preview();
 	}
 
 	/**

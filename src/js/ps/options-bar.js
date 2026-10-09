@@ -617,6 +617,7 @@ class Ps_options_bar_class {
 		var bar = document.getElementById('action_attributes');
 		bar.innerHTML = '';
 		bar.classList.add('ps_cs6_options');
+		if (job.warp) return this.render_warp(bar, job, T);
 		var html = '<div class="ps_opt_group"><span class="ps_tf_ref" title="Reference point location">' + '<i></i>'.repeat(9) + '</span></div>'
 			+ '<div class="ps_opt_group">'
 			+ '<span class="ps_opt"><span class="ps_opt_label">X:</span><input class="ps_opt_field" data-tf="x" style="width:58px"></span>'
@@ -663,6 +664,45 @@ class Ps_options_bar_class {
 		bar.querySelector('[data-tf-cancel]').addEventListener('click', () => T.cancel());
 		bar.querySelector('[data-tf-commit]').addEventListener('click', () => T.commit());
 		this.update_transform_fields();
+	}
+
+	/**
+	 * Warp options bar (CS6): Warp style, orientation, Bend, H / V distortion
+	 */
+	render_warp(bar, job, T) {
+		var ws = job.warp_style || { style: 'Custom', bend: 50, h: 0, v: 0, vertical: false };
+		var styles = ['None', 'Custom', '-', 'Arc', 'Arc Lower', 'Arc Upper', 'Arch', 'Bulge', 'Shell Lower', 'Shell Upper', 'Flag', 'Wave', 'Fish', 'Rise', 'Fisheye', 'Inflate', 'Squeeze', 'Twist'];
+		var preset = ws.style != 'Custom' && ws.style != 'None';
+		var num = (key, label, value) => '<span class="ps_opt"><span class="ps_opt_label">' + label + '</span><input class="ps_opt_field" data-wp="' + key + '" value="' + value.toFixed(1) + '"' + (preset ? '' : ' disabled') + ' style="width:46px"><span class="ps_opt_label">%</span></span>';
+		bar.innerHTML = '<div class="ps_opt_group"><span class="ps_tf_ref" title="Reference point location">' + '<i></i>'.repeat(9) + '</span></div>'
+			+ '<div class="ps_opt_group"><span class="ps_opt"><span class="ps_opt_label">Warp:</span><select class="ps_opt_select" data-wp-style>'
+			+ styles.map(s => s == '-' ? '<option disabled>──────</option>' : '<option' + (s == ws.style ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></span>'
+			+ '<button type="button" class="ps_opt_icon' + (ws.vertical ? ' pressed' : '') + '" data-wp-orient title="Change the warp orientation"' + (preset ? '' : ' disabled') + '>&#8645;</button></div>'
+			+ '<div class="ps_opt_group">' + num('bend', 'Bend:', ws.bend) + num('h', 'H:', ws.h) + num('v', 'V:', ws.v) + '</div>'
+			+ '<div class="ps_opt_group"><button type="button" class="ps_opt_icon pressed" data-tf-warp title="Switch between free transform and warp modes">&#8767;</button></div>'
+			+ '<div class="ps_opt_group"><button type="button" class="ps_opt_icon" data-tf-cancel title="Cancel transform (Esc)">&#8856;</button>'
+			+ '<button type="button" class="ps_opt_icon" data-tf-commit title="Commit transform (Return)">&#10004;</button></div>';
+		var apply = () => { T.warp_preset(ws.style, ws.bend, ws.h, ws.v, ws.vertical); this.render_transform(); };
+		bar.querySelector('[data-wp-style]').addEventListener('change', (e) => {
+			ws.style = e.target.value;
+			if (ws.style == 'None') { ws.bend = 0; ws.h = 0; ws.v = 0; T.warp_preset('Arc', 0, 0, 0, false); job.warp_style = { style: 'None', bend: 0, h: 0, v: 0, vertical: false }; this.render_transform(); return; }
+			if (ws.style == 'Custom') { job.warp_style = Object.assign({}, ws); this.render_transform(); return; }
+			if (!ws.bend) ws.bend = 50;
+			apply();
+		});
+		bar.querySelector('[data-wp-orient]').addEventListener('click', () => { ws.vertical = !ws.vertical; apply(); });
+		bar.querySelectorAll('[data-wp]').forEach((input) => {
+			input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter') input.blur(); });
+			input.addEventListener('change', () => {
+				var v = parseFloat(input.value);
+				if (isNaN(v)) return;
+				ws[input.dataset.wp] = Math.max(-100, Math.min(100, v));
+				apply();
+			});
+		});
+		bar.querySelector('[data-tf-warp]').addEventListener('click', () => { job.warp = null; job.warp_style = null; job.base_quad = null; T.preview(); this.render_transform(); });
+		bar.querySelector('[data-tf-cancel]').addEventListener('click', () => T.cancel());
+		bar.querySelector('[data-tf-commit]').addEventListener('click', () => T.commit());
 	}
 
 	update_transform_fields() {
