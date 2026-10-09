@@ -203,7 +203,7 @@ class Ps_selection_class {
 	/**
 	 * Magic Wand: flood/global color match on the active layer (or all layers)
 	 */
-	select_color(px, py, tolerance, contiguous, sample_all, op, description) {
+	sample_source(sample_all) {
 		var source;
 		if (sample_all) {
 			source = new_canvas(config.WIDTH, config.HEIGHT);
@@ -212,22 +212,26 @@ class Ps_selection_class {
 		else {
 			source = app.Layers.convert_layer_to_canvas(config.layer.id, false, false);
 		}
-		var w = config.WIDTH;
-		var h = config.HEIGHT;
+		return source.getContext('2d').getImageData(0, 0, config.WIDTH, config.HEIGHT).data;
+	}
+
+	/**
+	 * pixels similar to (px,py) as a 0/255 mask array; limit = {x0,y0,x1,y1} optional
+	 */
+	flood(src, px, py, tolerance, contiguous, limit, out) {
+		var w = config.WIDTH, h = config.HEIGHT;
 		px = Math.floor(px);
 		py = Math.floor(py);
 		if (px < 0 || py < 0 || px >= w || py >= h) {
-			return;
+			return out;
 		}
-		var src = source.getContext('2d').getImageData(0, 0, w, h).data;
+		var x0 = limit ? Math.max(0, limit.x0) : 0, y0 = limit ? Math.max(0, limit.y0) : 0;
+		var x1 = limit ? Math.min(w - 1, limit.x1) : w - 1, y1 = limit ? Math.min(h - 1, limit.y1) : h - 1;
 		var i0 = (py * w + px) * 4;
 		var r0 = src[i0], g0 = src[i0 + 1], b0 = src[i0 + 2], a0 = src[i0 + 3];
 		var match = (i) => Math.abs(src[i] - r0) <= tolerance && Math.abs(src[i + 1] - g0) <= tolerance
 			&& Math.abs(src[i + 2] - b0) <= tolerance && Math.abs(src[i + 3] - a0) <= tolerance;
-		var shape = new_canvas(w, h);
-		var sctx = shape.getContext('2d');
-		var out = sctx.createImageData(w, h);
-		var od = out.data;
+		out = out || new Uint8Array(w * h);
 		if (contiguous) {
 			var seen = new Uint8Array(w * h);
 			var stack = [px, py];
@@ -238,22 +242,46 @@ class Ps_selection_class {
 				if (seen[idx]) continue;
 				seen[idx] = 1;
 				if (!match(idx * 4)) continue;
-				od[idx * 4] = od[idx * 4 + 1] = od[idx * 4 + 2] = od[idx * 4 + 3] = 255;
-				if (x > 0) stack.push(x - 1, y);
-				if (x < w - 1) stack.push(x + 1, y);
-				if (y > 0) stack.push(x, y - 1);
-				if (y < h - 1) stack.push(x, y + 1);
+				out[idx] = 255;
+				if (x > x0) stack.push(x - 1, y);
+				if (x < x1) stack.push(x + 1, y);
+				if (y > y0) stack.push(x, y - 1);
+				if (y < y1) stack.push(x, y + 1);
 			}
 		}
 		else {
-			for (var j = 0; j < w * h; j++) {
-				if (match(j * 4)) {
-					od[j * 4] = od[j * 4 + 1] = od[j * 4 + 2] = od[j * 4 + 3] = 255;
+			for (var yy = y0; yy <= y1; yy++) {
+				for (var xx = x0; xx <= x1; xx++) {
+					var j = yy * w + xx;
+					if (match(j * 4)) out[j] = 255;
 				}
 			}
 		}
-		sctx.putImageData(out, 0, 0);
-		return this.commit(this.combine(shape, op), description);
+		return out;
+	}
+
+	array_to_mask(arr) {
+		var w = config.WIDTH, h = config.HEIGHT;
+		var shape = new_canvas(w, h);
+		var sctx = shape.getContext('2d');
+		var img = sctx.createImageData(w, h);
+		for (var i = 0; i < arr.length; i++) {
+			if (arr[i]) {
+				img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = 255;
+				img.data[i * 4 + 3] = arr[i];
+			}
+		}
+		sctx.putImageData(img, 0, 0);
+		return shape;
+	}
+
+	/**
+	 * Magic Wand: flood/global color match on the active layer (or all layers)
+	 */
+	select_color(px, py, tolerance, contiguous, sample_all, op, description) {
+		var src = this.sample_source(sample_all);
+		var arr = this.flood(src, px, py, tolerance, contiguous, null, null);
+		return this.commit(this.combine(this.array_to_mask(arr), op), description);
 	}
 
 	feather_mask(mask, radius) {
@@ -475,7 +503,7 @@ class Ps_selection_class {
 		var ctx = overlay.getContext('2d');
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, overlay.width, overlay.height);
-		if (!this.mask && !this.preview && !this.decorate) {
+		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview) {
 			return;
 		}
 		var m = zoomView.matrix;
@@ -493,6 +521,11 @@ class Ps_selection_class {
 		}
 		if (this.preview) {
 			this.draw_preview(ctx, m[0]);
+		}
+		if (this.quick_preview) {
+			ctx.globalAlpha = 0.35;
+			ctx.drawImage(this.quick_preview, 0, 0);
+			ctx.globalAlpha = 1;
 		}
 		if (this.decorate) {
 			//Free Transform box (drawn in document space, not offset)

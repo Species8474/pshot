@@ -39,12 +39,6 @@ class Pick_color_class extends Base_tools_class {
 		document.addEventListener('mousemove', function (event) {
 			_this.dragMove(event);
 		});
-		document.addEventListener('mouseup', function (event) {
-			var mouse = _this.get_mouse_info(event);
-			if (config.TOOL.name != _this.name || mouse.click_valid == false)
-				return;
-			_this.copy_color_to_clipboard();
-		});
 
 		// collect touch events
 		document.addEventListener('touchstart', function (event) {
@@ -56,6 +50,7 @@ class Pick_color_class extends Base_tools_class {
 	}
 
 	mousedown(e) {
+		this.ps_alt = !!e.altKey;
 		var mouse = this.get_mouse_info(e);
 		if (mouse.click_valid == false) {
 			return;
@@ -98,6 +93,11 @@ class Pick_color_class extends Base_tools_class {
 		if (c[3] > 0) {
 			//set alpha
 			newColorDefinition.a = c[3];
+		}
+		//pshot: CS6 Alt+click picks the background color
+		if (this.ps_alt) {
+			config.BG_COLOR = hex;
+			return;
 		}
 		this.Base_gui.GUI_colors.set_color(newColorDefinition);
 	}

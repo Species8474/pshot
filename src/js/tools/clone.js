@@ -62,6 +62,13 @@ class Clone_class extends Base_tools_class {
 		var _this = this;
 		if (config.TOOL.name != _this.name)
 			return;
+		//pshot: CS6 sets the clone source with Alt+click
+		if (event.altKey) {
+			this.ps_alt_source = true;
+			this.mouseRightClick({ which: 3, preventDefault() {}, target: event.target });
+			alertify.success('Clone source set', 1);
+			return;
+		}
 		_this.mousedown(event);
 
 		var mouse = this.get_mouse_info(event);
@@ -77,6 +84,9 @@ class Clone_class extends Base_tools_class {
 		var _this = this;
 		if (config.TOOL.name != _this.name)
 			return;
+		if (this.ps_alt_source) {
+			return;
+		}
 		_this.mousemove(event);
 
 		//mouse cursor
@@ -91,6 +101,10 @@ class Clone_class extends Base_tools_class {
 		var _this = this;
 		if (config.TOOL.name != _this.name)
 			return;
+		if (this.ps_alt_source) {
+			this.ps_alt_source = false;
+			return;
+		}
 		_this.mouseup(event);
 
 		clearTimeout(this.pressTimer);
@@ -193,7 +207,7 @@ class Clone_class extends Base_tools_class {
 			return;
 		}
 		if (this.clone_coords === null) {
-			alertify.error('Source is empty, right click on image or use long press to save source position.');
+			alertify.error('Could not use the Clone Stamp because the area to clone has not been defined (Alt-click to define a source point).');
 			return;
 		}
 		if (layer.width != layer.width_original || layer.height != layer.height_original) {

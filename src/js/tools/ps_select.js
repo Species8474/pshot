@@ -12,7 +12,7 @@ import config from './../config.js';
 import Base_tools_class from './../core/base-tools.js';
 
 const NAMES = {
-	rect: 'Rectangular Marquee', ellipse: 'Elliptical Marquee', row: 'Single Row Marquee', col: 'Single Column Marquee',
+	quick: 'Quick Selection', rect: 'Rectangular Marquee', ellipse: 'Elliptical Marquee', row: 'Single Row Marquee', col: 'Single Column Marquee',
 	lasso: 'Lasso', polygon: 'Polygonal Lasso', wand: 'Magic Wand',
 };
 
@@ -101,6 +101,19 @@ class Ps_select_class extends Base_tools_class {
 		var p = this.world(event);
 		var op = this.op_from_event(event);
 
+		if (mode == 'quick') {
+			//CS6 Quick Selection: the first stroke starts a selection, later strokes add to it
+			var qop = event.altKey ? 'subtract' : (this.selection().has() ? 'add' : 'new');
+			var a2 = this.attrs();
+			this.quick = {
+				op: qop,
+				src: this.selection().sample_source(a2.sample_all),
+				arr: null,
+				last: null,
+			};
+			this.quick_add(p);
+			return;
+		}
 		if (mode == 'wand') {
 			var a = this.attrs();
 			this.selection().select_color(p.x, p.y, a.tolerance, a.contiguous, a.sample_all, op, NAMES.wand);
@@ -133,7 +146,31 @@ class Ps_select_class extends Base_tools_class {
 		this.drag = { start: p, op: op, points: [p], moved: false };
 	}
 
+	quick_add(p) {
+		var q = this.quick;
+		var r = Math.max(4, this.attrs().brush || 20);
+		if (q.last && Math.hypot(p.x - q.last.x, p.y - q.last.y) < r / 2) {
+			return;
+		}
+		q.last = p;
+		var limit = { x0: Math.floor(p.x - r * 6), y0: Math.floor(p.y - r * 6), x1: Math.ceil(p.x + r * 6), y1: Math.ceil(p.y + r * 6) };
+		//sample a few points across the brush so the stroke grabs the region it covers
+		for (var dx of [-r / 2, 0, r / 2]) {
+			for (var dy of [-r / 2, 0, r / 2]) {
+				q.arr = this.selection().flood(q.src, p.x + dx, p.y + dy, 28, true, limit, q.arr);
+			}
+		}
+		var preview = this.selection().array_to_mask(q.arr);
+		this.selection().set_preview(null);
+		this.selection().quick_preview = preview;
+		this.selection().draw_overlay();
+	}
+
 	mousemove(event) {
+		if (this.quick) {
+			this.quick_add(this.world(event));
+			return;
+		}
 		if (this.polygon) {
 			this.update_polygon_preview(this.world(event));
 			return;
@@ -154,6 +191,16 @@ class Ps_select_class extends Base_tools_class {
 	}
 
 	mouseup(event) {
+		if (this.quick) {
+			var q = this.quick;
+			this.quick = null;
+			var sel = this.selection();
+			sel.quick_preview = null;
+			if (q.arr) {
+				sel.commit(sel.combine(sel.array_to_mask(q.arr), q.op), NAMES.quick);
+			}
+			return;
+		}
 		if (!this.drag) {
 			return;
 		}

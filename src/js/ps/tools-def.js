@@ -97,7 +97,7 @@ const groups = [
 		{ id: 'magnetic_lasso', name: 'Magnetic Lasso Tool', key: 'L', tool: null, icon: I.magnetic_lasso },
 	]},
 	{ members: [
-		{ id: 'quick_selection', name: 'Quick Selection Tool', key: 'W', tool: null, icon: I.quick_selection },
+		{ id: 'quick_selection', name: 'Quick Selection Tool', key: 'W', tool: 'ps_select', preset: { mode: 'quick' }, icon: I.quick_selection },
 		{ id: 'magic_wand', name: 'Magic Wand Tool', key: 'W', tool: 'ps_select', preset: { mode: 'wand' }, icon: I.magic_wand },
 	]},
 	{ separator: true, members: [

@@ -152,6 +152,19 @@ const LAYOUTS = {
 	col_marquee: [SELECTION_OPS, { type: 'sep' }, { type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 }],
 	lasso: LASSO_LAYOUT,
 	polygon_lasso: LASSO_LAYOUT,
+	quick_selection: [
+		{ type: 'icons', items: [
+			{ icon: IC.sel_new, title: 'New selection' },
+			{ icon: IC.sel_add, title: 'Add to selection', active: true },
+			{ icon: IC.sel_sub, title: 'Subtract from selection (Alt)' },
+		] },
+		{ type: 'brush', bind: 'brush' },
+		{ type: 'sep' },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
+		{ type: 'check', label: 'Auto-Enhance', value: false },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Refine Edge...' },
+	],
 	magic_wand: [
 		SELECTION_OPS,
 		{ type: 'sep' },

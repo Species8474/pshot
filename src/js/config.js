@@ -95,6 +95,7 @@ config.TOOLS = [
 			tolerance: 32,
 			contiguous: true,
 			sample_all: false,
+			brush: 20,
 		},
 	},
 	{
