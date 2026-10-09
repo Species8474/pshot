@@ -35,7 +35,7 @@ const M = [
 		['Export', ['Data Sets as Files...', 'Paths to Illustrator...', 'Render Video...', 'Zoomify...']],
 		'-',
 		['Automate', ['Batch...|ps/commands.batch', 'PDF Presentation...', 'Create Droplet...', '-', 'Crop and Straighten Photos', '-', 'Contact Sheet II...', '-', 'Conditional Mode Change...', 'Fit Image...', 'Lens Correction...', 'Merge to HDR Pro...', 'Photomerge...']],
-		['Scripts', ['Image Processor...|ps/commands.image_processor', '-', 'Delete All Empty Layers|ps/commands.delete_empty_layers', 'Flatten All Layer Effects', 'Flatten All Masks', '-', 'Layer Comps to Files...', 'Layer Comps to PDF...', 'Layer Comps to WPG...', 'Export Layers to Files...', '-', 'Script Events Manager...', '-', 'Load Files into Stack...', 'Load Multiple DICOM Files...', 'Statistics...', '-', 'Browse...']],
+		['Scripts', ['Image Processor...|ps/commands.image_processor', '-', 'Delete All Empty Layers|ps/commands.delete_empty_layers', 'Flatten All Layer Effects', 'Flatten All Masks', '-', 'Layer Comps to Files...|ps/commands.comps_to_files', 'Layer Comps to PDF...', 'Layer Comps to WPG...', 'Export Layers to Files...|ps/commands.export_layers', '-', 'Script Events Manager...', '-', 'Load Files into Stack...', 'Load Multiple DICOM Files...', 'Statistics...', '-', 'Browse...']],
 		'-',
 		'File Info...|Alt+Shift+Ctrl+I|image/information.information',
 		'-',

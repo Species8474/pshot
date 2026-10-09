@@ -122,6 +122,102 @@ class Ps_batch_class {
 	}
 
 	/**
+	 * File > Scripts > Export Layers to Files: every layer (or the visible ones)
+	 * as its own file, optionally trimmed to its pixels
+	 */
+	export_layers() {
+		var html = '<div class="ps_adj ps_batch">'
+			+ '<div class="ps_adj_row"><span>Destination:</span><span>Downloads</span></div>'
+			+ '<div class="ps_adj_row"><span>File Name Prefix:</span><input type="text" id="el_prefix" value="' + app.GUI.Ps_workspace.Helper.escapeHtml(app.GUI.Ps_workspace.document_name().replace(/\.[^.]+$/, '')) + '"></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="el_visible"> Visible Layers Only</label>'
+			+ '<div class="ps_adj_row"><span>File Type:</span><select id="el_type"><option>PNG-24</option><option>JPEG</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Quality:</span><input type="number" id="el_q" min="0" max="12" value="8" style="width:48px"></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="el_trim" checked> Trim Layers</label></div>';
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Export Layers To Files',
+			className: 'ps_adjust_dialog',
+			params: [{ function() { return html; } }],
+			on_finish: async () => {
+				var $ = (id) => document.getElementById(id);
+				var prefix = $('el_prefix').value || 'Layer', visible = $('el_visible').checked, type = $('el_type').value, trim = $('el_trim').checked;
+				var q = Math.max(0, Math.min(12, parseInt($('el_q').value) || 8)) / 12;
+				var layers = app.GUI.Ps_workspace.Groups.ordered().filter(l => l.type != null && l.type != 'ps_group' && l.type != 'ps_adjust' && (!visible || l.visible !== false));
+				var T = app.GUI.Ps_workspace.Transform;
+				var n = 0;
+				for (var l of layers) {
+					var saved = l.visible;
+					l.visible = true;
+					var c = app.Layers.convert_layer_to_canvas(l.id, false, false);
+					l.visible = saved;
+					if (trim) {
+						var b = T.alpha_bounds(c);
+						if (!b) continue;
+						var t = document.createElement('canvas');
+						t.width = b.width;
+						t.height = b.height;
+						t.getContext('2d').drawImage(c, -b.x, -b.y);
+						c = t;
+					}
+					if (type == 'JPEG') {
+						var j = document.createElement('canvas');
+						j.width = c.width;
+						j.height = c.height;
+						var jctx = j.getContext('2d');
+						jctx.fillStyle = '#fff';
+						jctx.fillRect(0, 0, j.width, j.height);
+						jctx.drawImage(c, 0, 0);
+						c = j;
+					}
+					var blob = await new Promise(r => c.toBlob(r, type == 'JPEG' ? 'image/jpeg' : 'image/png', type == 'JPEG' ? q : undefined));
+					n++;
+					filesaver.saveAs(blob, prefix + '_' + String(n).padStart(4, '0') + '_' + (l.name || 'Layer').replace(/[^\w\- ]+/g, '') + (type == 'JPEG' ? '.jpg' : '.png'));
+					await wait(150);
+				}
+				app.GUI.Ps_workspace.status_message('Export Layers To Files: ' + n + ' files.');
+			},
+		});
+	}
+
+	/**
+	 * File > Scripts > Layer Comps to Files
+	 */
+	comps_to_files() {
+		var comps = config.ps_comps || [];
+		if (!comps.length) {
+			alertify.error('There are no layer comps in the document.');
+			return;
+		}
+		var html = '<div class="ps_adj ps_batch">'
+			+ '<div class="ps_adj_row"><span>Destination:</span><span>Downloads</span></div>'
+			+ '<div class="ps_adj_row"><span>File Name Prefix:</span><input type="text" id="lc_prefix" value="' + app.GUI.Ps_workspace.Helper.escapeHtml(app.GUI.Ps_workspace.document_name().replace(/\.[^.]+$/, '')) + '"></div>'
+			+ '<div class="ps_adj_row"><span>File Type:</span><select id="lc_type"><option>PNG-24</option><option>JPEG</option><option>PSD</option></select></div></div>';
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Layer Comps To Files',
+			className: 'ps_adjust_dialog',
+			params: [{ function() { return html; } }],
+			on_finish: async () => {
+				var prefix = document.getElementById('lc_prefix').value || 'Comp', type = document.getElementById('lc_type').value;
+				var Comps = app.GUI.Ps_workspace.Comps;
+				var before = config.ps_comp_active == null ? -1 : config.ps_comp_active;
+				var start = app.State.action_history_index;
+				for (var i = 0; i < comps.length; i++) {
+					await Comps.apply(i);
+					await wait(200);
+					await this.save(prefix + '_' + String(i + 1).padStart(4, '0') + '_' + comps[i].name.replace(/[^\w\- ]+/g, ''), type == 'PNG-24' ? 'PNG' : type, 0.9);
+					await wait(200);
+				}
+				//back to the state before the export
+				await app.GUI.Ps_workspace.goto_history(start);
+				app.State.action_history.length = start;
+				app.GUI.Ps_workspace.render_history();
+				app.GUI.Ps_workspace.status_message('Layer Comps To Files: ' + comps.length + ' files.');
+			},
+		});
+	}
+
+	/**
 	 * File > Scripts > Image Processor
 	 */
 	image_processor() {

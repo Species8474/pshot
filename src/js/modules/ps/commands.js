@@ -742,6 +742,8 @@ class Ps_commands_class {
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
 	batch() { app.GUI.Ps_workspace.Batch.batch(); }
+	export_layers() { app.GUI.Ps_workspace.Batch.export_layers(); }
+	comps_to_files() { app.GUI.Ps_workspace.Batch.comps_to_files(); }
 	image_processor() { app.GUI.Ps_workspace.Batch.image_processor(); }
 	smart_filters_label() { return app.GUI.Ps_workspace.Smart_filters.label(); }
 	smart_filters_toggle() { app.GUI.Ps_workspace.Smart_filters.toggle_all(); }
