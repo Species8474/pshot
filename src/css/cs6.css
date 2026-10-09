@@ -1476,3 +1476,25 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 .ps_act_indent { width: 14px; } .ps_act_indent2 { width: 30px; }
 .ps_act_rec { color: #e33; }
 .ps_panel_footer button.recording { color: #e33; }
+
+/* Image > Adjustments > Variations */
+#popups .popup.ps_adjust_dialog.ps_variations_dialog { max-width: 96vw; width: 820px; }
+.ps_var { display: flex; flex-direction: column; gap: 10px; }
+.ps_var_top { display: flex; gap: 12px; }
+.ps_var_body { display: flex; gap: 14px; align-items: flex-start; }
+.ps_var_grid { display: grid; grid-template-columns: repeat(6, 50px); gap: 6px 2px; }
+.ps_var_grid .ps_var_tile { grid-column: span 2; }
+.ps_var_grid [data-v="green"] { grid-area: 1 / 2 / 2 / 4; }
+.ps_var_grid [data-v="yellow"] { grid-area: 1 / 4 / 2 / 6; }
+.ps_var_grid [data-v="cyan"] { grid-area: 2 / 1 / 3 / 3; }
+.ps_var_grid [data-v="pick"] { grid-area: 2 / 3 / 3 / 5; }
+.ps_var_grid [data-v="red"] { grid-area: 2 / 5 / 3 / 7; }
+.ps_var_grid [data-v="blue"] { grid-area: 3 / 2 / 4 / 4; }
+.ps_var_grid [data-v="magenta"] { grid-area: 3 / 4 / 4 / 6; }
+.ps_var_side { display: flex; flex-direction: column; gap: 6px; }
+.ps_var_opts { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+.ps_var_tile { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; font-size: 11px; }
+.ps_var_tile canvas { width: 96px; height: 96px; object-fit: contain; background: #222; border: 1px solid #111; }
+.ps_var_tile:hover canvas { outline: 1px solid #fff; }
+.ps_var_fine { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+.ps_var_fine input { width: 90px; }

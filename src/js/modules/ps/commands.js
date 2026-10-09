@@ -60,6 +60,7 @@ class Ps_commands_class {
 	posterize() { this.Adjust.posterize(); }
 	shadows_highlights() { this.Adjust.shadows_highlights(); }
 	equalize() { this.Adjust.equalize(); }
+	variations() { this.Adjust.variations(); }
 
 	new_adjustment_layer(kind) { app.GUI.Ps_workspace.Adjustment_layers.create(kind); }
 

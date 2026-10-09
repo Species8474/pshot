@@ -832,6 +832,135 @@ class Ps_adjust_class {
 	}
 
 	/**
+	 * CS6 Variations: click thumbnails to add color/lightness shifts to the
+	 * Shadows, Midtones, Highlights or the Saturation; Fine..Coarse sets the step
+	 */
+	variations() {
+		var tile = (id, label) => '<div class="ps_var_tile" data-v="' + id + '"><canvas></canvas><span>' + label + '</span></div>';
+		var html = '<div class="ps_var">'
+			+ '<div class="ps_var_top">' + tile('original', 'Original') + tile('current', 'Current Pick') + '</div>'
+			+ '<div class="ps_var_body"><div class="ps_var_grid">'
+			+ tile('green', 'More Green') + tile('yellow', 'More Yellow') + tile('cyan', 'More Cyan')
+			+ tile('red', 'More Red') + tile('pick', 'Current Pick') + tile('blue', 'More Blue')
+			+ tile('magenta', 'More Magenta') + '</div>'
+			+ '<div class="ps_var_side">' + tile('lighter', 'Lighter') + tile('pick2', 'Current Pick') + tile('darker', 'Darker') + '</div>'
+			+ '<div class="ps_var_opts">'
+			+ ['Shadows', 'Midtones', 'Highlights', 'Saturation'].map(t => '<label class="ps_adj_check"><input type="radio" name="var_tone" value="' + t + '"' + (t == 'Midtones' ? ' checked' : '') + '> ' + t + '</label>').join('')
+			+ '<div class="ps_var_fine"><span>Fine</span><input type="range" id="var_amount" min="0" max="6" step="1" value="3"><span>Coarse</span></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="var_clip" checked> Show Clipping</label>'
+			+ '</div></div></div>';
+		this.show('Variations', html, (root, state, update, job) => {
+			root.querySelector('.ps_adj_preview').style.display = 'none';
+			root.closest('.popup').classList.add('ps_variations_dialog');
+			if (!state.t) state.t = { Shadows: [0, 0, 0, 0], Midtones: [0, 0, 0, 0], Highlights: [0, 0, 0, 0] };
+			if (state.sat == null) state.sat = 0;
+			state.tone = 'Midtones';
+			state.amount = 3;
+			//thumbnail source
+			var sc = Math.min(1, 96 / Math.max(job.w, job.h));
+			var tw = Math.max(1, Math.round(job.w * sc)), th = Math.max(1, Math.round(job.h * sc));
+			var small = document.createElement('canvas');
+			small.width = job.w;
+			small.height = job.h;
+			small.getContext('2d').putImageData(job.original, 0, 0);
+			var thumb = document.createElement('canvas');
+			thumb.width = tw;
+			thumb.height = th;
+			thumb.getContext('2d').drawImage(small, 0, 0, tw, th);
+			var src = thumb.getContext('2d').getImageData(0, 0, tw, th).data;
+			var DELTA = { red: [1, 0, 0, 0], cyan: [-1, 0, 0, 0], green: [0, 1, 0, 0], magenta: [0, -1, 0, 0], blue: [0, 0, 1, 0], yellow: [0, 0, -1, 0], lighter: [0, 0, 0, 1], darker: [0, 0, 0, -1] };
+			var step = () => 3 * Math.pow(2, state.amount);
+			var shifted = (id) => {
+				var next = { t: JSON.parse(JSON.stringify(state.t)), sat: state.sat };
+				var d = DELTA[id];
+				if (!d) return next;
+				if (state.tone == 'Saturation') {
+					if (id == 'lighter' || id == 'darker') return next;
+					//Saturation mode: the tiles become Less / More Saturation
+					next.sat += (id == 'red' || id == 'blue' || id == 'green' ? 1 : -1) * step();
+					return next;
+				}
+				for (var c = 0; c < 4; c++) next.t[state.tone][c] += d[c] * step();
+				return next;
+			};
+			var paint = (canvas, st) => {
+				canvas.width = tw;
+				canvas.height = th;
+				var ctx = canvas.getContext('2d');
+				var img = ctx.createImageData(tw, th);
+				img.data.set(src);
+				if (st) this.build_variations(st, state.clip)(src, img.data);
+				ctx.putImageData(img, 0, 0);
+			};
+			var draw = () => {
+				root.querySelectorAll('.ps_var_tile').forEach((t) => {
+					var id = t.dataset.v;
+					var sat_mode = state.tone == 'Saturation';
+					var hidden = sat_mode && !['original', 'current', 'pick', 'red', 'cyan'].includes(id);
+					t.style.visibility = hidden ? 'hidden' : '';
+					if (sat_mode && id == 'red') t.querySelector('span').textContent = 'More Saturation';
+					else if (sat_mode && id == 'cyan') t.querySelector('span').textContent = 'Less Saturation';
+					else if (id == 'red') t.querySelector('span').textContent = 'More Red';
+					else if (id == 'cyan') t.querySelector('span').textContent = 'More Cyan';
+					if (hidden) return;
+					paint(t.querySelector('canvas'), id == 'original' ? null : shifted(id));
+				});
+			};
+			root.querySelectorAll('.ps_var_tile').forEach((t) => t.addEventListener('click', () => {
+				var id = t.dataset.v;
+				if (id == 'original') {
+					state.t = { Shadows: [0, 0, 0, 0], Midtones: [0, 0, 0, 0], Highlights: [0, 0, 0, 0] };
+					state.sat = 0;
+				}
+				else if (DELTA[id]) {
+					var next = shifted(id);
+					state.t = next.t;
+					state.sat = next.sat;
+				}
+				draw();
+				update();
+			}));
+			root.querySelectorAll('input[name="var_tone"]').forEach((r) => r.addEventListener('change', () => { state.tone = r.value; draw(); }));
+			root.querySelector('#var_amount').addEventListener('input', (e) => { state.amount = parseInt(e.target.value); draw(); });
+			var clip = root.querySelector('#var_clip');
+			state.clip = clip.checked;
+			clip.addEventListener('change', () => { state.clip = clip.checked; draw(); });
+			draw();
+		}, (state) => this.build_variations(state, false), 'variations');
+	}
+
+	/**
+	 * clip: show clipped (out of range) pixels in neon, for the thumbnails
+	 */
+	build_variations(state, clip) {
+		var t = state.t || { Shadows: [0, 0, 0, 0], Midtones: [0, 0, 0, 0], Highlights: [0, 0, 0, 0] };
+		var sat = (state.sat || 0) / 100;
+		return (src, dst) => {
+			for (var i = 0; i < src.length; i += 4) {
+				var r = src[i], g = src[i + 1], b = src[i + 2];
+				var l = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+				var ws = Math.max(0, 1 - l * 2.5), wh = Math.max(0, l * 2.5 - 1.5), wm = Math.max(0, 1 - Math.abs(l - 0.5) * 2.2);
+				var add = [0, 0, 0];
+				for (var [tone, w] of [['Shadows', ws], ['Midtones', wm], ['Highlights', wh]]) {
+					var v = t[tone];
+					for (var c = 0; c < 3; c++) add[c] += (v[c] + v[3]) * w;
+				}
+				var nr = r + add[0], ng = g + add[1], nb = b + add[2];
+				if (sat) {
+					var m = (nr + ng + nb) / 3;
+					nr = m + (nr - m) * (1 + sat); ng = m + (ng - m) * (1 + sat); nb = m + (nb - m) * (1 + sat);
+				}
+				if (clip && (nr > 255.5 || ng > 255.5 || nb > 255.5 || nr < -0.5 || ng < -0.5 || nb < -0.5) && (sat || add[0] || add[1] || add[2])) {
+					//CS6 shows clipping as neon
+					dst[i] = 0; dst[i + 1] = 255; dst[i + 2] = 0;
+					continue;
+				}
+				dst[i] = nr; dst[i + 1] = ng; dst[i + 2] = nb;
+			}
+		};
+	}
+
+	/**
 	 * one-step adjustments (no dialog in CS6): Invert, Desaturate
 	 */
 	direct(title, fn) {
