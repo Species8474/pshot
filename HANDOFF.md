@@ -113,7 +113,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Adjustment layers: Brightness/Contrast, Levels, Curves, Exposure, Vibrance, Hue/Saturation, Color Balance, Black & White, Photo Filter, Channel Mixer, Invert, Posterize, Threshold, Gradient Map, Selective Color.
   - Locks; clipping mask; blend modes.
   - Layer Mask > From Transparency; New > Background from Layer; Arrange > Reverse; Matting (Defringe, Remove Black/White Matte); Scripts > Delete All Empty Layers.
-  - Duplicate layers are named "X copy"; Layer via Copy/Cut.
+  - New Layer dialog (Shift+Ctrl+N: name, clipping, color label, mode, opacity), Layer Properties (panel menu), color labels in the eye column, Duplicate Layer dialog (name, destination document). Duplicate layers are named "X copy"; Layer via Copy/Cut.
   - Multiple layer selection (`ps/multi-select.js`): Ctrl+click and Shift+click in the Layers panel. Move, Group (Ctrl+G), Delete, Merge Layers (Ctrl+E), Align and Distribute act on all selected layers. The set is valid only while it contains `config.layer`.
   - Smart Objects (`ps_smart`: original pixels + box/quad): Convert to Smart Object, New Smart Object via Copy, Edit Contents (opens a .psb tab; Ctrl+S there updates the smart object in its parent), Replace Contents, Export Contents, Rasterize; Free Transform (incl. distort/perspective) resamples from the original each time; painting asks to rasterize; thumbnail badge.
   - Link Layers (chain button / Layer menu, label toggles to Unlink): linked layers move together; Select Linked Layers. (`ps_link` token; not saved to PSD.)

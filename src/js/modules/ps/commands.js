@@ -1572,6 +1572,95 @@ class Ps_commands_class {
 		});
 	}
 
+	next_layer_name() {
+		var n = 0;
+		for (var l of config.layers) {
+			var m = /^Layer (\d+)$/.exec(l.name);
+			if (m) n = Math.max(n, parseInt(m[1]));
+		}
+		return 'Layer ' + (n + 1);
+	}
+
+	/**
+	 * Layer > New > Layer (Shift+Ctrl+N): CS6 New Layer dialog
+	 */
+	new_layer_dialog() {
+		var colors = ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Gray'];
+		var modes = { 'Normal': 'source-over', 'Multiply': 'multiply', 'Screen': 'screen', 'Overlay': 'overlay', 'Soft Light': 'soft-light', 'Hard Light': 'hard-light',
+			'Darken': 'darken', 'Lighten': 'lighten', 'Color Dodge': 'color-dodge', 'Color Burn': 'color-burn', 'Difference': 'difference', 'Exclusion': 'exclusion',
+			'Hue': 'hue', 'Saturation': 'saturation', 'Color': 'color', 'Luminosity': 'luminosity' };
+		this.POP.show({
+			title: 'New Layer',
+			params: [
+				{ name: 'name', title: 'Name:', value: this.next_layer_name() },
+				{ name: 'clip', title: 'Use Previous Layer to Create Clipping Mask', value: false },
+				{ name: 'color', title: 'Color:', values: colors, value: 'None', type: 'select' },
+				{ name: 'mode', title: 'Mode:', values: Object.keys(modes), value: 'Normal', type: 'select' },
+				{ name: 'opacity', title: 'Opacity (%):', value: 100, range: [0, 100] },
+			],
+			on_finish: (params) => {
+				var settings = { name: params.name || this.next_layer_name(), opacity: parseInt(params.opacity), composition: params.clip ? 'source-atop' : (modes[params.mode] || 'source-over') };
+				if (params.color && params.color != 'None') settings.ps_color = params.color;
+				app.State.do_action(new app.Actions.Bundle_action('new_layer', 'New Layer', [new app.Actions.Insert_layer_action(settings)]));
+			},
+		});
+	}
+
+	/**
+	 * Layers panel menu > Layer Properties: name and color label
+	 */
+	layer_properties() {
+		var layer = config.layer;
+		if (!layer) return;
+		var colors = ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Gray'];
+		this.POP.show({
+			title: 'Layer Properties',
+			params: [
+				{ name: 'name', title: 'Name:', value: layer.name },
+				{ name: 'color', title: 'Color:', values: colors, value: layer.ps_color || 'None', type: 'select' },
+			],
+			on_finish: (params) => {
+				app.State.do_action(new app.Actions.Bundle_action('layer_properties', 'Layer Properties', [
+					new app.Actions.Update_layer_action(layer.id, { name: params.name || layer.name, ps_color: params.color == 'None' ? null : params.color }),
+				])).then(() => app.GUI.GUI_layers.render_layers());
+			},
+		});
+	}
+
+	/**
+	 * Layer > Duplicate Layer: CS6 dialog (name, destination document)
+	 */
+	duplicate_layer_dialog() {
+		var layer = config.layer;
+		if (!layer) return;
+		var ws = app.GUI.Ps_workspace;
+		var docs = ws.Documents.docs.map(d => d.name);
+		var base = layer.name.replace(/ copy( \d+)?$/, '');
+		this.POP.show({
+			title: 'Duplicate Layer',
+			params: [
+				{ title: 'Duplicate: ' + app.GUI.Ps_workspace.Helper.escapeHtml(layer.name) },
+				{ name: 'name', title: 'As:', value: base + ' copy' },
+				{ title: 'Destination' },
+				{ name: 'doc', title: 'Document:', values: docs, value: docs[ws.Documents.active], type: 'select' },
+			],
+			on_finish: async (params) => {
+				var target = docs.indexOf(params.doc);
+				if (target < 0 || target == ws.Documents.active) {
+					await app.GUI.modules['layer/duplicate'].duplicate();
+					if (params.name) await app.State.do_action(new app.Actions.Bundle_action('rename', 'Duplicate Layer', [new app.Actions.Update_layer_action(config.layer.id, { name: params.name })]), { merge_with_history: ['duplicate_layer'] });
+					app.GUI.GUI_layers.render_layers();
+					return;
+				}
+				//another document: copy the rendered pixels, keeping their position
+				var full = this.Base_layers.convert_layer_to_canvas(layer.id, false, false);
+				var settings = { type: 'image', name: params.name || layer.name, x: 0, y: 0, width: full.width, height: full.height, width_original: full.width, height_original: full.height, data: full.toDataURL('image/png'), opacity: layer.opacity, composition: layer.composition };
+				ws.Documents.switch_to(target);
+				await app.State.do_action(new app.Actions.Bundle_action('duplicate_layer', 'Duplicate Layer', [new app.Actions.Insert_layer_action(settings)]));
+			},
+		});
+	}
+
 	save_for_web() {
 		this.Save_for_web = this.Save_for_web || new Ps_save_for_web_class();
 		this.Save_for_web.open();

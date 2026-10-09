@@ -68,7 +68,7 @@ class Layer_duplicate_class {
 			params.link = config.layer.link.cloneNode(true);
 		}
 
-		var actions = [new app.Actions.Insert_layer_action(params)];
+		var actions = [new app.Actions.Insert_layer_action(params, false)];
 		return app.State.do_action(
 			new app.Actions.Bundle_action('duplicate_layer', 'Duplicate Layer', actions)
 		).then(() => {

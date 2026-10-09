@@ -133,8 +133,8 @@ const M = [
 		['Analysis', [['Set Measurement Scale', ['Default', 'Custom...']], ['Select Data Points', ['Default', 'Custom...']], 'Record Measurements|Shift+Ctrl+M', '-', 'Ruler Tool', 'Count Tool', '-', 'Place Scale Marker...']],
 	]],
 	['Layer', [
-		['New', ['Layer...|Shift+Ctrl+N|layer/new.new', 'Background from Layer|ps/commands.background_from_layer', 'Group...|ps/commands.new_group', 'Group from Layers...|ps/commands.group_layers', '-', 'Layer via Copy|Ctrl+J|ps/commands.layer_via_copy', 'Layer via Cut|Shift+Ctrl+J|ps/commands.layer_via_cut']],
-		'Duplicate Layer...|layer/duplicate.duplicate',
+		['New', ['Layer...|Shift+Ctrl+N|ps/commands.new_layer_dialog', 'Background from Layer|ps/commands.background_from_layer', 'Group...|ps/commands.new_group', 'Group from Layers...|ps/commands.group_layers', '-', 'Layer via Copy|Ctrl+J|ps/commands.layer_via_copy', 'Layer via Cut|Shift+Ctrl+J|ps/commands.layer_via_cut']],
+		'Duplicate Layer...|ps/commands.duplicate_layer_dialog',
 		['Delete', ['Layer|ps/commands.delete_layer', 'Hidden Layers|ps/commands.delete_hidden_layers']],
 		'-',
 		['Layer Style', [

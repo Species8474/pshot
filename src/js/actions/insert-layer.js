@@ -116,6 +116,7 @@ export class Insert_layer_action extends Base_action {
 			ps_mask_editing: false,
 			ps_link: null,
 			ps_smart: null,
+			ps_color: null,
 		};
 
 		// Build data

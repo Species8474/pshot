@@ -1459,3 +1459,6 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 .ps_sfw_matte { width: 40px; height: 16px; border: 1px solid #111; padding: 0; }
 .ps_sfw_buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .ps_sfw_buttons .button { min-width: 80px; }
+/* layer color labels (eye column) */
+.ps_eye.label_red { background: #8c4442; } .ps_eye.label_orange { background: #94633a; } .ps_eye.label_yellow { background: #8f843a; }
+.ps_eye.label_green { background: #4f7340; } .ps_eye.label_blue { background: #3f5d82; } .ps_eye.label_violet { background: #674c80; } .ps_eye.label_gray { background: #6a6a6a; }

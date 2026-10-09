@@ -492,7 +492,7 @@ class GUI_layers_class {
 				var indent = depth ? '<span class="ps_indent" style="width:' + (depth * 16) + 'px"></span>' : '';
 				if (value.type == 'ps_group') {
 					html += '<div class="ps_layer_row ps_group_row' + (is_selected(value) ? ' active' : '') + (value.visible != true ? ' hidden_layer' : '') + '" data-id="' + value.id + '" draggable="true">';
-					html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
+					html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + (value.ps_color ? ' label_' + value.ps_color.toLowerCase() : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
 					html += indent;
 					html += '<span class="ps_group_toggle' + (value.ps_collapsed ? '' : ' open') + '" data-action="toggle_group" data-id="' + value.id + '"></span>';
 					html += '<span class="ps_folder">' + ICON.folder + '</span>';
@@ -510,7 +510,7 @@ class GUI_layers_class {
 				var style_names = Styles ? Styles.enabled_names(value) : [];
 				var has_filters = (value.filters && value.filters.length > 0) || style_names.length > 0;
 				html += '<div class="' + classes + '" data-id="' + value.id + '" draggable="true">';
-				html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
+				html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + (value.ps_color ? ' label_' + value.ps_color.toLowerCase() : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
 				html += indent;
 				if (clipped) {
 					html += '<span class="ps_clip_arrow">' + ICON.clip + '</span>';

@@ -569,6 +569,7 @@ class Ps_workspace_class {
 				{ name: 'Delete Layer', action: () => run_target('ps/commands.delete_layer') },
 				{ name: 'Delete Hidden Layers', action: () => run_target('ps/commands.delete_hidden_layers') },
 				{ divider: true },
+				{ name: 'Layer Properties...', action: () => run_target('ps/commands.layer_properties') },
 				{ name: 'New Group...', action: () => run_target('ps/commands.new_group') },
 				{ name: 'New Group from Layers...', action: () => run_target('ps/commands.group_layers') },
 				{ divider: true },
