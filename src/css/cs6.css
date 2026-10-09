@@ -1286,3 +1286,14 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 		linear-gradient(to top left, transparent 45%, #e02020 45%, #e02020 55%, transparent 55%);
 }
 .ps_thumb.targeted, .ps_mask_thumb.targeted { outline: 2px solid #e8e8e8; outline-offset: 1px; }
+
+/* File > New */
+.ps_new { display: flex; flex-direction: column; gap: 7px; min-width: 330px; }
+.ps_new_row { display: flex; align-items: center; gap: 6px; }
+.ps_new_row > label { width: 130px; text-align: right; color: var(--ps-text); }
+.ps_new_row input[type="text"] { width: 190px; }
+.ps_new_row input[type="number"] { width: 84px; }
+.ps_new_row select { min-width: 96px; }
+#nd_preset { width: 196px; }
+.ps_new_size { display: flex; gap: 8px; margin-top: 6px; padding-left: 70px; }
+#popups .popup:has(.ps_new) { max-width: 520px; }

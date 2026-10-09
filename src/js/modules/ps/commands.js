@@ -10,6 +10,7 @@ import Dialog_class from './../../libs/popup.js';
 import { ensure_pixel_layer } from './../../ps/pixel-layer.js';
 import { open_document, place, save_psd } from './../../ps/document.js';
 import Ps_adjust_class from './../../ps/adjust.js';
+import { show_new_dialog } from './../../ps/new-dialog.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -662,6 +663,10 @@ class Ps_commands_class {
 	reset_workspace() { app.GUI.Ps_workspace.reset_workspace(); }
 
 	// ---------- File ----------
+
+	new_document() {
+		show_new_dialog();
+	}
 
 	open(files) {
 		open_document(files || null);

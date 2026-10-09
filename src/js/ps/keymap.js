@@ -115,6 +115,21 @@ class Ps_keymap_class {
 		var ctrl = event.ctrlKey || event.metaKey;
 		var combo = this.normalize(ctrl, event.altKey, event.shiftKey, key);
 
+		//Crop tool: Enter commits, Esc cancels (CS6)
+		if (config.TOOL.name == 'crop' && (event.key == 'Enter' || event.key == 'Escape')) {
+			var crop = app.GUI.GUI_tools.tools_modules.crop.object;
+			if (event.key == 'Enter') {
+				crop.on_params_update();
+			}
+			else {
+				crop.selection = { x: null, y: null, width: null, height: null };
+				config.need_render = true;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		//Delete / Backspace clear the selected pixels (CS6)
 		if ((event.key == 'Delete' || (event.key == 'Backspace' && !ctrl && !event.altKey)) && this.workspace.Selection.has()) {
 			run_target('ps/commands.clear');

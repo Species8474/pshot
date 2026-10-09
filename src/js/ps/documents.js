@@ -60,6 +60,7 @@ class Ps_documents_class {
 			HEIGHT: config.HEIGHT,
 			ZOOM: config.ZOOM,
 			guides: config.guides,
+			TRANSPARENCY: config.TRANSPARENCY,
 			auto_increment: app.Layers.auto_increment,
 			stable_dimensions: app.Layers.stable_dimensions,
 			history: app.State.action_history,
@@ -83,6 +84,7 @@ class Ps_documents_class {
 		config.HEIGHT = state.HEIGHT;
 		config.ZOOM = state.ZOOM;
 		config.guides = state.guides;
+		config.TRANSPARENCY = state.TRANSPARENCY;
 		app.Layers.auto_increment = state.auto_increment;
 		app.Layers.stable_dimensions = state.stable_dimensions;
 		app.State.action_history = state.history;

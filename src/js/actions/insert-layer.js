@@ -28,7 +28,8 @@ export class Insert_layer_action extends Base_action {
 	 */
 	default_name() {
 		if (config.layers.length == 0) {
-			return 'Background';
+			//CS6: a transparent new document starts with "Layer 1"
+			return config.TRANSPARENCY ? 'Layer 1' : 'Background';
 		}
 		const shapes = {rectangle: 'Rectangle', ellipse: 'Ellipse', line: 'Line', pentagon: 'Polygon', bezier_curve: 'Shape', text: 'Layer'};
 		const prefix = shapes[config.TOOL.name] || 'Layer';
@@ -52,7 +53,7 @@ export class Insert_layer_action extends Base_action {
 		canvas.width = config.WIDTH;
 		canvas.height = config.HEIGHT;
 		const ctx = canvas.getContext('2d');
-		ctx.fillStyle = config.BG_COLOR || '#ffffff';
+		ctx.fillStyle = config.ps_new_background || '#ffffff';
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		return {
 			name: 'Background',

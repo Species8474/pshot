@@ -175,6 +175,11 @@ const LAYOUTS = {
 		{ type: 'icon', icon: IC.gear, title: 'Set additional Crop options' },
 		{ type: 'sep' },
 		{ type: 'check', label: 'Delete Cropped Pixels', value: true, always_disabled: true },
+		{ type: 'sep' },
+		{ type: 'icons', items: [
+			{ icon: SVG('<path d="M4 9.5l3.5 3.5L14.5 5" fill="none" stroke="currentColor" stroke-width="1.8"/>'), title: 'Commit current crop operation (Enter)', action: () => app.GUI.GUI_tools.tools_modules.crop.object.on_params_update() },
+			{ icon: SVG('<circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.8 13.2l8.4-8.4" stroke="currentColor" stroke-width="1.5"/>'), title: 'Cancel current crop operation (Esc)', action: () => { const c = app.GUI.GUI_tools.tools_modules.crop.object; c.selection = { x: null, y: null, width: null, height: null }; config.need_render = true; } },
+		] },
 	],
 	eyedropper: [
 		{ type: 'select', label: 'Sample Size:', values: ['Point Sample', '3 by 3 Average', '5 by 5 Average', '11 by 11 Average', '31 by 31 Average', '51 by 51 Average', '101 by 101 Average'], value: 'Point Sample' },

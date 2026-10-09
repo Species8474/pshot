@@ -347,7 +347,8 @@ class GUI_tools_class {
 				itemDom.appendChild($colorInput[0]);
 			}
 			else {
-				alertify.error('Error: unsupported attribute type:' + typeof item + ', ' + k);
+				//pshot: plain string attributes (modes) are edited by the CS6 options bar only
+				itemDom.remove();
 			}
 		}
 

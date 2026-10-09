@@ -12,7 +12,7 @@
 
 const M = [
 	['File', [
-		'New...|Ctrl+N|file/new.new',
+		'New...|Ctrl+N|ps/commands.new_document',
 		'Open...|Ctrl+O|ps/commands.open',
 		'Browse in Bridge...|Alt+Ctrl+O',
 		'Browse in Mini Bridge...',
