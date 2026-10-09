@@ -1617,3 +1617,8 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_fg_layer { display: flex; align-items: center; gap: 6px; padding: 3px 6px; cursor: default; }
 .ps_fg_layer.active { background: var(--ps-select); color: #fff; }
 .ps_fg_eye { width: 16px; text-align: center; font-size: 11px; }
+
+/* Filter > Render > Lighting Effects (shares the Blur Gallery layout) */
+#popups .popup.ps_lighting { width: auto; max-width: 98vw; }
+.ps_le_props { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; }
+.ps_le_lights { min-height: 60px; }

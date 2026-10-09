@@ -258,7 +258,7 @@ const M = [
 		['Distort', ['Displace...|ps/filters.displace', 'Pinch...|ps/filters.pinch', 'Polar Coordinates...|ps/filters.polar_coordinates', 'Ripple...|ps/filters.ripple', 'Shear...|ps/filters.shear', 'Spherize...|ps/filters.spherize', 'Twirl...|ps/filters.twirl', 'Wave...|ps/filters.wave', 'ZigZag...|ps/filters.zigzag']],
 		['Noise', ['Add Noise...|ps/filters.add_noise', 'Despeckle|ps/filters.despeckle', 'Dust & Scratches...|ps/filters.dust_scratches', 'Median...|ps/filters.median', 'Reduce Noise...|ps/filters.reduce_noise']],
 		['Pixelate', ['Color Halftone...|ps/filters.color_halftone', 'Crystallize...|ps/filters.crystallize', 'Facet|ps/filters.facet', 'Fragment|ps/filters.fragment', 'Mezzotint...|ps/filters.mezzotint', 'Mosaic...|ps/filters.mosaic', 'Pointillize...|ps/filters.pointillize']],
-		['Render', ['Clouds|ps/filters.clouds', 'Difference Clouds|ps/filters.difference_clouds', 'Fibers...|ps/filters.fibers', 'Lens Flare...|ps/filters.lens_flare', 'Lighting Effects...']],
+		['Render', ['Clouds|ps/filters.clouds', 'Difference Clouds|ps/filters.difference_clouds', 'Fibers...|ps/filters.fibers', 'Lens Flare...|ps/filters.lens_flare', 'Lighting Effects...|ps/commands.lighting_effects']],
 		['Sharpen', ['Sharpen|ps/filters.sharpen', 'Sharpen Edges|ps/filters.sharpen_edges', 'Sharpen More|ps/filters.sharpen_more', 'Smart Sharpen...|ps/filters.smart_sharpen', 'Unsharp Mask...|ps/filters.unsharp_mask']],
 		['Stylize', ['Diffuse...|ps/filters.diffuse', 'Emboss...|ps/filters.emboss', 'Extrude...|ps/filters.extrude', 'Find Edges|ps/filters.find_edges', 'Solarize|ps/filters.solarize', 'Tiles...|ps/filters.tiles', 'Trace Contour...|ps/filters.trace_contour', 'Wind...|ps/filters.wind']],
 		['Video', ['De-Interlace...', 'NTSC Colors']],
