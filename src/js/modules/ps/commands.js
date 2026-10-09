@@ -833,8 +833,11 @@ class Ps_commands_class {
 
 	layer_via_copy() {
 		if (!this.selection().has()) {
-			app.GUI.modules['layer/duplicate'].duplicate();
-			return;
+			//CS6 History calls it "Layer Via Copy"
+			return Promise.resolve(app.GUI.modules['layer/duplicate'].duplicate()).then(() => {
+				var last = app.State.action_history[app.State.action_history_index - 1];
+				if (last && last.action_id == 'duplicate_layer') last.action_description = 'Layer Via Copy';
+			});
 		}
 		if (!this.require_image_layer()) {
 			return;
