@@ -119,7 +119,7 @@ class Retouch_class extends Base_tools_class {
 				return;
 			}
 		}
-		if (mode == 'healing') {
+		if (mode == 'healing' && this.getParams().heal_source != 'Pattern') {
 			if (e.altKey) {
 				//CS6: Alt+click defines the source point
 				this.source = this.to_layer(mouse);
@@ -140,14 +140,41 @@ class Retouch_class extends Base_tools_class {
 		this.last = this.to_layer(mouse);
 		this.original = null;
 		if (mode == 'healing') {
-			//aligned: the offset is fixed by the first stroke after setting the source
-			if (!this.offset) {
-				this.offset = { x: this.source.x - this.last.x, y: this.source.y - this.last.y };
-			}
+			var hp = this.getParams();
 			this.original = document.createElement('canvas');
 			this.original.width = this.canvas.width;
 			this.original.height = this.canvas.height;
 			this.original.getContext('2d').drawImage(this.canvas, 0, 0);
+			this.heal_src = null;
+			if (hp.heal_source == 'Pattern') {
+				//Source: Pattern - texture from the pattern, aligned to the document
+				var hl = config.layer;
+				this.heal_src = Patterns.tiled(hp.pattern, hl.width_original, hl.height_original, 100, hl.x, hl.y);
+				this.offset = { x: 0, y: 0 };
+			}
+			else {
+				//Aligned keeps the offset of the first stroke after setting the source
+				if (!this.offset || hp.heal_aligned === false) {
+					this.offset = { x: this.source.x - this.last.x, y: this.source.y - this.last.y };
+				}
+				if (hp.heal_sample && hp.heal_sample != 'Current Layer') {
+					//Current & Below / All Layers: the texture comes from the merged image
+					var ml = config.layer, merged = document.createElement('canvas');
+					merged.width = this.canvas.width;
+					merged.height = this.canvas.height;
+					var mctx = merged.getContext('2d');
+					mctx.scale(ml.width_original / ml.width, ml.height_original / ml.height);
+					mctx.translate(-ml.x, -ml.y);
+					var upto = hp.heal_sample == 'All Layers' ? config.layers.length - 1 : config.layers.indexOf(ml);
+					for (var li = 0; li <= upto; li++) {
+						var L = config.layers[li];
+						if (!L || L.visible === false) continue;
+						mctx.globalAlpha = L.opacity / 100;
+						app.Layers.render_object(mctx, L);
+					}
+					this.heal_src = merged;
+				}
+			}
 			this.heal_dab(this.last);
 		}
 		if (mode == 'red_eye') {
@@ -873,8 +900,9 @@ class Retouch_class extends Base_tools_class {
 		var tx = Math.round(p.x - r), ty = Math.round(p.y - r);
 		var sx = Math.round(p.x + this.offset.x - r), sy = Math.round(p.y + this.offset.y - r);
 		var octx = this.original.getContext('2d', { willReadFrequently: true });
-		var src = octx.getImageData(sx, sy, size, size).data;
+		var src = (this.heal_src || this.original).getContext('2d', { willReadFrequently: true }).getImageData(sx, sy, size, size).data;
 		var under = octx.getImageData(tx, ty, size, size).data;
+		var heal_mode = this.getParams().heal_mode || 'Normal';
 		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 		var dst = ctx.getImageData(tx, ty, size, size);
 		//mean color of the source and destination rings (texture from source, tone from destination)
@@ -895,9 +923,15 @@ class Retouch_class extends Base_tools_class {
 				if (d2 > 1) continue;
 				var f = d2 < 0.6 ? 1 : 1 - (d2 - 0.6) / 0.4;
 				var k = (y2 * size + x2) * 4;
+				//Replace keeps the source as it is; the other modes heal (source texture,
+				//destination tone), then blend with what is there
+				var healed = [0, 1, 2].map(c3 => (heal_mode == 'Replace' ? src[k + c3] : src[k + c3] - ms[c3] + md[c3]));
+				if (heal_mode != 'Normal' && heal_mode != 'Replace') {
+					//blended with the pixels from before the stroke, so overlapping dabs do not compound
+					healed = blend_rgb(heal_mode, [under[k] / 255, under[k + 1] / 255, under[k + 2] / 255], healed.map(v => Math.max(0, Math.min(255, v)) / 255)).map(v => v * 255);
+				}
 				for (var c3 = 0; c3 < 3; c3++) {
-					var healed = src[k + c3] - ms[c3] + md[c3];
-					dst.data[k + c3] = dst.data[k + c3] + (healed - dst.data[k + c3]) * f;
+					dst.data[k + c3] = dst.data[k + c3] + (healed[c3] - dst.data[k + c3]) * f;
 				}
 			}
 		}
@@ -960,7 +994,20 @@ class Retouch_class extends Base_tools_class {
 		//start from the untouched layer pixels (the preview tint is discarded)
 		ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		ctx.drawImage(config.layer.link, 0, 0);
+		var mode = this.getParams().heal_mode || 'Normal';
+		var before = mode != 'Normal' && mode != 'Replace' ? ctx.getImageData(0, 0, this.canvas.width, this.canvas.height) : null;
 		inpaint(this.canvas, this.spot);
+		if (before) {
+			//Mode: the healed pixels blended with the original ones
+			var img = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height), d = img.data, o = before.data;
+			for (var k = 0; k < this.spot.length; k++) {
+				if (!this.spot[k]) continue;
+				var i = k * 4;
+				var m = blend_rgb(mode, [o[i] / 255, o[i + 1] / 255, o[i + 2] / 255], [d[i] / 255, d[i + 1] / 255, d[i + 2] / 255]);
+				d[i] = m[0] * 255; d[i + 1] = m[1] * 255; d[i + 2] = m[2] * 255;
+			}
+			ctx.putImageData(img, 0, 0);
+		}
 	}
 }
 

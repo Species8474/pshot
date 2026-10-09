@@ -106,6 +106,7 @@ const SELECTION_OPS = { type: 'icons', items: [
 	{ icon: IC.sel_sub, title: 'Subtract from selection', bind: 'op', bind_value: 'subtract' },
 	{ icon: IC.sel_int, title: 'Intersect with selection', bind: 'op', bind_value: 'intersect' },
 ] };
+const HEAL_MODES = ['Normal', 'Replace', 'Multiply', 'Screen', 'Darken', 'Lighten', 'Color', 'Luminosity'];
 const CROP_RATIOS = ['Unconstrained', 'Original Ratio', '1 x 1 (Square)', '4 x 5 (8 x 10)', '8.5 x 11', '4 x 3', '5 x 7', '2 x 3 (4 x 6)', '16 x 9'];
 const CROP_VIEWS = ['Rule of Thirds', 'Grid', 'Diagonal', 'Triangle', 'Golden Ratio', 'Golden Spiral'];
 const TONE_MODES = ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'];
@@ -505,19 +506,20 @@ const LAYOUTS = {
 	spot_healing: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: ['Normal', 'Replace', 'Multiply', 'Screen', 'Darken', 'Lighten', 'Color', 'Luminosity'] },
+		{ type: 'select', label: 'Mode:', values: HEAL_MODES, bind: 'heal_mode', map: Object.fromEntries(HEAL_MODES.map(v => [v, v])) },
 		{ type: 'select', label: 'Type:', values: ['Proximity Match', 'Create Texture', 'Content-Aware'], value: 'Content-Aware', disabled_values: ['Proximity Match', 'Create Texture'] },
 		{ type: 'check', label: 'Sample All Layers', value: false },
 	],
 	healing: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Clone Source panel' },
+		{ type: 'icon', icon: IC.clone_source, title: 'Toggle the Clone Source panel', action: () => app.GUI.Ps_workspace.toggle_panel('clone_source') },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: ['Normal', 'Replace', 'Multiply', 'Screen', 'Darken', 'Lighten', 'Color', 'Luminosity'] },
-		{ type: 'select', label: 'Source:', values: ['Sampled', 'Pattern'], value: 'Sampled', disabled_values: ['Pattern'] },
+		{ type: 'select', label: 'Mode:', values: HEAL_MODES, bind: 'heal_mode', map: Object.fromEntries(HEAL_MODES.map(v => [v, v])) },
+		{ type: 'select', label: 'Source:', values: ['Sampled', 'Pattern'], bind: 'heal_source', map: { 'Sampled': 'Sampled', 'Pattern': 'Pattern' }, rerender: true },
+		{ type: 'pattern', bind: 'pattern', get disabled() { return config.TOOL.attributes.heal_source != 'Pattern'; } },
 		{ type: 'sep' },
-		{ type: 'check', label: 'Aligned', value: true },
-		{ type: 'select', label: 'Sample:', values: ['Current Layer', 'Current & Below', 'All Layers'], value: 'Current Layer', disabled_values: ['Current & Below', 'All Layers'] },
+		{ type: 'check', label: 'Aligned', bind: 'heal_aligned' },
+		{ type: 'select', label: 'Sample:', values: ['Current Layer', 'Current & Below', 'All Layers'], bind: 'heal_sample', map: { 'Current Layer': 'Current Layer', 'Current & Below': 'Current & Below', 'All Layers': 'All Layers' } },
 	],
 	patch: [
 		SELECTION_OPS,
