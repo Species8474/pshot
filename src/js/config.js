@@ -187,6 +187,11 @@ config.TOOLS = [
 			width: 10,
 			contrast: 10,
 			frequency: 57,
+			style: 'Normal',
+			ratio_w: 1,
+			ratio_h: 1,
+			size_w: 64,
+			size_h: 64,
 		},
 	},
 	{

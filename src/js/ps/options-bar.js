@@ -105,13 +105,20 @@ const SELECTION_OPS = { type: 'icons', items: [
 	{ icon: IC.sel_sub, title: 'Subtract from selection', bind: 'op', bind_value: 'subtract' },
 	{ icon: IC.sel_int, title: 'Intersect with selection', bind: 'op', bind_value: 'intersect' },
 ] };
+//Marquee Style: Normal, Fixed Ratio (Width:Height), Fixed Size (px); the fields follow the style
+var marquee_style = () => (config.TOOL.attributes.style || 'Normal');
+const MARQUEE_STYLE = [
+	{ type: 'select', label: 'Style:', values: ['Normal', 'Fixed Ratio', 'Fixed Size'], bind: 'style', map: { 'Normal': 'Normal', 'Fixed Ratio': 'Fixed Ratio', 'Fixed Size': 'Fixed Size' }, rerender: true },
+	{ type: 'num', label: 'Width:', width: 46, get bind() { return { 'Fixed Ratio': 'ratio_w', 'Fixed Size': 'size_w' }[marquee_style()] || null; }, get unit() { return marquee_style() == 'Fixed Size' ? 'px' : ''; } },
+	{ type: 'num', label: 'Height:', width: 46, get bind() { return { 'Fixed Ratio': 'ratio_h', 'Fixed Size': 'size_h' }[marquee_style()] || null; }, get unit() { return marquee_style() == 'Fixed Size' ? 'px' : ''; } },
+];
 const LASSO_LAYOUT = [
 	SELECTION_OPS,
 	{ type: 'sep' },
 	{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
 	{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
 	{ type: 'sep' },
-	{ type: 'button', text: 'Refine Edge...' },
+	{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 ];
 const PAINT_MODES = ['Normal', 'Behind', 'Clear', 'Darken', 'Multiply', 'Color Burn', 'Lighten', 'Screen', 'Color Dodge',
 	'Linear Dodge (Add)', 'Overlay', 'Soft Light', 'Hard Light', 'Difference', 'Exclusion', 'Hue', 'Saturation', 'Color', 'Luminosity'];
@@ -185,11 +192,9 @@ const LAYOUTS = {
 		{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
 		{ type: 'check', label: 'Anti-alias', value: false, always_disabled: true },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Style:', values: ['Normal', 'Fixed Ratio', 'Fixed Size'], value: 'Normal' },
-		{ type: 'num', label: 'Width:', width: 46 },
-		{ type: 'num', label: 'Height:', width: 46 },
+		...MARQUEE_STYLE,
 		{ type: 'sep' },
-		{ type: 'button', text: 'Refine Edge...' },
+		{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 	],
 	ellipse_marquee: [
 		SELECTION_OPS,
@@ -197,11 +202,9 @@ const LAYOUTS = {
 		{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
 		{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Style:', values: ['Normal', 'Fixed Ratio', 'Fixed Size'], value: 'Normal' },
-		{ type: 'num', label: 'Width:', width: 46 },
-		{ type: 'num', label: 'Height:', width: 46 },
+		...MARQUEE_STYLE,
 		{ type: 'sep' },
-		{ type: 'button', text: 'Refine Edge...' },
+		{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 	],
 	row_marquee: [SELECTION_OPS, { type: 'sep' }, { type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 }],
 	col_marquee: [SELECTION_OPS, { type: 'sep' }, { type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 }],
@@ -218,7 +221,7 @@ const LAYOUTS = {
 		{ type: 'num', label: 'Frequency:', bind: 'frequency', unit: '', width: 40 },
 		{ type: 'icon', icon: IC.pressure_size, title: 'Use tablet pressure to change pen width' },
 		{ type: 'sep' },
-		{ type: 'button', text: 'Refine Edge...' },
+		{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 	],
 	quick_selection: [
 		{ type: 'icons', items: [
@@ -231,7 +234,7 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 		{ type: 'check', label: 'Auto-Enhance', value: false },
 		{ type: 'sep' },
-		{ type: 'button', text: 'Refine Edge...' },
+		{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 	],
 	magic_wand: [
 		SELECTION_OPS,
@@ -242,7 +245,7 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Contiguous', bind: 'contiguous' },
 		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 		{ type: 'sep' },
-		{ type: 'button', text: 'Refine Edge...' },
+		{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 	],
 	crop: [
 		{ type: 'select', values: ['Unconstrained', 'Original Ratio', '1 x 1 (Square)', '4 x 5 (8 x 10)', '8.5 x 11', '4 x 3', '5 x 7', '2 x 3 (4 x 6)', '16 x 9'], value: 'Unconstrained' },
@@ -1006,6 +1009,7 @@ class Ps_options_bar_class {
 			if (bound && c.map) {
 				select.addEventListener('change', () => {
 					this.set(c.bind, c.map[select.value]);
+					if (c.rerender) this.render();
 					//Mixer Brush presets set Wet / Load / Mix
 					if (c.bind == 'mixer_preset' && MIXER_PRESETS[select.value]) {
 						var pv = MIXER_PRESETS[select.value];

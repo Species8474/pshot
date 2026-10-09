@@ -252,6 +252,12 @@ class Ps_select_class extends Base_tools_class {
 		this.selection().set_preview(null);
 		var mode = this.attrs().mode;
 		var feather = this.attrs().feather || 0;
+		if (!drag.moved && this.attrs().style == 'Fixed Size' && (mode == 'rect' || mode == 'ellipse')) {
+			//Fixed Size: a click places the box
+			var fr = this.marquee_rect(drag.start, drag.start, event);
+			this.selection().select_rect(fr.x, fr.y, fr.w, fr.h, drag.op, mode == 'ellipse', feather, NAMES[mode]);
+			return;
+		}
 		if (!drag.moved) {
 			//CS6: a plain click with a marquee or lasso deselects
 			if (drag.op == 'new') {
@@ -271,9 +277,21 @@ class Ps_select_class extends Base_tools_class {
 	}
 
 	marquee_rect(a, b, event) {
+		var at = this.attrs();
 		var dx = b.x - a.x;
 		var dy = b.y - a.y;
-		if (event.shiftKey && this.drag && this.drag.op != 'add') {
+		//Style: Fixed Size - a box of that size whose corner (center with Alt) follows the pointer
+		if (at.style == 'Fixed Size') {
+			var fw = Math.max(1, at.size_w || 64), fh = Math.max(1, at.size_h || 64);
+			return event.altKey ? { x: b.x - fw / 2, y: b.y - fh / 2, w: fw, h: fh } : { x: b.x, y: b.y, w: fw, h: fh };
+		}
+		//Style: Fixed Ratio - width:height kept, the larger drag direction wins
+		if (at.style == 'Fixed Ratio') {
+			var ratio = Math.max(0.001, at.ratio_w || 1) / Math.max(0.001, at.ratio_h || 1);
+			if (Math.abs(dx) / ratio >= Math.abs(dy)) dy = Math.sign(dy || 1) * Math.abs(dx) / ratio;
+			else dx = Math.sign(dx || 1) * Math.abs(dy) * ratio;
+		}
+		else if (event.shiftKey && this.drag && this.drag.op != 'add') {
 			var size = Math.max(Math.abs(dx), Math.abs(dy));
 			dx = Math.sign(dx || 1) * size;
 			dy = Math.sign(dy || 1) * size;
