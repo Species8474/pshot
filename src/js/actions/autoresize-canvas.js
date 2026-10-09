@@ -76,7 +76,7 @@ export class Autoresize_canvas_action extends Base_action {
 		if (need_fit == true) {
 			await new Promise((resolve) => {
 				window.setTimeout(() => {
-					app.GUI.GUI_preview.zoom_auto();
+					app.GUI.GUI_preview.zoom_auto(true);
 					resolve();
 				}, 100);
 			});

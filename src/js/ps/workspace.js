@@ -115,6 +115,10 @@ class Ps_workspace_class {
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());
 		this.relayout();
+		//the startup document opens at the largest CS6 zoom step that fits
+		setTimeout(() => {
+			if (app.State.action_history.length == 0) app.GUI.GUI_preview.zoom_auto(true);
+		}, 300);
 	}
 
 	/**

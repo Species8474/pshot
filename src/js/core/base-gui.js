@@ -3,6 +3,7 @@
  * author: Vilius L.
  */
 
+import app from './../app.js';
 import config from './../config.js';
 import Base_layers_class from './base-layers.js';
 import GUI_tools_class from './gui/gui-tools.js';
@@ -217,7 +218,12 @@ class Base_gui_class {
 		//confirmation on exit
 		var exit_confirm = this.Tools_settings.get_setting('exit_confirm');
 		window.addEventListener('beforeunload', function (e) {
-			if(exit_confirm && (config.layers.length > 1 || _this.Base_layers.is_layer_empty(config.layer.id) == false)){
+			//pshot: only documents with changes need a confirmation (CS6)
+			var dirty = _this.Ps_workspace ? _this.Ps_workspace.Documents.docs.some((doc, i) => {
+				var history = i == _this.Ps_workspace.Documents.active ? app.State.action_history : (doc.state ? doc.state.history : []);
+				return history && history.length > 0;
+			}) : (config.layers.length > 1 || _this.Base_layers.is_layer_empty(config.layer.id) == false);
+			if(exit_confirm && dirty){
 				e.preventDefault();
 				e.returnValue = '';
 			}

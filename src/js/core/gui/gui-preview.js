@@ -270,6 +270,16 @@ class GUI_preview_class {
 			return false;
 		}
 
+		if (only_increase != undefined) {
+			//pshot: opening/creating a document uses the largest CS6 zoom step that fits
+			//(View > Fit on Screen keeps the exact fit)
+			var steps = [0.01, 0.02, 0.03, 0.04, 0.05, 0.0625, 0.0833, 0.125, 0.1667, 0.25, 0.3333, 0.5, 0.6667, 1];
+			var fit = steps.filter(z => z <= best_zoom + 0.00001);
+			best_zoom = fit.length ? fit[fit.length - 1] : steps[0];
+			this.zoom(best_zoom * 100);
+			return;
+		}
+
 		this.zoom(Math.min(best_width, best_height) * 100);
 	}
 
