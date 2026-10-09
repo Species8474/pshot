@@ -224,6 +224,21 @@ async function file_to_layers(file) {
 						continue;
 					}
 				}
+				//type layers stay editable
+				var type_settings = child.text ? text_from_psd(child) : null;
+				if (type_settings) {
+					Object.assign(type_settings, {
+						opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
+						visible: !child.hidden,
+						composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
+						_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+						_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
+						_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
+						_parent_key: parent_key,
+					});
+					layers.push(type_settings);
+					continue;
+				}
 				if (!child.canvas || child.canvas.width == 0 || child.canvas.height == 0) {
 					continue;
 				}
@@ -412,6 +427,123 @@ async function place(files) {
 /**
  * builds the PSD structure from the current layers
  */
+// ---------- type layers <-> PSD text ----------
+
+const PS_FONT_NAMES = { 'Arial': 'ArialMT', 'Times New Roman': 'TimesNewRomanPSMT', 'Courier New': 'CourierNewPSMT', 'Courier': 'Courier', 'Helvetica': 'Helvetica', 'Georgia': 'Georgia', 'Verdana': 'Verdana', 'Tahoma': 'Tahoma', 'Impact': 'Impact', 'Trebuchet MS': 'TrebuchetMS' };
+
+function font_from_psd(name) {
+	if (!name) return 'Arial';
+	for (var family in PS_FONT_NAMES) {
+		if (PS_FONT_NAMES[family] == name) return family;
+	}
+	//PostScript names: strip the style suffix and MT/PSMT
+	return name.replace(/-(Bold|Italic|BoldItalic|Regular|Oblique|BoldOblique)$/i, '').replace(/(PSMT|MT)$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+/**
+ * pshot type layer -> ag-psd text data (style runs per span, \r between lines)
+ */
+function text_to_psd(layer) {
+	var lines = layer.data || [];
+	var text = '', runs = [];
+	var hex = (c) => hex_to_rgb(c && c[0] == '#' ? c.substr(0, 7) : '#000000');
+	lines.forEach((line, li) => {
+		line.forEach((span, si) => {
+			var m = span.meta || {};
+			var size = m.size || 40;
+			var len = span.text.length + (si == line.length - 1 && li < lines.length - 1 ? 1 : 0);
+			text += span.text;
+			if (len == 0) return;
+			runs.push({ length: len, style: {
+				font: { name: PS_FONT_NAMES[m.family || 'Arial'] || (m.family || 'Arial').replace(/\s+/g, '') },
+				fontSize: size, fauxBold: !!m.bold, fauxItalic: !!m.italic, underline: !!m.underline, strikethrough: !!m.strikethrough,
+				tracking: Math.round((m.kerning || 0) / size * 1000), autoLeading: !m.leading, leading: m.leading ? size + m.leading : undefined,
+				fillColor: hex(m.fill_color || '#000000'),
+			} });
+		});
+		if (li < lines.length - 1) text += '\r';
+	});
+	if (!runs.length) return undefined;
+	var first = runs[0].style;
+	var halign = (layer.params && layer.params.halign) || 'left';
+	var vertical = layer.params && layer.params.text_direction == 'ttb';
+	//the anchor is the first baseline at the alignment side
+	var baseline = first.fontSize * 0.9 + 1;
+	try {
+		var editor = app.GUI.GUI_tools.tools_modules.text.object.get_editor(layer);
+		if (editor && editor.lineRenderInfo && editor.lineRenderInfo.wrapSizes[0]) baseline = editor.lineRenderInfo.wrapSizes[0].baseline + 1;
+	} catch (e) { /* keep the estimate */ }
+	var ax = layer.x + (halign == 'center' ? layer.width / 2 : (halign == 'right' ? layer.width : 0));
+	return {
+		text: text,
+		transform: [1, 0, 0, 1, vertical ? layer.x + layer.width / 2 : ax, vertical ? layer.y : layer.y + baseline],
+		orientation: vertical ? 'vertical' : 'horizontal',
+		antiAlias: 'sharp',
+		style: first,
+		styleRuns: runs,
+		paragraphStyle: { justification: halign },
+		shapeType: 'point',
+	};
+}
+
+/**
+ * ag-psd text data -> pshot type layer settings (editable), or null
+ */
+function text_from_psd(child) {
+	var t = child.text;
+	if (!t || typeof t.text != 'string') return null;
+	var runs = t.styleRuns && t.styleRuns.length ? t.styleRuns : [{ length: t.text.length, style: t.style || {} }];
+	var base = t.style || {};
+	var scale = t.transform ? Math.hypot(t.transform[0], t.transform[1]) || 1 : 1;
+	var meta_of = (st) => {
+		st = Object.assign({}, base, st);
+		var name = st.font && st.font.name;
+		var m = {
+			family: font_from_psd(name),
+			size: Math.round((st.fontSize || 12) * scale * 10) / 10,
+			bold: !!st.fauxBold || /Bold/i.test(name || ''),
+			italic: !!st.fauxItalic || /Italic|Oblique/i.test(name || ''),
+			underline: !!st.underline,
+			strikethrough: !!st.strikethrough,
+			fill_color: st.fillColor ? rgb_to_hex(st.fillColor) : '#000000',
+		};
+		if (st.tracking) m.kerning = st.tracking / 1000 * m.size;
+		return m;
+	};
+	var lines = [[]], pos = 0;
+	for (var run of runs) {
+		var piece = t.text.substr(pos, run.length);
+		pos += run.length;
+		var meta = meta_of(run.style || {});
+		var parts = piece.split(/\r\n|\r|\n/);
+		parts.forEach((part, i) => {
+			if (i > 0) lines.push([]);
+			if (part.length) lines[lines.length - 1].push({ text: part, meta: Object.assign({}, meta) });
+		});
+	}
+	lines = lines.map(l => l.length ? l : [{ text: '', meta: meta_of({}) }]);
+	var first_size = lines[0][0].meta.size;
+	var vertical = t.orientation == 'vertical';
+	var justification = (t.paragraphStyle && t.paragraphStyle.justification) || 'left';
+	var halign = justification.indexOf('center') >= 0 ? 'center' : (justification.indexOf('right') >= 0 ? 'right' : 'left');
+	//the box is resized to the text when it renders (dynamic boundary); estimate it for alignment
+	var longest = Math.max.apply(null, lines.map(l => l.reduce((n, s) => n + s.text.length, 0)));
+	var w = Math.max(1, longest * first_size * 0.55), h = lines.length * first_size * 1.15;
+	var tx = t.transform ? t.transform[4] : (child.left || 0), ty = t.transform ? t.transform[5] : (child.top || 0) + first_size * 0.9;
+	var x = vertical ? tx - w / 2 : (halign == 'center' ? tx - w / 2 : (halign == 'right' ? tx - w : tx));
+	var y = vertical ? ty : ty - first_size * 0.9 - 1;
+	return {
+		name: child.name || lines.map(l => l.map(s => s.text).join('')).join(' '),
+		type: 'text',
+		x: x, y: y, width: w, height: h,
+		params: { boundary: 'dynamic', kerning: 'metrics', text_direction: vertical ? 'ttb' : 'ltr', wrap_direction: vertical ? 'rtl' : 'ttb', halign: halign, valign: 'top', wrap: 'letter' },
+		render_function: ['text', 'render'],
+		rotate: 0,
+		is_vector: true,
+		data: lines,
+	};
+}
+
 function psd_node(layer) {
 	let canvas, left, top;
 	if (layer.type == 'image' && layer.link && !layer.rotate && (!layer.filters || layer.filters.length == 0)) {
@@ -449,6 +581,7 @@ function psd_node(layer) {
 		mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
 		effects: styles_to_effects(layer.ps_styles),
 		fillOpacity: layer.ps_fill == null ? undefined : layer.ps_fill / 100,
+		text: layer.type == 'text' ? text_to_psd(layer) : undefined,
 	};
 }
 
@@ -498,7 +631,7 @@ function build_psd() {
 
 function save_psd(file_name) {
 	try {
-		const buffer = writePsd(build_psd(), { generateThumbnail: true });
+		const buffer = writePsd(build_psd(), { generateThumbnail: true, invalidateTextLayers: true });
 		const blob = new Blob([buffer], { type: 'application/octet-stream' });
 		const name = /\.psd$/i.test(file_name) ? file_name : file_name + '.psd';
 		filesaver.saveAs(blob, name);
