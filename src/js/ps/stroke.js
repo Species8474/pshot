@@ -126,4 +126,4 @@ function rename_last(label) {
 	}
 }
 
-export { commit_stroke };
+export { commit_stroke, BLEND_OPS };

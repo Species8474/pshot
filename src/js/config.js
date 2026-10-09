@@ -294,9 +294,14 @@ config.TOOLS = [
 	{
 		name: 'fill',
 		attributes: {
-			power: 5,
-			anti_aliasing: false,
-			contiguous: false,
+			source: 'Foreground',
+			pattern: 'Checkerboard',
+			blend: 'Normal',
+			opacity: 100,
+			tolerance: 32,
+			anti_aliasing: true,
+			contiguous: true,
+			all_layers: false,
 		},
 	},
 	{

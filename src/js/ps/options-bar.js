@@ -327,14 +327,15 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Transparency', bind: 'transparency' },
 	],
 	paint_bucket: [
-		{ type: 'select', values: ['Foreground', 'Pattern'], value: 'Foreground', disabled_values: ['Pattern'] },
+		{ type: 'select', values: ['Foreground', 'Pattern'], bind: 'source', map: { 'Foreground': 'Foreground', 'Pattern': 'Pattern' }, rerender: true },
+		{ type: 'pattern', bind: 'pattern', get disabled() { return config.TOOL.attributes.source != 'Pattern'; } },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: MODES },
-		{ type: 'pct', label: 'Opacity:', value: 100 },
-		{ type: 'num', label: 'Tolerance:', bind: 'power', width: 40 },
+		{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
+		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
+		{ type: 'num', label: 'Tolerance:', bind: 'tolerance', width: 40 },
 		{ type: 'check', label: 'Anti-alias', bind: 'anti_aliasing' },
 		{ type: 'check', label: 'Contiguous', bind: 'contiguous' },
-		{ type: 'check', label: 'All Layers', value: false },
+		{ type: 'check', label: 'All Layers', bind: 'all_layers' },
 	],
 	blur: [
 		{ type: 'brush', bind: 'size' },
@@ -1081,6 +1082,7 @@ class Ps_options_bar_class {
 				psel.appendChild(popt);
 			}
 			if (bound) psel.addEventListener('change', () => this.set(c.bind, psel.value));
+			psel.disabled = !bound || !!c.disabled;
 			wrap.appendChild(psel);
 			return wrap;
 		}

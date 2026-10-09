@@ -4,6 +4,8 @@ import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 import Helper_class from './../libs/helpers.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
+import Patterns from './../ps/patterns.js';
+import { BLEND_OPS } from './../ps/stroke.js';
 
 class Fill_class extends Base_tools_class {
 
@@ -50,181 +52,86 @@ class Fill_class extends Base_tools_class {
 		this.fill(mouse);
 	}
 
+	/**
+	 * pshot: CS6 Paint Bucket - the area similar to the clicked pixel (Tolerance,
+	 * Contiguous, All Layers; Anti-alias softens its edge) filled with the
+	 * foreground color or a pattern, in the Mode and Opacity, inside the selection
+	 */
 	async fill(mouse) {
 		var params = this.getParams();
-
-		if(this.working == true){
+		if (this.working == true) {
 			return;
 		}
-
-		if (config.layer.type != 'image' && config.layer.type !== null) {
+		var layer = config.layer;
+		if (layer.type != 'image' || !layer.link) {
 			alertify.error('This layer must contain an image. Please convert it to raster to apply this tool.');
 			return;
 		}
-		if (config.layer.is_vector == true) {
+		if (layer.is_vector == true) {
 			alertify.error('Layer is vector, convert it to raster to apply this tool.');
 			return;
 		}
-		if (config.ALPHA == 0) {
-			alertify.error('Color alpha value can not be zero.');
+		var W = config.WIDTH, H = config.HEIGHT;
+		if (mouse.x < 0 || mouse.y < 0 || mouse.x >= W || mouse.y >= H) {
 			return;
 		}
-
-		//get canvas from layer
-		var canvas = document.createElement('canvas');
-		var ctx = canvas.getContext("2d");
-		if (config.layer.type !== null) {
-			canvas.width = config.layer.width_original;
-			canvas.height = config.layer.height_original;
-			ctx.drawImage(config.layer.link, 0, 0);
-		}
-		else {
-			canvas.width = config.WIDTH;
-			canvas.height = config.HEIGHT;
-		}
-
-		var mouse_x = Math.round(mouse.x) - config.layer.x;
-		var mouse_y = Math.round(mouse.y) - config.layer.y;
-
-		//adapt to origin size
-		mouse_x = this.adaptSize(mouse_x, 'width');
-		mouse_y = this.adaptSize(mouse_y, 'height');
-
-		//convert float coords to integers
-		mouse_x = Math.round(mouse_x);
-		mouse_y = Math.round(mouse_y);
-
-		var color_to = this.Helper.hexToRgb(config.COLOR);
-		color_to.a = config.ALPHA;
-
-		//change
 		this.working = true;
-		this.fill_general(ctx, config.WIDTH, config.HEIGHT,
-			mouse_x, mouse_y, color_to, params.power, params.anti_aliasing, params.contiguous);
-
-		if (config.layer.type != null) {
-			//update
-			app.State.do_action(
-				new app.Actions.Bundle_action('fill_tool', 'Fill Tool', [
-					new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(canvas, config.layer))
+		try {
+			var Selection = app.GUI.Ps_workspace.Selection;
+			var src = Selection.sample_source(!!params.all_layers);
+			var tolerance = params.tolerance == null ? 32 : params.tolerance;
+			var area = Selection.flood(src, mouse.x, mouse.y, tolerance, params.contiguous !== false, null, null);
+			if (!area) return;
+			var mask = Selection.array_to_mask(area);
+			if (params.anti_aliasing !== false) {
+				var soft = document.createElement('canvas');
+				soft.width = W;
+				soft.height = H;
+				var sctx = soft.getContext('2d');
+				sctx.filter = 'blur(0.6px)';
+				sctx.drawImage(mask, 0, 0);
+				sctx.filter = 'none';
+				sctx.drawImage(mask, 0, 0);
+				mask = soft;
+			}
+			//what is poured: the foreground color or the pattern (aligned to the document)
+			var paint = document.createElement('canvas');
+			paint.width = W;
+			paint.height = H;
+			var pctx = paint.getContext('2d');
+			if (params.source == 'Pattern') {
+				pctx.drawImage(Patterns.tiled(params.pattern || Patterns.names()[0], W, H, 100), 0, 0);
+			}
+			else {
+				pctx.fillStyle = config.COLOR;
+				pctx.fillRect(0, 0, W, H);
+			}
+			pctx.globalCompositeOperation = 'destination-in';
+			pctx.drawImage(mask, 0, 0);
+			//into the layer's own pixels
+			var canvas = document.createElement('canvas');
+			canvas.width = layer.width_original;
+			canvas.height = layer.height_original;
+			var ctx = canvas.getContext('2d');
+			ctx.drawImage(layer.link, 0, 0);
+			ctx.save();
+			ctx.scale(layer.width_original / layer.width, layer.height_original / layer.height);
+			ctx.translate(-layer.x, -layer.y);
+			ctx.globalAlpha = (params.opacity == null ? 100 : params.opacity) / 100;
+			ctx.globalCompositeOperation = BLEND_OPS[params.blend] || 'source-over';
+			ctx.drawImage(paint, 0, 0);
+			ctx.restore();
+			await app.State.do_action(
+				new app.Actions.Bundle_action('fill_tool', 'Paint Bucket', [
+					new app.Actions.Update_layer_image_action(Selection.restrict(canvas, layer))
 				])
 			);
 		}
-		else {
-			//create new
-			var params = [];
-			params.type = 'image';
-			params.name = 'Fill';
-			params.data = canvas.toDataURL("image/png");
-			params.x = parseInt(canvas.dataset.x) || 0;
-			params.y = parseInt(canvas.dataset.y) || 0;
-			params.width = canvas.width;
-			params.height = canvas.height;
-			app.State.do_action(
-				new app.Actions.Bundle_action('fill_tool', 'Fill Tool', [
-					new app.Actions.Insert_layer_action(params)
-				])
-			);
+		finally {
+			//prevent crash bug on touch screen - hard to explain and debug
+			await new Promise(r => setTimeout(r, 10));
+			this.working = false;
 		}
-
-		//prevent crash bug on touch screen - hard to explain and debug
-		await new Promise(r => setTimeout(r, 10));
-		this.working = false;
-	}
-
-	fill_general(context, W, H, x, y, color_to, sensitivity, anti_aliasing, contiguous = false) {
-		sensitivity = sensitivity * 255 / 100; //convert to 0-255 interval
-		x = parseInt(x);
-		y = parseInt(y);
-		var canvasTemp = document.createElement('canvas');
-		canvasTemp.width = W;
-		canvasTemp.height = H;
-		var ctxTemp = canvasTemp.getContext("2d");
-
-		ctxTemp.rect(0, 0, W, H);
-		ctxTemp.fillStyle = "rgba(255, 255, 255, 0)";
-		ctxTemp.fill();
-
-		var img_tmp = ctxTemp.getImageData(0, 0, W, H);
-		var imgData_tmp = img_tmp.data;
-
-		var img = context.getImageData(0, 0, W, H);
-		var imgData = img.data;
-		var k = ((y * (img.width * 4)) + (x * 4));
-		var dx = [0, -1, +1, 0];
-		var dy = [-1, 0, 0, +1];
-		var color_from = {
-			r: imgData[k + 0],
-			g: imgData[k + 1],
-			b: imgData[k + 2],
-			a: imgData[k + 3]
-		};
-		if (color_from.r == color_to.r && color_from.g == color_to.g
-			&& color_from.b == color_to.b && color_from.a == color_to.a) {
-			return false;
-		}
-
-		if (contiguous == false) {
-			//check only nearest pixels
-			var stack = [];
-			stack.push([x, y]);
-			while (stack.length > 0) {
-				var curPoint = stack.pop();
-				for (var i = 0; i < 4; i++) {
-					var nextPointX = curPoint[0] + dx[i];
-					var nextPointY = curPoint[1] + dy[i];
-					if (nextPointX < 0 || nextPointY < 0 || nextPointX >= W || nextPointY >= H)
-						continue;
-					var k = (nextPointY * W + nextPointX) * 4;
-					if (imgData_tmp[k + 3] != 0)
-						continue; //already parsed
-
-					//check
-					if (Math.abs(imgData[k + 0] - color_from.r) <= sensitivity &&
-						Math.abs(imgData[k + 1] - color_from.g) <= sensitivity &&
-						Math.abs(imgData[k + 2] - color_from.b) <= sensitivity &&
-						Math.abs(imgData[k + 3] - color_from.a) <= sensitivity) {
-
-						//fill pixel
-						imgData_tmp[k] = color_to.r; //r
-						imgData_tmp[k + 1] = color_to.g; //g
-						imgData_tmp[k + 2] = color_to.b; //b
-						imgData_tmp[k + 3] = color_to.a; //a
-
-						stack.push([nextPointX, nextPointY]);
-					}
-				}
-			}
-		}
-		else {
-			//global mode - contiguous
-			for (var i = 0; i < imgData.length; i += 4) {
-				if (imgData[i + 3] == 0)
-					continue;	//transparent
-
-				//imgData[i] + 0.7152 * imgData[i + 1] + 0.0722 * imgData[i + 2]);
-
-				for (var j = 0; j < 4; j++) {
-					var k = i + j;
-
-					if (Math.abs(imgData[k] - color_from.r) <= sensitivity
-						&& Math.abs(imgData[k + 1] - color_from.g) <= sensitivity
-						&& Math.abs(imgData[k + 2] - color_from.b) <= sensitivity
-						&& Math.abs(imgData[k + 3] - color_from.a) <= sensitivity) {
-						imgData_tmp[k] = color_to.r; //r
-						imgData_tmp[k + 1] = color_to.g; //g
-						imgData_tmp[k + 2] = color_to.b; //b
-						imgData_tmp[k + 3] = color_to.a; //a
-					}
-				}
-			}
-		}
-
-		ctxTemp.putImageData(img_tmp, 0, 0);
-		if (anti_aliasing == true) {
-			context.filter = 'blur(1px)';
-		}
-		context.drawImage(canvasTemp, 0, 0);
 	}
 
 }
