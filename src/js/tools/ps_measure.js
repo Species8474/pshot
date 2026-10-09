@@ -57,6 +57,7 @@ class Ps_measure_class extends Base_tools_class {
 		});
 		document.addEventListener('mouseup', () => {
 			if (config.TOOL.name != this.name || !this.drag) return;
+			if (this.drag.note) app.GUI.Ps_workspace.Notes.mouseup();
 			this.drag = null;
 			this.refresh();
 		});
@@ -70,6 +71,11 @@ class Ps_measure_class extends Base_tools_class {
 	mousedown(e) {
 		var p = this.world(e);
 		var mode = this.mode();
+		if (mode == 'note') {
+			app.GUI.Ps_workspace.Notes.mousedown(p);
+			this.drag = { note: true };
+			return;
+		}
 		if (mode == 'ruler') {
 			if (this.ruler && this.near({ x: this.ruler.x1, y: this.ruler.y1 }, p)) this.drag = { end: 1 };
 			else if (this.ruler && this.near({ x: this.ruler.x2, y: this.ruler.y2 }, p)) this.drag = { end: 2 };
@@ -106,6 +112,10 @@ class Ps_measure_class extends Base_tools_class {
 	mousemove(e) {
 		var p = this.world(e);
 		var d = this.drag;
+		if (d.note) {
+			app.GUI.Ps_workspace.Notes.mousemove(p);
+			return;
+		}
 		if (d.end && this.ruler) {
 			if (e.shiftKey) {
 				//constrain to 45 degree steps

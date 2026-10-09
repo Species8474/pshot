@@ -368,6 +368,12 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'button', text: 'Clear', action: () => measure_tool().clear() },
 	],
+	note: [
+		{ type: 'text', label: 'Author:', bind: 'note_author', width: 140 },
+		{ type: 'swatch', label: 'Color:', bind: 'note_color' },
+		{ type: 'button', text: 'Clear All', action: () => app.GUI.Ps_workspace.Notes.clear_all() },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Show or hide the Notes panel', action: () => app.GUI.Ps_workspace.toggle_panel('notes') },
+	],
 	count: [
 		{ type: 'readout', text: () => 'Count: ' + measure_tool().counts.length },
 		{ type: 'sep' },
@@ -785,6 +791,19 @@ class Ps_options_bar_class {
 			ro.textContent = c.text();
 			ro._text = c.text;
 			wrap.appendChild(ro);
+			return wrap;
+		}
+		if (c.type == 'text') {
+			wrap.innerHTML = '<span class="ps_opt_label">' + c.label + '</span>';
+			var ti = document.createElement('input');
+			ti.type = 'text';
+			ti.className = 'ps_opt_field';
+			if (c.width) ti.style.width = c.width + 'px';
+			ti.value = bound ? this.get(c.bind) : '';
+			ti.disabled = !bound;
+			ti.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter') ti.blur(); });
+			ti.addEventListener('change', () => this.set(c.bind, ti.value));
+			wrap.appendChild(ti);
 			return wrap;
 		}
 		if (c.type == 'rotation') {

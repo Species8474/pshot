@@ -100,6 +100,8 @@ config.TOOLS = [
 		attributes: {
 			mode: 'ruler',
 			sample_size: 'Point Sample',
+			note_author: '',
+			note_color: '#ffde4a',
 		},
 	},
 	{

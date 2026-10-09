@@ -277,7 +277,7 @@ async function file_to_layers(file) {
 				settings._ps_mask_canvas = psd_mask_to_alpha(settings._ps_mask, psd.width, psd.height);
 			}
 		}
-		return { width: psd.width, height: psd.height, layers };
+		return { width: psd.width, height: psd.height, layers, annotations: psd.annotations };
 	}
 	const data = await read_file(file, 'dataurl');
 	const image = await load_image(data);
@@ -386,6 +386,8 @@ async function open_document(files) {
 			}
 		}
 	}
+	//notes (annotations)
+	config.ps_notes = app.GUI.Ps_workspace.Notes.from_psd(doc.annotations);
 	app.GUI.modules['ps/commands'].purge_histories();
 	app.GUI.GUI_preview.zoom_auto(true);
 	app.GUI.GUI_layers.render_layers();
@@ -643,7 +645,7 @@ function build_psd() {
 	composite.width = config.WIDTH;
 	composite.height = config.HEIGHT;
 	app.Layers.convert_layers_to_canvas(composite.getContext('2d'), null, false);
-	return { width: config.WIDTH, height: config.HEIGHT, children: build(null), canvas: composite };
+	return { width: config.WIDTH, height: config.HEIGHT, children: build(null), canvas: composite, annotations: app.GUI.Ps_workspace.Notes.to_psd() };
 }
 
 function save_psd(file_name) {

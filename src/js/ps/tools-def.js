@@ -111,7 +111,7 @@ const groups = [
 		{ id: 'material_eyedropper', name: '3D Material Eyedropper Tool', key: 'I', tool: null, icon: I.material_eyedropper },
 		{ id: 'color_sampler', name: 'Color Sampler Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'sampler' }, icon: I.color_sampler },
 		{ id: 'ruler', name: 'Ruler Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'ruler' }, icon: I.ruler },
-		{ id: 'note', name: 'Note Tool', key: 'I', tool: null, icon: I.note },
+		{ id: 'note', name: 'Note Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'note' }, icon: I.note },
 		{ id: 'count', name: 'Count Tool', key: 'I', tool: 'ps_measure', preset: { mode: 'count' }, icon: I.count },
 	]},
 	{ separator: true, members: [

@@ -1540,6 +1540,12 @@ class Ps_commands_class {
 
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
+	toggle_show_notes() {
+		var ws = app.GUI.Ps_workspace;
+		ws.show_notes = ws.show_notes === false;
+		ws.Selection.draw_overlay();
+	}
+
 	toggle_pixel_grid() {
 		var ws = app.GUI.Ps_workspace;
 		ws.pixel_grid = ws.pixel_grid === false;

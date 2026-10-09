@@ -1588,3 +1588,10 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 /* Rotate View */
 #canvas_wrapper { transform-origin: 50% 50%; }
 #ps_rotate_compass { position: fixed; z-index: 50; pointer-events: none; }
+
+/* Notes panel */
+#ps_notes { display: flex; flex-direction: column; gap: 4px; min-width: 250px; }
+.ps_notes_author { padding: 4px 6px 0; color: var(--ps-text-dim); min-height: 14px; }
+.ps_notes_text { margin: 0 6px; min-height: 150px; resize: vertical; box-sizing: border-box; background: var(--ps-field); color: var(--ps-text); border: 1px solid var(--ps-field-border); padding: 4px; font: inherit; }
+#ps_notes .ps_panel_footer { align-items: center; }
+.ps_notes_count { flex: 1; text-align: right; padding-right: 6px; color: var(--ps-text-dim); }

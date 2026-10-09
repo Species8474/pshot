@@ -26,6 +26,7 @@ import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
 import Ps_blur_gallery_class from './blur-gallery.js';
+import Ps_notes_class from './notes.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
@@ -42,10 +43,11 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes',
 };
 
 const STRIP_ICONS = {
+	notes: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 2.5h9l3 3v10H3z M12 2.5v3h3M5.5 8h7M5.5 10.5h7M5.5 13h4.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	actions: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M5 3l9 6-9 6z" fill="currentColor"/></svg>',
 	histogram: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M2 15.5h14M3 15V11M5 15V7M7 15V4M9 15V6M11 15V9M13 15V8M15 15v-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
 	comps: '<svg viewBox="0 0 18 18" width="18" height="18"><rect x="2.5" y="5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 5V3h10.5v9.5h-2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
@@ -95,6 +97,7 @@ class Ps_workspace_class {
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
 		this.Blur_gallery = new Ps_blur_gallery_class();
+		this.Notes = new Ps_notes_class();
 		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
@@ -140,6 +143,7 @@ class Ps_workspace_class {
 		this.render_history();
 		this.render_channels();
 		this.Preferences.install();
+		this.Notes.install();
 
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());
@@ -192,6 +196,7 @@ class Ps_workspace_class {
 			app.GUI.GUI_layers.render_layers();
 			this.render_channels();
 			if (this.open_popout == 'comps') this.Comps.render();
+			if (this.open_popout == 'notes') this.Notes.render();
 			if (this.open_popout == 'histogram') this.render_histogram_panel();
 			if (this.paths_signature !== config.ps_paths) {
 				this.paths_signature = config.ps_paths;
@@ -733,6 +738,9 @@ class Ps_workspace_class {
 		if (panel == 'comps') {
 			this.Comps.render();
 		}
+		if (panel == 'notes') {
+			this.Notes.render();
+		}
 		if (panel == 'brush') {
 			this.Brush_panel.render(document.getElementById('ps_brush_panel'));
 		}
@@ -958,6 +966,7 @@ class Ps_workspace_class {
 			case 'extras': return this.extras;
 			case 'grid': return app.GUI.grid == true;
 			case 'pixel_grid': return this.pixel_grid !== false;
+			case 'show_notes': return this.show_notes !== false;
 			case 'guides': return config.guides_enabled == true;
 			case 'rulers': return config.ruler_active == true;
 			case 'snap': return config.SNAP == true;
