@@ -11,7 +11,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import Patterns from './patterns.js';
-import { PRESETS, render as render_gradient, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
+import { PRESETS, render_centered, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
 
 const STYLES = ['Linear', 'Radial', 'Angle', 'Reflected', 'Diamond'];
 
@@ -36,15 +36,8 @@ class Ps_fill_layers_class {
 		if (layer._ps_fill_cache && layer._ps_fill_cache.key == key) return layer._ps_fill_cache.canvas;
 		var c;
 		if (f.kind == 'gradient') {
-			//CS6: centered, the angle measured counter-clockwise, Scale stretches the length
-			var a = (f.angle == null ? 90 : f.angle) * Math.PI / 180, s = (f.scale || 100) / 100;
-			var cx = W / 2, cy = H / 2, dx = Math.cos(a), dy = -Math.sin(a);
-			var len = (Math.abs(dx) * W + Math.abs(dy) * H) / 2 * s;
-			var type = (f.style || 'Linear').toLowerCase();
-			var x1 = cx - dx * len, y1 = cy - dy * len, x2 = cx + dx * len, y2 = cy + dy * len;
-			if (type == 'radial' || type == 'angle' || type == 'diamond') { x1 = cx; y1 = cy; }
-			if (type == 'reflected') { x1 = cx; y1 = cy; }
-			c = render_gradient(W, H, f.gradient || two_color(config.COLOR, config.BG_COLOR), type, x1, y1, x2, y2, { reverse: f.reverse, dither: f.dither });
+			//CS6: centered on the document, the angle counter-clockwise, Scale stretches the length
+			c = render_centered(W, H, f.gradient || two_color(config.COLOR, config.BG_COLOR), f.style, f.angle, f.scale, { x: 0, y: 0, w: W, h: H }, { reverse: f.reverse, dither: f.dither });
 		}
 		else if (f.kind == 'pattern') {
 			c = Patterns.tiled(f.pattern || Patterns.names()[0], W, H, f.scale || 100);

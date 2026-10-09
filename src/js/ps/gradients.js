@@ -143,6 +143,21 @@ function render(w, h, g, type, x1, y1, x2, y2, opts) {
 }
 
 /**
+ * a gradient centered on a box (Gradient Fill layers, Gradient Overlay): style
+ * Linear / Radial / Angle / Reflected / Diamond, angle in degrees (counter-
+ * clockwise), scale in percent of the box
+ */
+function render_centered(w, h, g, style, angle, scale, box, opts) {
+	var a = (angle == null ? 90 : angle) * Math.PI / 180, s = (scale || 100) / 100;
+	var cx = box.x + box.w / 2, cy = box.y + box.h / 2, dx = Math.cos(a), dy = -Math.sin(a);
+	var len = Math.max(1, (Math.abs(dx) * box.w + Math.abs(dy) * box.h) / 2 * s);
+	var type = (style || 'Linear').toLowerCase();
+	var x1 = cx - dx * len, y1 = cy - dy * len, x2 = cx + dx * len, y2 = cy + dy * len;
+	if (type != 'linear') { x1 = cx; y1 = cy; }
+	return render(w, h, g, type, x1, y1, x2, y2, opts);
+}
+
+/**
  * CSS preview (over a checkerboard where there is transparency)
  */
 function css(g) {
@@ -305,4 +320,4 @@ function editor(initial, on_ok, on_preview) {
 	return root;
 }
 
-export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color, render };
+export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color, render, render_centered };

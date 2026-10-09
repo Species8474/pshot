@@ -10,6 +10,7 @@ import config from './../config.js';
 import { readPsd, writePsd } from 'ag-psd';
 import { inject_paths, read_paths } from './psd-paths.js';
 import Patterns from './patterns.js';
+import { resolve as resolve_gradient, two_color } from './gradients.js';
 import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
@@ -140,10 +141,16 @@ function styles_to_effects(styles) {
 			fx.patternOverlay = { enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, scale: e.scale || 100, pattern: { name: e.pattern, id: pattern_id(e.pattern) } };
 		}
 		if (key == 'color_overlay') fx.solidFill = [{ enabled: true, color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 }];
-		if (key == 'gradient_overlay') fx.gradientOverlay = [{
-			enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, angle: e.angle, reverse: !!e.reverse, type: 'linear', scale: 100,
-			gradient: { name: 'Custom', type: 'solid', colorStops: [{ color: hex_to_rgb(e.color_1), location: 0, midpoint: 50 }, { color: hex_to_rgb(e.color_2), location: 4096, midpoint: 50 }], opacityStops: [{ opacity: 1, location: 0, midpoint: 50 }, { opacity: 1, location: 4096, midpoint: 50 }] },
-		}];
+		if (key == 'gradient_overlay') {
+			var gg = resolve_gradient(e.gradient || two_color(e.color_1, e.color_2));
+			fx.gradientOverlay = [{
+				enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, angle: e.angle, reverse: !!e.reverse, type: (e.style || 'Linear').toLowerCase(),
+				scale: e.scale || 100, align: e.align !== false, dither: !!e.dither,
+				gradient: { name: gg.name || 'Custom', type: 'solid',
+					colorStops: gg.stops.map(st => ({ color: hex_to_rgb(st.color), location: Math.round(st.pos * 4096), midpoint: 50 })),
+					opacityStops: (gg.alphas || []).map(op => ({ opacity: op.a, location: Math.round(op.pos * 4096), midpoint: 50 })) },
+			}];
+		}
 	}
 	return any ? fx : undefined;
 }
@@ -183,8 +190,17 @@ function effects_to_styles(fx) {
 	if (fill) styles.color_overlay = { enabled: fill.enabled !== false, blend: blend_from_psd(fill.blendMode), color: rgb_to_hex(fill.color), opacity: Math.round((fill.opacity === undefined ? 1 : fill.opacity) * 100) };
 	var go = first(fx.gradientOverlay);
 	if (go) {
-		var stops = go.gradient && go.gradient.colorStops || [];
-		styles.gradient_overlay = { enabled: go.enabled !== false, blend: blend_from_psd(go.blendMode), opacity: Math.round((go.opacity === undefined ? 1 : go.opacity) * 100), angle: go.angle === undefined ? 90 : go.angle, reverse: !!go.reverse, color_1: rgb_to_hex(stops[0] && stops[0].color), color_2: rgb_to_hex(stops[stops.length - 1] && stops[stops.length - 1].color) };
+		var stops = go.gradient && go.gradient.colorStops || [], ostops = go.gradient && go.gradient.opacityStops || [];
+		var gloc = (v, i, n) => (v == null ? (n > 1 ? i / (n - 1) : 0) : (v > 1 ? v / 4096 : v));
+		var ggrad = stops.length >= 2 ? {
+			name: go.gradient.name || 'Custom',
+			stops: stops.map((st, i) => ({ pos: gloc(st.location, i, stops.length), color: rgb_to_hex(st.color) })),
+			alphas: ostops.length ? ostops.map((op, i) => ({ pos: gloc(op.location, i, ostops.length), a: op.opacity == null ? 1 : op.opacity })) : [{ pos: 0, a: 1 }, { pos: 1, a: 1 }],
+		} : null;
+		var gtype = go.type || 'linear';
+		styles.gradient_overlay = { enabled: go.enabled !== false, blend: blend_from_psd(go.blendMode), opacity: Math.round((go.opacity === undefined ? 1 : go.opacity) * 100), angle: go.angle === undefined ? 90 : go.angle, reverse: !!go.reverse,
+			color_1: rgb_to_hex(stops[0] && stops[0].color), color_2: rgb_to_hex(stops[stops.length - 1] && stops[stops.length - 1].color),
+			gradient: ggrad, style: gtype.charAt(0).toUpperCase() + gtype.slice(1), scale: go.scale || 100, align: go.align !== false, dither: !!go.dither };
 	}
 	return styles;
 }

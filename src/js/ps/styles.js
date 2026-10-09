@@ -11,6 +11,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import Patterns from './patterns.js';
+import { render_centered, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
 
 const BLEND = {
 	'Normal': 'source-over', 'Multiply': 'multiply', 'Screen': 'screen', 'Overlay': 'overlay', 'Darken': 'darken',
@@ -49,7 +50,7 @@ const DEFAULTS = {
 		contour_on: false, contour: 'Linear', contour_range: 50, texture_on: false, texture_pattern: 'Checkerboard', texture_scale: 100, texture_depth: 100, texture_invert: false },
 	satin: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 50, angle: 19, distance: 11, size: 14, invert: true },
 	color_overlay: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100 },
-	gradient_overlay: { enabled: false, blend: 'Normal', opacity: 100, color_1: '#000000', color_2: '#ffffff', angle: 90, reverse: false },
+	gradient_overlay: { enabled: false, blend: 'Normal', opacity: 100, gradient: null, style: 'Linear', align: true, scale: 100, color_1: '#000000', color_2: '#ffffff', angle: 90, reverse: false, dither: false },
 	pattern_overlay: { enabled: false, blend: 'Normal', opacity: 100, pattern: 'Checkerboard', scale: 100 },
 };
 
@@ -76,6 +77,26 @@ const SUB = { bevel_contour: 'contour_on', bevel_texture: 'texture_on' };
 function rgba(hex, alpha) {
 	var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16);
 	return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+/**
+ * bounding box of a canvas' non-transparent pixels, or null
+ */
+function alpha_bounds(c) {
+	var w = c.width, h = c.height, d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+	var x0 = w, y0 = h, x1 = -1, y1 = -1;
+	for (var y = 0; y < h; y++) {
+		var row = y * w * 4;
+		for (var x = 0; x < w; x++) {
+			if (d[row + x * 4 + 3]) {
+				if (x < x0) x0 = x;
+				if (x > x1) x1 = x;
+				if (y < y0) y0 = y;
+				y1 = y;
+			}
+		}
+	}
+	return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
 function canvas_like(c) {
@@ -334,18 +355,16 @@ class Ps_styles_class {
 		}
 		if (on('gradient_overlay')) {
 			var go = s.gradient_overlay;
-			var gc = canvas_like(content);
-			var gctx = gc.getContext('2d');
-			var ang = (go.angle || 0) * Math.PI / 180;
-			var cx = gc.width / 2, cy = gc.height / 2, len = Math.max(gc.width, gc.height) / 2;
-			var grad = gctx.createLinearGradient(cx - Math.cos(ang) * len, cy + Math.sin(ang) * len, cx + Math.cos(ang) * len, cy - Math.sin(ang) * len);
-			grad.addColorStop(0, go.reverse ? go.color_2 : go.color_1);
-			grad.addColorStop(1, go.reverse ? go.color_1 : go.color_2);
-			gctx.globalAlpha = go.opacity / 100;
-			gctx.fillStyle = grad;
-			gctx.fillRect(0, 0, gc.width, gc.height);
+			//Align with Layer: the gradient spans the layer's pixels, otherwise the whole canvas
+			var box = go.align !== false ? alpha_bounds(content) : null;
+			box = box || { x: 0, y: 0, w: content.width, h: content.height };
+			var gc = render_centered(content.width, content.height, go.gradient || two_color(go.color_1, go.color_2), go.style, go.angle, go.scale, box, { reverse: go.reverse, dither: go.dither });
+			var gfade = canvas_like(content);
+			var gfctx = gfade.getContext('2d');
+			gfctx.globalAlpha = go.opacity / 100;
+			gfctx.drawImage(gc, 0, 0);
 			bctx.globalCompositeOperation = BLEND[go.blend] || 'source-over';
-			bctx.drawImage(clip_to_shape(gc), 0, 0);
+			bctx.drawImage(clip_to_shape(gfade), 0, 0);
 		}
 		if (on('color_overlay')) {
 			var co = s.color_overlay;
@@ -660,10 +679,12 @@ class Ps_styles_class {
 					+ row('', '<label class="ps_fx_check"><input type="checkbox" data-field="invert"' + (e.invert ? ' checked' : '') + '> Invert</label>');
 			}
 			else if (key == 'gradient_overlay') {
-				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend))
+				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend) + '<label class="ps_fx_check"><input type="checkbox" data-field="dither"' + (e.dither ? ' checked' : '') + '> Dither</label>')
 					+ row('Opacity:', num('opacity', e.opacity, '%', 0, 100))
-					+ row('Gradient:', swatch('color_1', e.color_1) + swatch('color_2', e.color_2) + '<label class="ps_fx_check"><input type="checkbox" data-field="reverse"' + (e.reverse ? ' checked' : '') + '> Reverse</label>')
-					+ row('Angle:', num('angle', e.angle, '°', -180, 180));
+					+ row('Gradient:', '<span class="ps_adj_gradient ps_fx_gradient" title="Click to edit the gradient" style="background:' + gradient_css(e.gradient || two_color(e.color_1, e.color_2)) + '"></span><span class="ps_caret ps_fx_gradient_caret" title="Gradient presets">&#9662;</span><label class="ps_fx_check"><input type="checkbox" data-field="reverse"' + (e.reverse ? ' checked' : '') + '> Reverse</label>')
+					+ row('Style:', select('style', ['Linear', 'Radial', 'Angle', 'Reflected', 'Diamond'], e.style || 'Linear') + '<label class="ps_fx_check"><input type="checkbox" data-field="align"' + (e.align !== false ? ' checked' : '') + '> Align with Layer</label>')
+					+ row('Angle:', num('angle', e.angle, '°', -180, 180))
+					+ row('Scale:', num('scale', e.scale || 100, '%', 10, 150));
 			}
 			else {
 				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend) + swatch('color', e.color))
@@ -700,6 +721,16 @@ class Ps_styles_class {
 			input.addEventListener('input', update);
 			input.addEventListener('change', update);
 		});
+		var fx_gradient = panel.querySelector('.ps_fx_gradient');
+		if (fx_gradient) {
+			var set_gradient = (g) => {
+				target().gradient = resolve(g);
+				fx_gradient.style.background = gradient_css(target().gradient);
+				apply_preview();
+			};
+			fx_gradient.addEventListener('click', () => gradient_editor(target().gradient || two_color(target().color_1, target().color_2), set_gradient, set_gradient));
+			panel.querySelector('.ps_fx_gradient_caret').addEventListener('click', (e) => gradient_picker(e.currentTarget, set_gradient));
+		}
 		panel.querySelectorAll('[data-color]').forEach((button) => {
 			button.addEventListener('click', () => {
 				var field = button.dataset.color;
