@@ -23,6 +23,7 @@ import Ps_styles_class from './styles.js';
 import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_warp_text_class from './warp-text.js';
 import Ps_calculations_class from './calculations.js';
+import Ps_preferences_class from './preferences.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
@@ -89,6 +90,7 @@ class Ps_workspace_class {
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Warp_text = new Ps_warp_text_class();
 		this.Calculations = new Ps_calculations_class();
+		this.Preferences = new Ps_preferences_class();
 		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
@@ -132,6 +134,7 @@ class Ps_workspace_class {
 		this.render_document_tab();
 		this.render_history();
 		this.render_channels();
+		this.Preferences.install();
 
 		setInterval(() => this.tick(), 250);
 		window.addEventListener('resize', () => this.relayout());

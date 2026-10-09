@@ -1504,3 +1504,24 @@ body.theme-cs6 #popups .popup.ps_sfw { width: min(1100px, 94vw); max-width: none
 .ps_calc_cols { display: flex; gap: 16px; align-items: flex-start; }
 .ps_calc_cols > div { display: flex; flex-direction: column; gap: 6px; }
 .ps_calc .ps_adj_row > span:first-child { width: 64px; }
+
+/* Edit > Preferences */
+#popups .popup.ps_prefs { width: 760px; max-width: 96vw; }
+.ps_prefs_body { display: grid; grid-template-columns: 170px 1fr auto; gap: 12px; min-height: 420px; }
+.ps_prefs_list { background: var(--ps-field); border: 1px solid var(--ps-field-border); padding: 2px 0; }
+.ps_prefs_item { padding: 3px 8px; cursor: default; }
+.ps_prefs_item.active { background: var(--ps-select); color: #fff; }
+.ps_prefs_pane { display: flex; flex-direction: column; gap: 6px; }
+.ps_prefs_title { font-weight: 600; }
+.ps_prefs_group { margin-top: 6px; color: var(--ps-text-dim); border-bottom: 1px solid var(--ps-border); padding-bottom: 2px; }
+.ps_prefs_row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.ps_prefs_field { display: inline-flex; align-items: center; gap: 6px; }
+.ps_prefs_field.disabled, .ps_adj_check.disabled { color: var(--ps-text-disabled); }
+.ps_prefs_field input[type="number"] { width: 64px; }
+.ps_prefs_unit { color: var(--ps-text-dim); }
+.ps_prefs_buttons { display: flex; flex-direction: column; gap: 6px; }
+.ps_prefs_buttons .button { min-width: 80px; }
+.ps_prefs_theme { width: 22px; height: 22px; border: 1px solid #000; margin-right: 4px; padding: 0; }
+.ps_prefs_theme.active { outline: 2px solid var(--ps-select-light); outline-offset: 1px; }
+.ps_prefs_theme:disabled { opacity: 0.35; }
+.ps_prefs_checker { display: inline-block; width: 36px; height: 36px; border: 1px solid var(--ps-field-border); }
