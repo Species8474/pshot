@@ -23,6 +23,7 @@ import Ps_styles_class from './styles.js';
 import Ps_adjustment_layers_class from './adjustment-layers.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
+import Ps_paths_class from './paths.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
@@ -68,6 +69,7 @@ class Ps_workspace_class {
 		this.Transform = new Ps_transform_class();
 		this.Groups = new Ps_groups_class();
 		this.Multi = new Ps_multi_select_class();
+		this.Paths = new Ps_paths_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
 		this.Guides = new Ps_guides_class();
@@ -137,6 +139,11 @@ class Ps_workspace_class {
 			this.render_history();
 			app.GUI.GUI_layers.render_layers();
 			this.render_channels();
+			if (this.paths_signature !== config.ps_paths) {
+				this.paths_signature = config.ps_paths;
+				this.Paths.render_panel();
+				this.Selection.draw_overlay();
+			}
 		}
 	}
 
@@ -516,15 +523,18 @@ class Ps_workspace_class {
 				{ divider: true },
 				{ name: 'Link Layers' }, { name: 'Select Linked Layers' },
 				{ divider: true },
-				{ name: 'Merge Down', shortcut: 'Ctrl+E', action: () => run_target('layer/merge.merge') },
+				{ name: 'Merge Down', shortcut: 'Ctrl+E', action: () => run_target('ps/commands.merge_down') },
 				{ name: 'Merge Visible', shortcut: 'Shift+Ctrl+E', action: () => run_target('ps/commands.merge_visible') },
-				{ name: 'Flatten Image', action: () => run_target('layer/flatten.flatten') },
+				{ name: 'Flatten Image', action: () => run_target('ps/commands.flatten_image') },
 				{ divider: true },
 				{ name: 'Animation Options' }, { name: 'Panel Options...' },
 				{ divider: true },
 				{ name: 'Close', action: () => this.toggle_panel('layers') },
 				{ name: 'Close Tab Group', action: () => this.toggle_panel('layers') },
 			];
+		}
+		else if (panel == 'paths') {
+			return this.Paths.panel_menu_items();
 		}
 		else if (panel == 'history') {
 			items = [
@@ -1059,14 +1069,7 @@ class Ps_workspace_class {
 	}
 
 	render_paths_panel() {
-		document.getElementById('ps_paths').innerHTML = '<div class="ps_empty_panel"></div>'
-			+ '<div class="ps_panel_footer"><button type="button" class="disabled" title="Fill path with foreground color"></button>'
-			+ '<button type="button" class="disabled" title="Stroke path with brush"></button>'
-			+ '<button type="button" class="disabled" title="Load path as a selection"></button>'
-			+ '<button type="button" class="disabled" title="Make work path from selection"></button>'
-			+ '<button type="button" class="disabled" title="Add a mask"></button>'
-			+ '<button type="button" class="disabled" title="Create new path"></button>'
-			+ '<button type="button" class="disabled" title="Delete current path"></button></div>';
+		this.Paths.init();
 	}
 
 	// =================================================================

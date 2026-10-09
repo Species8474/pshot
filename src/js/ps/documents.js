@@ -120,6 +120,8 @@ class Ps_documents_class {
 			undo_toggle_index: commands.undo_toggle_index,
 			last_selection: commands.last_selection,
 			view: { scale: zoomView.getScale(), x: pos.x, y: pos.y },
+			ps_paths: config.ps_paths,
+			ps_path_active: config.ps_path_active,
 		};
 	}
 
@@ -143,6 +145,11 @@ class Ps_documents_class {
 		app.GUI.Ps_workspace.Selection.restore(state.ps_selection);
 		commands.undo_toggle_index = state.undo_toggle_index;
 		commands.last_selection = state.last_selection;
+		config.ps_paths = state.ps_paths || [];
+		config.ps_path_active = state.ps_path_active == null ? -1 : state.ps_path_active;
+		app.GUI.Ps_workspace.Paths.selected = null;
+		app.GUI.Ps_workspace.Paths.drawing = false;
+		app.GUI.Ps_workspace.Paths.render_panel();
 
 		//resize the canvas first: zoomView constrains the view to the canvas size
 		app.GUI.prepare_canvas();
@@ -197,6 +204,11 @@ class Ps_documents_class {
 		app.GUI.Ps_workspace.Selection.restore(null);
 		app.GUI.modules['ps/commands'].undo_toggle_index = null;
 		app.GUI.modules['ps/commands'].last_selection = null;
+		config.ps_paths = [];
+		config.ps_path_active = -1;
+		app.GUI.Ps_workspace.Paths.selected = null;
+		app.GUI.Ps_workspace.Paths.drawing = false;
+		app.GUI.Ps_workspace.Paths.render_panel();
 		this.changed();
 		return entry;
 	}

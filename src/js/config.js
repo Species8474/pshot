@@ -83,6 +83,24 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'ps_pen',
+		title: 'Pen',
+		on_activate: 'on_activate',
+		on_leave: 'on_leave',
+		attributes: {
+			mode: 'pen',
+			auto_add: true,
+		},
+	},
+	{
+		name: 'ps_path_select',
+		title: 'Path Selection',
+		on_activate: 'on_activate',
+		attributes: {
+			mode: 'path',
+		},
+	},
+	{
 		name: 'ps_patch',
 		title: 'Patch',
 		on_activate: 'on_activate',

@@ -156,11 +156,11 @@ const groups = [
 		{ id: 'sponge', name: 'Sponge Tool', key: 'O', tool: 'desaturate', icon: I.sponge },
 	]},
 	{ separator: true, members: [
-		{ id: 'pen', name: 'Pen Tool', key: 'P', tool: 'bezier_curve', icon: I.pen },
+		{ id: 'pen', name: 'Pen Tool', key: 'P', tool: 'ps_pen', preset: { mode: 'pen' }, icon: I.pen },
 		{ id: 'freeform_pen', name: 'Freeform Pen Tool', key: 'P', tool: null, icon: I.freeform_pen },
-		{ id: 'add_anchor', name: 'Add Anchor Point Tool', key: '', tool: null, icon: I.add_anchor },
-		{ id: 'delete_anchor', name: 'Delete Anchor Point Tool', key: '', tool: null, icon: I.delete_anchor },
-		{ id: 'convert_point', name: 'Convert Point Tool', key: '', tool: null, icon: I.convert_point },
+		{ id: 'add_anchor', name: 'Add Anchor Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'add' }, icon: I.add_anchor },
+		{ id: 'delete_anchor', name: 'Delete Anchor Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'delete' }, icon: I.delete_anchor },
+		{ id: 'convert_point', name: 'Convert Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'convert' }, icon: I.convert_point },
 	]},
 	{ members: [
 		{ id: 'type', name: 'Horizontal Type Tool', key: 'T', tool: 'text', icon: I.type },
@@ -169,8 +169,8 @@ const groups = [
 		{ id: 'vertical_type_mask', name: 'Vertical Type Mask Tool', key: 'T', tool: null, icon: I.vertical_type_mask },
 	]},
 	{ members: [
-		{ id: 'path_selection', name: 'Path Selection Tool', key: 'A', tool: null, icon: I.path_selection },
-		{ id: 'direct_selection', name: 'Direct Selection Tool', key: 'A', tool: null, icon: I.direct_selection },
+		{ id: 'path_selection', name: 'Path Selection Tool', key: 'A', tool: 'ps_path_select', preset: { mode: 'path' }, icon: I.path_selection },
+		{ id: 'direct_selection', name: 'Direct Selection Tool', key: 'A', tool: 'ps_path_select', preset: { mode: 'direct' }, icon: I.direct_selection },
 	]},
 	{ members: [
 		{ id: 'rectangle', name: 'Rectangle Tool', key: 'U', tool: 'rectangle', preset: { radius: 0 }, icon: I.rectangle },

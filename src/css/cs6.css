@@ -1377,3 +1377,10 @@ body.theme-cs6 #toggle_colors .ui_input_group input[type="range"] { min-width: 0
 .ps_typ_faux button.pressed, .ps_typ_align button.pressed { background: #2c2c2c; box-shadow: inset 0 1px 2px rgba(0,0,0,.6); color: #fff; }
 .ps_typ_faux button.disabled, .ps_typ_align button.disabled { opacity: .4; pointer-events: none; }
 .ps_typ_hint { color: #bdbdbd; font-size: 11px; }
+
+/* Paths panel */
+.ps_paths_list { min-height: 60px; flex: 1; overflow-y: auto; }
+.ps_path_row { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; border-bottom: 1px solid #3a3a3a; cursor: default; }
+.ps_path_row.active { background: var(--ps-select); color: #fff; }
+.ps_path_thumb { border: 1px solid #222; flex: none; }
+.ps_path_name.work { font-style: italic; }

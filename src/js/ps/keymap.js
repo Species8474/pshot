@@ -130,6 +130,22 @@ class Ps_keymap_class {
 			return;
 		}
 
+		//Ctrl+Enter: load the active path as a selection (CS6)
+		if (ctrl && event.key == 'Enter' && this.workspace.Paths.active()) {
+			this.workspace.Paths.make_selection(event.shiftKey ? 'add' : (event.altKey ? 'subtract' : 'new'));
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
+		//Delete / Backspace with a path tool: delete the selected anchor / subpath
+		if ((event.key == 'Delete' || event.key == 'Backspace') && (config.TOOL.name == 'ps_path_select' || config.TOOL.name == 'ps_pen') && this.workspace.Paths.selected) {
+			this.workspace.Paths.delete_selected();
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		//Delete / Backspace clear the selected pixels (CS6)
 		if ((event.key == 'Delete' || (event.key == 'Backspace' && !ctrl && !event.altKey)) && this.workspace.Selection.has()) {
 			run_target('ps/commands.clear');

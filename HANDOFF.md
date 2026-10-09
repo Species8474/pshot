@@ -49,6 +49,7 @@ pshot keeps miniPaint's engine: layers in `config.layers`, actions and undo in `
 | Pixel-tool guards: rasterize prompt, hidden, group, adjustment and locked layers; empty layer becomes pixels | `src/js/ps/pixel-layer.js` |
 | Guides from rulers | `src/js/ps/guides.js` |
 | Multiple layer selection | `src/js/ps/multi-select.js` |
+| Paths, Pen, Path/Direct Selection | `src/js/ps/paths.js`, `src/js/tools/ps_pen.js`, `src/js/tools/ps_path_select.js` |
 | Hand and Zoom tools | `src/js/tools/hand.js`, `src/js/tools/zoom.js` |
 
 Layer properties pshot adds (all changed through `Update_layer_action`, so they're undoable):
@@ -78,6 +79,11 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - All of them respect the selection, layer locks and mask targeting.
   - History Brush (Y): paints back the document's opening snapshot, which is captured just before the first edit (`Documents.before_action`, hooked in `base-state.js`).
   - Quick Mask (Q): painting edits the selection, shown as a red overlay.
+- **Paths** (`ps/paths.js`, tools `ps_pen.js`, `ps_path_select.js`)
+  - Pen (P): click for corners, drag for smooth points, click the first point to close, Enter/Esc to end; Auto Add/Delete. Add/Delete Anchor Point and Convert Point tools.
+  - Path Selection and Direct Selection (A): drag subpaths, anchors and handles (smooth points stay smooth; Alt breaks them); Delete removes an anchor or subpath.
+  - Paths panel: Work Path (replaced when a new one is drawn), Save/Rename (double-click), New, Duplicate, Delete; Fill Path, Stroke Path (Brush size/hardness), Load as Selection (Ctrl+Enter; Shift adds, Alt subtracts), Make Work Path from selection.
+  - `config.ps_paths` is per document and every change is an undoable `Update_config_action`.
 - **Selections**
   - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso; Quick Selection; Magic Wand.
   - Quick Mask mode.
@@ -105,7 +111,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Pen paths and the Paths panel, Slice tools, 3D.
+- Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.

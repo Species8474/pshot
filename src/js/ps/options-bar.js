@@ -11,6 +11,10 @@ import app from './../app.js';
 import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 
+function paths() {
+	return app.GUI.Ps_workspace.Paths;
+}
+
 //Type tool alignment buttons: act on the active type layer
 function text_align(align) {
 	var layer = () => (config.layer && config.layer.type == 'text' ? config.layer : null);
@@ -377,6 +381,34 @@ const LAYOUTS = {
 		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
 		{ type: 'check', label: 'Vibrance', value: true },
 	],
+	pen: [
+		{ type: 'select', values: ['Shape', 'Path', 'Pixels'], value: 'Path', disabled_values: ['Shape', 'Pixels'] },
+		{ type: 'sep' },
+		{ type: 'label', text: 'Make:' },
+		{ type: 'button', text: 'Selection...', action: () => paths().make_selection_dialog() },
+		{ type: 'button', text: 'Mask' },
+		{ type: 'button', text: 'Shape' },
+		{ type: 'sep' },
+		{ type: 'icon', icon: IC.path_ops, title: 'Path operations' },
+		{ type: 'icon', icon: IC.gear, title: 'Set additional pen and path options' },
+		{ type: 'check', label: 'Auto Add/Delete', bind: 'auto_add' },
+		{ type: 'check', label: 'Align Edges', value: false },
+	],
+	path_selection: [
+		{ type: 'select', label: 'Select:', values: ['Active Layers', 'All Layers'], value: 'Active Layers' },
+		{ type: 'sep' },
+		{ type: 'label', text: 'Make:' },
+		{ type: 'button', text: 'Selection...', action: () => paths().make_selection_dialog() },
+		{ type: 'button', text: 'Mask' },
+		{ type: 'button', text: 'Shape' },
+		{ type: 'sep' },
+		{ type: 'icon', icon: IC.path_ops, title: 'Path operations' },
+		{ type: 'icon', icon: IC.gear, title: 'Set additional path and shape options' },
+		{ type: 'check', label: 'Constrain Path Dragging', value: false },
+	],
+	add_anchor: [],
+	delete_anchor: [],
+	convert_point: [],
 	rectangle: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
 	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', value: true }]),
 	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
@@ -407,6 +439,7 @@ const LAYOUTS = {
 		...ZOOM_BUTTONS,
 	],
 };
+LAYOUTS.direct_selection = LAYOUTS.path_selection;
 
 function run(command) {
 	app.GUI.modules['ps/commands'][command]();
