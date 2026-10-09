@@ -116,10 +116,10 @@ const groups = [
 	]},
 	{ separator: true, members: [
 		{ id: 'spot_healing', name: 'Spot Healing Brush Tool', key: 'J', tool: 'retouch', preset: { mode: 'spot_healing' }, icon: I.spot_healing },
-		{ id: 'healing', name: 'Healing Brush Tool', key: 'J', tool: null, icon: I.healing },
-		{ id: 'patch', name: 'Patch Tool', key: 'J', tool: null, icon: I.patch },
-		{ id: 'content_aware_move', name: 'Content-Aware Move Tool', key: 'J', tool: null, icon: I.content_aware_move },
-		{ id: 'red_eye', name: 'Red Eye Tool', key: 'J', tool: null, icon: I.red_eye },
+		{ id: 'healing', name: 'Healing Brush Tool', key: 'J', tool: 'retouch', preset: { mode: 'healing' }, icon: I.healing },
+		{ id: 'patch', name: 'Patch Tool', key: 'J', tool: 'ps_patch', preset: { mode: 'patch' }, icon: I.patch },
+		{ id: 'content_aware_move', name: 'Content-Aware Move Tool', key: 'J', tool: 'ps_patch', preset: { mode: 'cam' }, icon: I.content_aware_move },
+		{ id: 'red_eye', name: 'Red Eye Tool', key: 'J', tool: 'retouch', preset: { mode: 'red_eye' }, icon: I.red_eye },
 	]},
 	{ members: [
 		{ id: 'brush', name: 'Brush Tool', key: 'B', tool: 'brush', icon: I.brush },

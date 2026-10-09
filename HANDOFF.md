@@ -71,10 +71,13 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Save, Save As and Save for Web.
 - **Painting**
   - Brush, pencil and gradient paint into the active layer, with Opacity and Mode.
-  - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen and sponge.
+  - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen, sponge, dodge, burn and smudge.
+  - Retouching: Spot Healing Brush, Healing Brush (Alt+click source), Patch, Content-Aware Move and Red Eye (`tools/retouch.js`, `tools/ps_patch.js`, `ps/inpaint.js`).
   - All of them respect the selection, layer locks and mask targeting.
+  - Quick Mask (Q): painting edits the selection, shown as a red overlay.
 - **Selections**
   - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso; Quick Selection; Magic Wand.
+  - Quick Mask mode.
   - Add, subtract and intersect; Inverse, Feather, Expand, Contract, Border; Reselect.
   - Move the selected pixels (Alt copies).
   - Fill, Clear, Cut, Copy, Copy Merged, Paste, Paste in Place.
@@ -82,7 +85,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - New layers go above the active layer.
   - Groups (Ctrl+G and Shift+Ctrl+G; drag into and out of groups; the Move tool moves the whole group).
   - Masks, styles and Fill Opacity.
-  - Adjustment layers: Brightness/Contrast, Levels, Curves, Hue/Saturation, Black & White, Invert, Posterize, Threshold.
+  - Adjustment layers: Brightness/Contrast, Levels, Curves, Exposure, Vibrance, Hue/Saturation, Color Balance, Black & White, Photo Filter, Channel Mixer, Invert, Posterize, Threshold, Gradient Map.
   - Locks; clipping mask; blend modes.
   - Duplicate layers are named "X copy"; Layer via Copy/Cut.
 - **Image**
@@ -97,8 +100,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size.
 
 ## Known gaps / next
-- Magnetic Lasso, Healing tools, Dodge/Burn, Smudge, History Brush, Pen paths, the Paths panel, Quick Mask.
-- Adjustment kinds: Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color.
+- Magnetic Lasso, Color Replacement, Mixer Brush, History Brush, Pen paths and the Paths panel, Slice tools, 3D.
+- Adjustment kinds: Selective Color, Color Lookup, Shadows/Highlights, HDR Toning.
 - Styles: Bevel & Emboss, Satin, Pattern Overlay. Vector masks. Smart Objects.
 - Brush hardness, flow and the Brush panel. Character and Paragraph panels.
 - Multiple layer selection (Shift-click) is not supported: miniPaint has one active layer.

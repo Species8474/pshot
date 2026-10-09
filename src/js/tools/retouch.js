@@ -9,6 +9,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
+import { inpaint } from './../ps/inpaint.js';
 
 class Retouch_class extends Base_tools_class {
 
@@ -47,12 +48,41 @@ class Retouch_class extends Base_tools_class {
 		if (mouse.click_valid == false || config.layer.type != 'image' || !config.layer.link) {
 			return;
 		}
+		var mode = this.getParams().mode;
+		if (mode == 'healing') {
+			if (e.altKey) {
+				//CS6: Alt+click defines the source point
+				this.source = this.to_layer(mouse);
+				this.offset = null;
+				app.GUI.Ps_workspace.status_message('Healing source set');
+				return;
+			}
+			if (!this.source) {
+				app.GUI.Ps_workspace.status_message('Alt-click to define a source point for the Healing Brush.');
+				return;
+			}
+		}
 		this.started = true;
 		this.canvas = document.createElement('canvas');
 		this.canvas.width = config.layer.width_original;
 		this.canvas.height = config.layer.height_original;
 		this.canvas.getContext('2d', { willReadFrequently: true }).drawImage(config.layer.link, 0, 0);
 		this.last = this.to_layer(mouse);
+		this.original = null;
+		if (mode == 'healing') {
+			//aligned: the offset is fixed by the first stroke after setting the source
+			if (!this.offset) {
+				this.offset = { x: this.source.x - this.last.x, y: this.source.y - this.last.y };
+			}
+			this.original = document.createElement('canvas');
+			this.original.width = this.canvas.width;
+			this.original.height = this.canvas.height;
+			this.original.getContext('2d').drawImage(this.canvas, 0, 0);
+			this.heal_dab(this.last);
+		}
+		if (mode == 'red_eye') {
+			this.box_start = this.last;
+		}
 		if (this.getParams().mode == 'spot_healing') {
 			//the stroke marks the area to heal
 			this.spot = new Uint8Array(this.canvas.width * this.canvas.height);
@@ -81,6 +111,19 @@ class Retouch_class extends Base_tools_class {
 			this.mark(p);
 			this.last = p;
 		}
+		else if (mode == 'red_eye') {
+			this.box_end = p;
+		}
+		else if (mode == 'healing') {
+			if (dist >= step) {
+				var hfrom = this.last;
+				for (var th = step; th <= dist; th += step) {
+					hfrom = { x: this.last.x + dx * th / dist, y: this.last.y + dy * th / dist };
+					this.heal_dab(hfrom);
+				}
+				this.last = hfrom;
+			}
+		}
 		else if (dist >= step) {
 			var from = this.last;
 			for (var t2 = step; t2 <= dist; t2 += step) {
@@ -102,8 +145,13 @@ class Retouch_class extends Base_tools_class {
 		if (mode == 'spot_healing') {
 			this.heal();
 		}
+		if (mode == 'red_eye') {
+			this.red_eye(this.box_start, this.box_end || this.box_start);
+			this.box_end = null;
+		}
 		delete config.layer.link_canvas;
-		app.State.do_action(new app.Actions.Bundle_action('retouch', mode == 'smudge' ? 'Smudge Tool' : 'Spot Healing Brush', [
+		var labels = { smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		]));
 		this.canvas = null;
@@ -138,6 +186,76 @@ class Retouch_class extends Base_tools_class {
 		ctx.putImageData(dst, tx, ty);
 	}
 
+	/**
+	 * Healing Brush dab: copy texture from the source, shifted to the destination's color
+	 */
+	heal_dab(p) {
+		var layer = config.layer;
+		var r = Math.max(1, this.getParams().size / 2 * (layer.width_original / layer.width));
+		var size = Math.ceil(r * 2);
+		var tx = Math.round(p.x - r), ty = Math.round(p.y - r);
+		var sx = Math.round(p.x + this.offset.x - r), sy = Math.round(p.y + this.offset.y - r);
+		var octx = this.original.getContext('2d', { willReadFrequently: true });
+		var src = octx.getImageData(sx, sy, size, size).data;
+		var under = octx.getImageData(tx, ty, size, size).data;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var dst = ctx.getImageData(tx, ty, size, size);
+		//mean color of the source and destination rings (texture from source, tone from destination)
+		var ms = [0, 0, 0], md = [0, 0, 0], n = 0;
+		for (var y = 0; y < size; y++) {
+			for (var x = 0; x < size; x++) {
+				var d = Math.hypot(x + 0.5 - r, y + 0.5 - r) / r;
+				if (d < 0.8 || d > 1) continue;
+				var i = (y * size + x) * 4;
+				for (var c = 0; c < 3; c++) { ms[c] += src[i + c]; md[c] += under[i + c]; }
+				n++;
+			}
+		}
+		if (n) for (var c2 = 0; c2 < 3; c2++) { ms[c2] /= n; md[c2] /= n; }
+		for (var y2 = 0; y2 < size; y2++) {
+			for (var x2 = 0; x2 < size; x2++) {
+				var d2 = Math.hypot(x2 + 0.5 - r, y2 + 0.5 - r) / r;
+				if (d2 > 1) continue;
+				var f = d2 < 0.6 ? 1 : 1 - (d2 - 0.6) / 0.4;
+				var k = (y2 * size + x2) * 4;
+				for (var c3 = 0; c3 < 3; c3++) {
+					var healed = src[k + c3] - ms[c3] + md[c3];
+					dst.data[k + c3] = dst.data[k + c3] + (healed - dst.data[k + c3]) * f;
+				}
+			}
+		}
+		ctx.putImageData(dst, tx, ty);
+	}
+
+	/**
+	 * Red Eye: remove red from pupils inside the clicked/dragged area
+	 */
+	red_eye(a, b) {
+		var layer = config.layer;
+		var r = Math.max(4, this.getParams().size / 2 * (layer.width_original / layer.width));
+		var x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y), x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
+		if (x1 - x0 < 4 && y1 - y0 < 4) {
+			x0 -= r; y0 -= r; x1 += r; y1 += r;
+		}
+		x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+		x1 = Math.min(this.canvas.width, Math.ceil(x1)); y1 = Math.min(this.canvas.height, Math.ceil(y1));
+		if (x1 <= x0 || y1 <= y0) return;
+		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
+		var d = img.data;
+		var darken = (this.getParams().strength == null ? 50 : this.getParams().strength) / 100;
+		for (var i = 0; i < d.length; i += 4) {
+			var rr = d[i], g = d[i + 1], bb = d[i + 2];
+			if (rr > 60 && rr > g * 1.5 && rr > bb * 1.5) {
+				var v = (g + bb) / 2 * (1 - darken * 0.6);
+				d[i] = v;
+				d[i + 1] = Math.min(g, v + 4);
+				d[i + 2] = Math.min(bb, v + 4);
+			}
+		}
+		ctx.putImageData(img, x0, y0);
+	}
+
 	mark(p) {
 		var layer = config.layer;
 		var r = Math.max(1, this.getParams().size / 2 * (layer.width_original / layer.width));
@@ -161,74 +279,11 @@ class Retouch_class extends Base_tools_class {
 	 * diffusion inpainting of the marked pixels from their unmarked neighbours
 	 */
 	heal() {
-		var w = this.canvas.width, h = this.canvas.height;
 		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 		//start from the untouched layer pixels (the preview tint is discarded)
-		ctx.clearRect(0, 0, w, h);
+		ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		ctx.drawImage(config.layer.link, 0, 0);
-		var minx = w, miny = h, maxx = -1, maxy = -1;
-		for (var i = 0; i < this.spot.length; i++) {
-			if (this.spot[i]) {
-				var x = i % w, y = (i / w) | 0;
-				if (x < minx) minx = x; if (x > maxx) maxx = x;
-				if (y < miny) miny = y; if (y > maxy) maxy = y;
-			}
-		}
-		if (maxx < 0) return;
-		var pad = 3;
-		var x0 = Math.max(0, minx - pad), y0 = Math.max(0, miny - pad);
-		var x1 = Math.min(w - 1, maxx + pad), y1 = Math.min(h - 1, maxy + pad);
-		var bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-		var img = ctx.getImageData(x0, y0, bw, bh);
-		var d = img.data;
-		var hole = new Uint8Array(bw * bh);
-		var px = new Float32Array(bw * bh * 4);
-		for (var yy = 0; yy < bh; yy++) {
-			for (var xx = 0; xx < bw; xx++) {
-				var k = yy * bw + xx;
-				hole[k] = this.spot[(y0 + yy) * w + (x0 + xx)];
-				for (var c = 0; c < 4; c++) px[k * 4 + c] = d[k * 4 + c];
-			}
-		}
-		//initialise the hole with the average of its border, then relax
-		var sum = [0, 0, 0, 0], n = 0;
-		for (var k2 = 0; k2 < hole.length; k2++) {
-			if (!hole[k2]) continue;
-			var kx = k2 % bw, ky = (k2 / bw) | 0;
-			for (var [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-				var nx = kx + ax, ny = ky + ay;
-				if (nx >= 0 && ny >= 0 && nx < bw && ny < bh && !hole[ny * bw + nx]) {
-					var m = (ny * bw + nx) * 4;
-					sum[0] += px[m]; sum[1] += px[m + 1]; sum[2] += px[m + 2]; sum[3] += px[m + 3]; n++;
-				}
-			}
-		}
-		if (n) for (var k3 = 0; k3 < hole.length; k3++) if (hole[k3]) for (var c3 = 0; c3 < 4; c3++) px[k3 * 4 + c3] = sum[c3] / n;
-		var iterations = Math.min(400, Math.max(60, Math.max(bw, bh) * 2));
-		for (var it = 0; it < iterations; it++) {
-			for (var y2 = 0; y2 < bh; y2++) {
-				for (var x2 = 0; x2 < bw; x2++) {
-					var k4 = y2 * bw + x2;
-					if (!hole[k4]) continue;
-					for (var c4 = 0; c4 < 4; c4++) {
-						var acc = 0, cnt = 0;
-						if (x2 > 0) { acc += px[(k4 - 1) * 4 + c4]; cnt++; }
-						if (x2 < bw - 1) { acc += px[(k4 + 1) * 4 + c4]; cnt++; }
-						if (y2 > 0) { acc += px[(k4 - bw) * 4 + c4]; cnt++; }
-						if (y2 < bh - 1) { acc += px[(k4 + bw) * 4 + c4]; cnt++; }
-						px[k4 * 4 + c4] = acc / cnt;
-					}
-				}
-			}
-		}
-		//a little grain so the patch doesn't look airbrushed
-		for (var k5 = 0; k5 < hole.length; k5++) {
-			if (!hole[k5]) continue;
-			var noise = (Math.random() - 0.5) * 4;
-			for (var c5 = 0; c5 < 3; c5++) d[k5 * 4 + c5] = px[k5 * 4 + c5] + noise;
-			d[k5 * 4 + 3] = px[k5 * 4 + 3];
-		}
-		ctx.putImageData(img, x0, y0);
+		inpaint(this.canvas, this.spot);
 	}
 }
 

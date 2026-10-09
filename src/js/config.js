@@ -83,6 +83,14 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'ps_patch',
+		title: 'Patch',
+		on_activate: 'on_activate',
+		attributes: {
+			mode: 'patch',
+		},
+	},
+	{
 		name: 'retouch',
 		title: 'Retouch',
 		attributes: {
