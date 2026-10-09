@@ -1428,3 +1428,6 @@ body.theme-cs6 #popups .popup.ps_liquify { width: auto; max-width: none; max-hei
 .ps_thumb_wrap { position: relative; display: inline-flex; }
 .ps_thumb_wrap.smart::after { content: ""; position: absolute; right: 0; bottom: 0; width: 9px; height: 9px; background: #fff; border: 1px solid #333; border-radius: 1px;
 	background-image: linear-gradient(135deg, transparent 45%, #333 45%, #333 55%, transparent 55%); }
+.ps_tf_ref { display: grid; grid-template-columns: repeat(3, 6px); gap: 2px; padding: 2px; }
+.ps_tf_ref i { width: 6px; height: 6px; border: 1px solid #aaa; box-sizing: border-box; }
+.ps_tf_ref i:nth-child(5) { background: #ddd; }

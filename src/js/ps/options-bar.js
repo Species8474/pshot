@@ -606,8 +606,81 @@ class Ps_options_bar_class {
 		document.querySelectorAll('#action_attributes .ps_opt_readout').forEach((el) => { if (el._text) el.textContent = el._text(); });
 	}
 
+	/**
+	 * Free Transform options bar (CS6): reference point, X, Y, W, H (linked), angle,
+	 * Warp toggle, Cancel, Commit; values follow the box while dragging
+	 */
+	render_transform() {
+		var T = this.workspace.Transform;
+		var job = T.job;
+		if (!job) return;
+		var bar = document.getElementById('action_attributes');
+		bar.innerHTML = '';
+		bar.classList.add('ps_cs6_options');
+		var html = '<div class="ps_opt_group"><span class="ps_tf_ref" title="Reference point location">' + '<i></i>'.repeat(9) + '</span></div>'
+			+ '<div class="ps_opt_group">'
+			+ '<span class="ps_opt"><span class="ps_opt_label">X:</span><input class="ps_opt_field" data-tf="x" style="width:58px"></span>'
+			+ '<span class="ps_opt"><span class="ps_opt_label">Y:</span><input class="ps_opt_field" data-tf="y" style="width:58px"></span></div>'
+			+ '<div class="ps_opt_group">'
+			+ '<span class="ps_opt"><span class="ps_opt_label">W:</span><input class="ps_opt_field" data-tf="w" style="width:58px"></span>'
+			+ '<button type="button" class="ps_opt_icon' + (this.tf_linked ? ' pressed' : '') + '" data-tf-link title="Maintain aspect ratio">&#128279;</button>'
+			+ '<span class="ps_opt"><span class="ps_opt_label">H:</span><input class="ps_opt_field" data-tf="h" style="width:58px"></span></div>'
+			+ '<div class="ps_opt_group"><span class="ps_opt"><span class="ps_opt_label">&#8736;</span><input class="ps_opt_field" data-tf="a" style="width:52px"></span>'
+			+ '<span class="ps_opt"><span class="ps_opt_label">H:</span><input class="ps_opt_field" disabled value="0.0 °" style="width:46px"></span>'
+			+ '<span class="ps_opt"><span class="ps_opt_label">V:</span><input class="ps_opt_field" disabled value="0.0 °" style="width:46px"></span></div>'
+			+ '<div class="ps_opt_group"><span class="ps_opt"><span class="ps_opt_label">Interpolation:</span><select class="ps_opt_select" disabled><option>Bicubic</option></select></span>'
+			+ '<button type="button" class="ps_opt_icon' + (job.warp ? ' pressed' : '') + '" data-tf-warp title="Switch between free transform and warp modes">&#8767;</button></div>'
+			+ '<div class="ps_opt_group"><button type="button" class="ps_opt_icon" data-tf-cancel title="Cancel transform (Esc)">&#8856;</button>'
+			+ '<button type="button" class="ps_opt_icon" data-tf-commit title="Commit transform (Return)">&#10004;</button></div>';
+		bar.innerHTML = html;
+		var set = (key, v) => {
+			var b = job.box;
+			if (key == 'x') b.cx = v;
+			else if (key == 'y') b.cy = v;
+			else if (key == 'w') { var ow = b.w; b.w = job.w0 * v / 100; if (this.tf_linked) b.h = b.h * b.w / ow; }
+			else if (key == 'h') { var oh = b.h; b.h = job.h0 * v / 100; if (this.tf_linked) b.w = b.w * b.h / oh; }
+			else if (key == 'a') b.angle = v * Math.PI / 180;
+			job.quad = null;
+			T.preview();
+		};
+		bar.querySelectorAll('[data-tf]').forEach((input) => {
+			input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter') input.blur(); });
+			input.addEventListener('change', () => { var v = parseFloat(input.value); if (!isNaN(v)) set(input.dataset.tf, v); this.update_transform_fields(); });
+		});
+		bar.querySelector('[data-tf-link]').addEventListener('click', (e) => { this.tf_linked = !this.tf_linked; e.currentTarget.classList.toggle('pressed', this.tf_linked); });
+		bar.querySelector('[data-tf-warp]').addEventListener('click', () => {
+			if (job.warp) { job.warp = null; T.preview(); this.render_transform(); }
+			else if (job.kind != 'vector') {
+				var c = T.corners(), q = [c[0], c[2], c[4], c[6]];
+				var lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+				job.warp = [];
+				for (var j = 0; j < 4; j++) { var l = lerp(q[0], q[3], j / 3), r = lerp(q[1], q[2], j / 3); for (var i = 0; i < 4; i++) job.warp.push(lerp(l, r, i / 3)); }
+				job.quad = null;
+				T.preview();
+				this.render_transform();
+			}
+		});
+		bar.querySelector('[data-tf-cancel]').addEventListener('click', () => T.cancel());
+		bar.querySelector('[data-tf-commit]').addEventListener('click', () => T.commit());
+		this.update_transform_fields();
+	}
+
+	update_transform_fields() {
+		var job = this.workspace.Transform.job;
+		if (!job) return;
+		var b = job.box;
+		var vals = { x: b.cx.toFixed(1) + ' px', y: b.cy.toFixed(1) + ' px', w: (b.w / job.w0 * 100).toFixed(2) + '%', h: (b.h / job.h0 * 100).toFixed(2) + '%', a: (b.angle * 180 / Math.PI).toFixed(1) + ' °' };
+		document.querySelectorAll('#action_attributes [data-tf]').forEach((input) => {
+			if (document.activeElement !== input) input.value = vals[input.dataset.tf];
+		});
+	}
+
 	render() {
 		var member = this.workspace.active_member;
+		if (this.workspace.Transform && this.workspace.Transform.active()) {
+			this.render_transform();
+			return true;
+		}
 		if (!member || member.tool != config.TOOL.name) {
 			return false;
 		}

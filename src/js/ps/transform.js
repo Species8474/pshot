@@ -338,6 +338,7 @@ class Ps_transform_class {
 			return;
 		}
 		this.job.box0 = Object.assign({}, this.job.box);
+		app.GUI.Ps_workspace.Options_bar.render_transform();
 		app.GUI.Ps_workspace.status_message('Free Transform: drag handles to scale, outside to rotate. Enter commits, Esc cancels.');
 		sel.decorate = (ctx, scale) => this.draw_box(ctx, scale);
 		sel.draw_overlay();
@@ -547,6 +548,7 @@ class Ps_transform_class {
 		}
 		config.need_render = true;
 		this.selection().draw_overlay();
+		app.GUI.Ps_workspace.Options_bar.update_transform_fields();
 	}
 
 	corners() {
@@ -711,6 +713,8 @@ class Ps_transform_class {
 
 		window.addEventListener('keydown', (e) => {
 			if (!this.job) return;
+			//typing in the options bar fields (Enter applies the value there)
+			if (e.target && (e.target.tagName == 'INPUT' || e.target.tagName == 'SELECT')) return;
 			if (e.key == 'Enter') {
 				e.preventDefault();
 				e.stopImmediatePropagation();
@@ -882,6 +886,8 @@ class Ps_transform_class {
 		this.job = null;
 		this.drag = null;
 		config.need_render = true;
+		//back to the tool's options bar
+		if (!app.GUI.Ps_workspace.Options_bar.render()) app.GUI.GUI_tools.show_action_attributes();
 	}
 
 	cancel() {
@@ -957,6 +963,7 @@ class Ps_transform_class {
 		};
 		this.job.box0 = Object.assign({}, this.job.box);
 		sel.decorate = (ctx, scale) => this.draw_box(ctx, scale);
+		app.GUI.Ps_workspace.Options_bar.render_transform();
 		app.GUI.Ps_workspace.status_message('Transform Selection: drag handles to scale, outside to rotate. Enter commits, Esc cancels.');
 		this.preview();
 	}
@@ -989,6 +996,7 @@ class Ps_transform_class {
 			this.job.warp = grid;
 			this.job.quad = null;
 			this.preview();
+			app.GUI.Ps_workspace.Options_bar.render_transform();
 			return;
 		}
 		if (layer && layer.type != 'image' && layer.type != null) {
