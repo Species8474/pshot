@@ -86,6 +86,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - History Brush (Y): paints back the document's opening snapshot, which is captured just before the first edit (`Documents.before_action`, hooked in `base-state.js`).
   - Quick Mask (Q): painting edits the selection, shown as a red overlay.
 - **Measuring** (`tools/ps_measure.js`): Ruler (X/Y/W/H/A/L1 in the options bar, Shift constrains, Straighten Layer), Color Sampler (up to 4, Info panel readouts, Alt+click deletes, sample size), Count tool. Markers are not History states.
+- **Shape tool modes** (`ps/shape-modes.js`): Shape (miniPaint vector layer), Path (adds the rectangle/rounded rectangle/ellipse/line exactly, polygons traced, to the Work Path), Pixels (paints with the foreground color into the active layer).
 - **Paths** (`ps/paths.js`, tools `ps_pen.js`, `ps_path_select.js`)
   - Pen (P): click for corners, drag for smooth points, click the first point to close, Enter/Esc to end; Auto Add/Delete. Add/Delete Anchor Point and Convert Point tools.
   - Path Selection and Direct Selection (A): drag subpaths, anchors and handles (smooth points stay smooth; Alt breaks them); Delete removes an anchor or subpath.
@@ -129,7 +130,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
+- Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush panel sections other than Tip Shape / Shape Dynamics (size jitter) / Scattering / Transfer; Brush Presets.

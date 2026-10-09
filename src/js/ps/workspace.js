@@ -29,6 +29,7 @@ import Ps_brush_panel_class from './brush-panel.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
+import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -113,6 +114,7 @@ class Ps_workspace_class {
 		this.Groups.install_group_move();
 		install_pixel_layer_guard();
 		install_move_selection();
+		install_shape_modes();
 		this.render_document_tab();
 		this.render_history();
 		this.render_channels();

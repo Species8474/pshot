@@ -265,6 +265,7 @@ config.TOOLS = [
 		visible: false,
 		attributes: {
 			size: 4,
+			shape_mode: 'Shape',
 		},
 	},
 	{
@@ -288,6 +289,7 @@ config.TOOLS = [
 				min: 0,
 			},
 			square: false,
+			shape_mode: 'Shape',
 		},
 	},
 	{
@@ -300,6 +302,7 @@ config.TOOLS = [
 			border_color: '#555555',
 			fill_color: '#aaaaaa',
 			circle: false,
+			shape_mode: 'Shape',
 		},
 	},
 	{
@@ -385,6 +388,7 @@ config.TOOLS = [
 			fill: true,
 			border_color: '#555555',
 			fill_color: '#aaaaaa',
+			shape_mode: 'Shape',
 		},
 	},
 	{

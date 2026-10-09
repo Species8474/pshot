@@ -125,7 +125,7 @@ const ZOOM_BUTTONS = [
 	{ type: 'button', text: 'Print Size' },
 ];
 const SHAPE_COMMON = (extra) => [
-	{ type: 'select', values: ['Shape', 'Path', 'Pixels'], value: 'Shape', disabled_values: ['Path', 'Pixels'] },
+	{ type: 'select', values: ['Shape', 'Path', 'Pixels'], bind: 'shape_mode', map: { Shape: 'Shape', Path: 'Path', Pixels: 'Pixels' } },
 	{ type: 'sep' },
 	{ type: 'swatch', label: 'Fill:', bind: 'fill_color', toggle: 'fill' },
 	{ type: 'swatch', label: 'Stroke:', bind: 'border_color', toggle: 'border' },
@@ -518,6 +518,7 @@ const LAYOUTS = {
 	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', value: true }]),
 	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', value: true }]),
 	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', value: 5, width: 36 }, { type: 'check', label: 'Align Edges', value: true }]),
+	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', value: true }]),
 	type: [
 		{ type: 'icon', icon: IC.type_orient, title: 'Toggle text orientation' },
 		{ type: 'sep' },
