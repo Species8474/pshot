@@ -1,6 +1,6 @@
 /*
  * pshot - CS6 selection tools: Rectangular / Elliptical / Single Row / Single
- * Column Marquee, Lasso, Polygonal Lasso, Magic Wand.
+ * Column Marquee, Lasso, Polygonal Lasso, Magnetic Lasso, Magic Wand.
  *
  * Modifiers at mouse down: Shift = add, Alt = subtract, Shift+Alt = intersect
  * (otherwise the options bar mode). While dragging a marquee: Shift constrains
@@ -13,7 +13,7 @@ import Base_tools_class from './../core/base-tools.js';
 
 const NAMES = {
 	quick: 'Quick Selection', rect: 'Rectangular Marquee', ellipse: 'Elliptical Marquee', row: 'Single Row Marquee', col: 'Single Column Marquee',
-	lasso: 'Lasso', polygon: 'Polygonal Lasso', wand: 'Magic Wand',
+	lasso: 'Lasso', polygon: 'Polygonal Lasso', magnetic: 'Magnetic Lasso', wand: 'Magic Wand',
 };
 
 class Ps_select_class extends Base_tools_class {
@@ -82,6 +82,21 @@ class Ps_select_class extends Base_tools_class {
 			if (event.key == 'Escape') {
 				this.cancel_polygon();
 			}
+			if ((event.key == 'Backspace' || event.key == 'Delete') && this.polygon.magnetic) {
+				//back to the previous anchor point
+				var anchors = this.polygon.anchors;
+				if (anchors.length > 1) {
+					anchors.pop();
+					this.polygon.points.length = anchors[anchors.length - 1] + 1;
+					this.update_polygon_preview();
+				}
+				else {
+					this.cancel_polygon();
+				}
+				event.preventDefault();
+				event.stopPropagation();
+				return;
+			}
 			if (event.key == 'Backspace' || event.key == 'Delete') {
 				this.polygon.points.pop();
 				if (this.polygon.points.length == 0) {
@@ -117,6 +132,24 @@ class Ps_select_class extends Base_tools_class {
 		if (mode == 'wand') {
 			var a = this.attrs();
 			this.selection().select_color(p.x, p.y, a.tolerance, a.contiguous, a.sample_all, op, NAMES.wand);
+			return;
+		}
+		if (mode == 'magnetic') {
+			if (!this.polygon) {
+				this.edges = this.edge_map();
+				var s0 = this.snap(p);
+				this.polygon = { points: [s0], op: op, magnetic: true, anchors: [0] };
+			}
+			else {
+				var first0 = this.polygon.points[0];
+				if (Math.hypot(first0.x - p.x, first0.y - p.y) * config.ZOOM < 10 && this.polygon.points.length > 2) {
+					this.finish_polygon();
+					return;
+				}
+				this.magnetic_to(p);
+				this.polygon.anchors.push(this.polygon.points.length - 1);
+			}
+			this.update_polygon_preview();
 			return;
 		}
 		if (mode == 'polygon') {
@@ -169,6 +202,11 @@ class Ps_select_class extends Base_tools_class {
 	mousemove(event) {
 		if (this.quick) {
 			this.quick_add(this.world(event));
+			return;
+		}
+		if (this.polygon && this.polygon.magnetic) {
+			this.magnetic_to(this.world(event));
+			this.update_polygon_preview();
 			return;
 		}
 		if (this.polygon) {
@@ -247,6 +285,78 @@ class Ps_select_class extends Base_tools_class {
 		return { x: x, y: y, w: w, h: h };
 	}
 
+	/**
+	 * Magnetic Lasso: gradient magnitude (0..1) of the layer (or all layers)
+	 */
+	edge_map() {
+		var w = config.WIDTH, h = config.HEIGHT;
+		var src = this.selection().sample_source(this.attrs().sample_all);
+		var lum = new Float32Array(w * h);
+		for (var i = 0; i < lum.length; i++) {
+			var a = src[i * 4 + 3] / 255;
+			lum[i] = (src[i * 4] * 0.299 + src[i * 4 + 1] * 0.587 + src[i * 4 + 2] * 0.114) * a;
+		}
+		var edge = new Float32Array(w * h);
+		for (var y = 1; y < h - 1; y++) {
+			for (var x = 1; x < w - 1; x++) {
+				var k = y * w + x;
+				var gx = lum[k - w + 1] + 2 * lum[k + 1] + lum[k + w + 1] - lum[k - w - 1] - 2 * lum[k - 1] - lum[k + w - 1];
+				var gy = lum[k + w - 1] + 2 * lum[k + w] + lum[k + w + 1] - lum[k - w - 1] - 2 * lum[k - w] - lum[k - w + 1];
+				edge[k] = Math.min(1, Math.hypot(gx, gy) / 1020);
+			}
+		}
+		return { w: w, h: h, data: edge };
+	}
+
+	/**
+	 * the strongest edge within the Width radius (or p itself when there is no
+	 * edge above the Contrast threshold)
+	 */
+	snap(p) {
+		var e = this.edges;
+		if (!e) return p;
+		var r = Math.max(1, Math.round(this.attrs().width || 10));
+		var threshold = (this.attrs().contrast == null ? 10 : this.attrs().contrast) / 100 * 0.5;
+		var best = null, best_score = -1;
+		var cx = Math.round(p.x), cy = Math.round(p.y);
+		for (var y = Math.max(1, cy - r); y <= Math.min(e.h - 2, cy + r); y++) {
+			for (var x = Math.max(1, cx - r); x <= Math.min(e.w - 2, cx + r); x++) {
+				var d = Math.hypot(x - p.x, y - p.y);
+				if (d > r) continue;
+				var v = e.data[y * e.w + x];
+				if (v < threshold) continue;
+				var score = v - d / r * 0.15;
+				if (score > best_score) { best_score = score; best = { x: x + 0.5, y: y + 0.5 }; }
+			}
+		}
+		return best || p;
+	}
+
+	/**
+	 * extend the magnetic path towards the cursor, snapping every few pixels;
+	 * anchors are fastened automatically (Frequency)
+	 */
+	magnetic_to(p) {
+		var poly = this.polygon;
+		var last = poly.points[poly.points.length - 1];
+		var dist = Math.hypot(p.x - last.x, p.y - last.y);
+		var step = 2;
+		if (dist < step) return;
+		var freq = Math.max(1, Math.min(100, this.attrs().frequency || 57));
+		var spacing = 4 + (100 - freq) * 0.6;
+		var n = Math.floor(dist / step);
+		for (var i = 1; i <= n; i++) {
+			var q = this.snap({ x: last.x + (p.x - last.x) * i / n, y: last.y + (p.y - last.y) * i / n });
+			var prev = poly.points[poly.points.length - 1];
+			if (Math.hypot(q.x - prev.x, q.y - prev.y) < 0.5) continue;
+			poly.points.push(q);
+			var anchor = poly.points[poly.anchors[poly.anchors.length - 1]];
+			if (Math.hypot(q.x - anchor.x, q.y - anchor.y) >= spacing) {
+				poly.anchors.push(poly.points.length - 1);
+			}
+		}
+	}
+
 	update_polygon_preview(cursor) {
 		this.selection().set_preview({ type: 'polygon', points: this.polygon.points, cursor: cursor || null });
 	}
@@ -256,12 +366,14 @@ class Ps_select_class extends Base_tools_class {
 		this.polygon = null;
 		this.selection().set_preview(null);
 		if (poly && poly.points.length > 2) {
-			this.selection().select_polygon(poly.points, poly.op, this.attrs().feather || 0, NAMES.polygon);
+			this.selection().select_polygon(poly.points, poly.op, this.attrs().feather || 0, poly.magnetic ? NAMES.magnetic : NAMES.polygon);
 		}
+		this.edges = null;
 	}
 
 	cancel_polygon() {
 		this.polygon = null;
+		this.edges = null;
 		this.selection().set_preview(null);
 	}
 

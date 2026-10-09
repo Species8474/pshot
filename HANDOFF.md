@@ -86,7 +86,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Paths panel: Work Path (replaced when a new one is drawn), Save/Rename (double-click), New, Duplicate, Delete; Fill Path, Stroke Path (Brush size/hardness), Load as Selection (Ctrl+Enter; Shift adds, Alt subtracts), Make Work Path from selection.
   - `config.ps_paths` is per document and every change is an undoable `Update_config_action`.
 - **Selections**
-  - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso; Quick Selection; Magic Wand.
+  - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso, Magnetic Lasso (snaps to the strongest edge within Width; Contrast threshold; Frequency sets anchor spacing; Backspace removes back to the last anchor); Quick Selection; Magic Wand.
   - Quick Mask mode.
   - Add, subtract and intersect; Inverse, Feather, Expand, Contract, Border; Reselect.
   - Move the selected pixels (Alt copies).
@@ -114,7 +114,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
-- Warp transform. Magnetic Lasso, Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
+- Warp transform. Color Replacement, Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.

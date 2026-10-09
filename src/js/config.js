@@ -142,6 +142,9 @@ config.TOOLS = [
 			contiguous: true,
 			sample_all: false,
 			brush: 20,
+			width: 10,
+			contrast: 10,
+			frequency: 57,
 		},
 	},
 	{

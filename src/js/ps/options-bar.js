@@ -171,6 +171,19 @@ const LAYOUTS = {
 	col_marquee: [SELECTION_OPS, { type: 'sep' }, { type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 }],
 	lasso: LASSO_LAYOUT,
 	polygon_lasso: LASSO_LAYOUT,
+	magnetic_lasso: [
+		SELECTION_OPS,
+		{ type: 'sep' },
+		{ type: 'num', label: 'Feather:', bind: 'feather', unit: 'px', width: 40 },
+		{ type: 'check', label: 'Anti-alias', bind: 'anti_alias' },
+		{ type: 'sep' },
+		{ type: 'num', label: 'Width:', bind: 'width', unit: 'px', width: 40 },
+		{ type: 'pct', label: 'Contrast:', bind: 'contrast' },
+		{ type: 'num', label: 'Frequency:', bind: 'frequency', unit: '', width: 40 },
+		{ type: 'icon', icon: IC.pressure_size, title: 'Use tablet pressure to change pen width' },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Refine Edge...' },
+	],
 	quick_selection: [
 		{ type: 'icons', items: [
 			{ icon: IC.sel_new, title: 'New selection' },

@@ -94,7 +94,7 @@ const groups = [
 	{ members: [
 		{ id: 'lasso', name: 'Lasso Tool', key: 'L', tool: 'ps_select', preset: { mode: 'lasso' }, icon: I.lasso },
 		{ id: 'polygon_lasso', name: 'Polygonal Lasso Tool', key: 'L', tool: 'ps_select', preset: { mode: 'polygon' }, icon: I.polygon_lasso },
-		{ id: 'magnetic_lasso', name: 'Magnetic Lasso Tool', key: 'L', tool: null, icon: I.magnetic_lasso },
+		{ id: 'magnetic_lasso', name: 'Magnetic Lasso Tool', key: 'L', tool: 'ps_select', preset: { mode: 'magnetic' }, icon: I.magnetic_lasso },
 	]},
 	{ members: [
 		{ id: 'quick_selection', name: 'Quick Selection Tool', key: 'W', tool: 'ps_select', preset: { mode: 'quick' }, icon: I.quick_selection },
