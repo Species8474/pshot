@@ -41,3 +41,23 @@ Phase 1 (CS6 workspace) is built:
 - `src/js/core/gui/gui-layers.js` was rewritten as the CS6 Layers panel.
 - New tools: `tools/hand.js` and `tools/zoom.js`.
 - New documents get a white "Background" layer; new layers are named "Layer N".
+- **Options bar**: `ps/options-bar.js` has a CS6 layout per tool. Controls bound to miniPaint attributes work; the rest are greyed out. Tools without a layout fall back to miniPaint's renderer.
+- **PSD**: `ps/document.js` uses ag-psd 31.0.2, pinned. Open, Place, Save and Save As handle .psd, keeping layer names, positions, opacity, visibility, blend modes and clipping. Vector, text and filtered layers are rasterized on save. Groups are flattened on open.
+- **Document tabs**: `ps/documents.js` stores each tab's miniPaint global state (layers, size, history, view, selection) and swaps it in and out. New and Open create tabs, × or Ctrl+W closes one, and the Window menu lists open documents.
+- **CS6 behaviours added**:
+  - Gradients paint into the active layer.
+  - Empty layers become pixel layers when a pixel tool touches them.
+  - "Rasterize the type?" prompt.
+  - Hidden-layer alert.
+  - Type layers are named after their text.
+  - Esc and Ctrl+Enter commit text.
+  - Layer bounds show only with the Move tool.
+- **Testing**: `window.pshot` exposes the app. The menu sweep (every enabled target) runs with no errors.
+
+### Known gaps (next)
+- Lasso, Magic Wand and Quick Selection; elliptical marquee; add/subtract selection modes.
+- Layer groups, masks, adjustment layers, layer styles beyond Drop Shadow.
+- Real Levels and Curves dialogs.
+- Brush hardness, opacity and flow (the controls exist but are greyed out).
+- Free Transform handles for pixel layers.
+- Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so use the menus for New, Close and Free Transform.

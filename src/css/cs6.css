@@ -1254,3 +1254,4 @@ body.theme-cs6 button, body.theme-cs6 select, body.theme-cs6 a { cursor: default
 body.theme-cs6 #popups .popup > .close { top: 3px; height: 20px; line-height: 16px; }
 body.theme-cs6 #popups .popup input[type="text"], body.theme-cs6 #popups .popup input[type="number"],
 body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important; -webkit-text-fill-color: #f0f0f0; }
+#popups .popup.ps_alert [data-id="popup_cancel"] { display: none; }

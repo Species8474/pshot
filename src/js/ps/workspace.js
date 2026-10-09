@@ -11,8 +11,10 @@ import GUI_colors_class from './../core/gui/gui-colors.js';
 import { groups } from './tools-def.js';
 import { ADJUSTMENTS, run_target } from './adjustments-def.js';
 import { show_popup_menu, close_popup_menu } from './popup-menu.js';
+import menuDefinition from './../config-menu.js';
 import Ps_keymap_class from './keymap.js';
 import Ps_options_bar_class from './options-bar.js';
+import Ps_documents_class from './documents.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 
 const PANEL_TITLES = {
@@ -48,7 +50,8 @@ class Ps_workspace_class {
 		this.extras = true;
 		this.grid_before_extras = false;
 		this.screen_mode = 'standard';
-		this.document_number = 1;
+		this.Documents = new Ps_documents_class();
+		this.Documents.init();
 		this.two_column = false;
 		this.strip_panels = ['history', 'properties'];
 		this.open_popout = null;
@@ -711,33 +714,83 @@ class Ps_workspace_class {
 	// =================================================================
 
 	document_name() {
-		return this.doc_name || 'Untitled-' + this.document_number;
+		return this.Documents.current().name;
+	}
+
+	get saved_as_psd() {
+		return this.Documents.current().saved_as_psd;
 	}
 
 	/**
-	 * @param {string|null} name document name (null = Untitled-N)
+	 * @param {string} name document name
 	 * @param {string} file_name original file name; a .psd saves straight back with Ctrl+S
 	 */
 	set_document_name(name, file_name) {
-		this.doc_name = name;
-		this.saved_as_psd = !!(file_name && /\.psd$/i.test(file_name));
-		this.last_tab_label = null;
-		this.render_document_tab();
-		this.render_history();
+		this.Documents.rename_current(name, file_name);
+	}
+
+	tab_label(name, zoom, layer) {
+		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', RGB/8)';
 	}
 
 	render_document_tab() {
-		var tabs = document.getElementById('ps_doctabs');
-		var layer = config.layer ? config.layer.name : '';
-		var label = this.document_name() + ' @ ' + this.format_zoom() + ' (' + this.Helper.escapeHtml(layer) + ', RGB/8)';
-		if (this.last_tab_label === label) {
+		var docs = this.Documents.docs;
+		var active = this.Documents.active;
+		var labels = docs.map((doc, i) => {
+			if (i == active) {
+				return this.tab_label(doc.name, this.format_zoom(), config.layer ? config.layer.name : '');
+			}
+			var st = doc.state;
+			var layer = st && st.layer ? st.layer.name : '';
+			var z = st ? Math.round(st.ZOOM * 100) + '%' : '100%';
+			return this.tab_label(doc.name, z, layer);
+		});
+		var signature = active + '|' + labels.join('|');
+		if (this.last_tab_label === signature) {
 			return;
 		}
-		this.last_tab_label = label;
-		tabs.innerHTML = '<div class="ps_doctab active"><span class="ps_doctab_label">' + label + '</span>'
-			+ '<button type="button" class="ps_doctab_close" title="Close">&times;</button></div>';
-		tabs.querySelector('.ps_doctab_close').addEventListener('click', () => run_target('ps/commands.close_document'));
+		this.last_tab_label = signature;
+		var tabs = document.getElementById('ps_doctabs');
+		var html = '';
+		labels.forEach((label, i) => {
+			html += '<div class="ps_doctab' + (i == active ? ' active' : '') + '" data-index="' + i + '" title="' + label + '">'
+				+ '<span class="ps_doctab_label">' + label + '</span>'
+				+ '<button type="button" class="ps_doctab_close" data-index="' + i + '" title="Close">&times;</button></div>';
+		});
+		tabs.innerHTML = html;
+		tabs.querySelectorAll('.ps_doctab').forEach((tab) => {
+			tab.addEventListener('mousedown', (event) => {
+				if (event.target.closest('.ps_doctab_close')) {
+					return;
+				}
+				this.Documents.switch_to(parseInt(tab.dataset.index));
+			});
+		});
+		tabs.querySelectorAll('.ps_doctab_close').forEach((button) => {
+			button.addEventListener('click', () => this.Documents.close(parseInt(button.dataset.index)));
+		});
 		document.title = this.document_name() + ' - pshot';
+		this.update_window_menu();
+	}
+
+	/**
+	 * Window menu ends with the list of open documents (CS6)
+	 */
+	update_window_menu() {
+		var menu = menuDefinition.find(m => m.name == 'Window');
+		var start = menu.children.findIndex(c => c.document_entry);
+		if (start >= 0) {
+			menu.children.splice(start);
+		}
+		this.Documents.docs.forEach((doc, i) => {
+			menu.children.push({
+				name: (i + 1) + ' ' + doc.name,
+				target: 'ps/commands.switch_document',
+				parameter: i,
+				checked: i == this.Documents.active,
+				document_entry: true,
+			});
+		});
 	}
 
 	format_zoom() {

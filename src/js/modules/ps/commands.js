@@ -552,8 +552,8 @@ class Ps_commands_class {
 
 	// ---------- File ----------
 
-	open() {
-		open_document();
+	open(files) {
+		open_document(files || null);
 	}
 
 	place() {
@@ -575,12 +575,23 @@ class Ps_commands_class {
 	}
 
 	close_document() {
-		var _this = this;
-		window.State.do_action(new app.Actions.Reset_layers_action(true)).then(function () {
-			_this.purge_histories();
-			app.GUI.Ps_workspace.document_number++;
-			app.GUI.Ps_workspace.set_document_name(null);
-		});
+		app.GUI.Ps_workspace.Documents.close();
+	}
+
+	async close_all() {
+		var docs = app.GUI.Ps_workspace.Documents;
+		var count = docs.docs.length;
+		for (var i = 0; i < count; i++) {
+			var before = docs.docs.length;
+			await docs.close(docs.docs.length - 1);
+			if (docs.docs.length == before && before > 1) {
+				return; //cancelled
+			}
+		}
+	}
+
+	switch_document(index) {
+		app.GUI.Ps_workspace.Documents.switch_to(index);
 	}
 
 }

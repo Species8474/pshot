@@ -68,6 +68,8 @@ class File_new_class {
 	}
 
 	async new_handler(response) {
+		//pshot: File > New opens a new document tab (CS6)
+		app.GUI.Ps_workspace.Documents.add(null);
 		var width = parseFloat(response.width);
 		var height = parseFloat(response.height);
 		var resolution_type = response.resolution_type;
@@ -120,9 +122,7 @@ class File_new_class {
 		//sleep, lets wait till DOM is finished
 		await new Promise(r => setTimeout(r, 10));
 
-		//pshot: a new document is Untitled-N with a fresh History
-		app.GUI.Ps_workspace.document_number++;
-		app.GUI.Ps_workspace.set_document_name(null);
+		//pshot: the new document starts with a fresh History
 		app.GUI.modules['ps/commands'].purge_histories();
 
 		//fit to screen?

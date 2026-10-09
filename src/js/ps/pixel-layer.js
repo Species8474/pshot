@@ -57,6 +57,18 @@ function ask_rasterize(kind) {
 	});
 }
 
+/**
+ * CS6 alert dialog with only an OK button
+ */
+function alert_box(message) {
+	var POP = new Dialog_class();
+	POP.show({
+		title: 'Adobe Photoshop',
+		className: 'ps_alert',
+		params: [{ html: '<p class="ps_alert_text">' + message + '</p>' }],
+	});
+}
+
 function install_pixel_layer_guard() {
 	//when the mousedown is blocked, the rest of that gesture must not reach the tool either
 	var blocked = false;
@@ -76,6 +88,14 @@ function install_pixel_layer_guard() {
 			return;
 		}
 		var tool = config.TOOL.name;
+		if (PAINT_TOOLS.includes(tool) && config.layer && config.layer.visible == false) {
+			event.stopPropagation();
+			event.preventDefault();
+			blocked = true;
+			var member = app.GUI.Ps_workspace.active_member;
+			alert_box('Could not use the ' + (member ? member.name : 'tool') + ' because the target layer is hidden.');
+			return;
+		}
 		if (PAINT_TOOLS.includes(tool) && config.layer && KIND[config.layer.type]) {
 			event.stopPropagation();
 			event.preventDefault();

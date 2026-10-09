@@ -21,7 +21,7 @@ const M = [
 		['Open Recent', []],
 		'-',
 		'Close|Ctrl+W|ps/commands.close_document',
-		'Close All|Alt+Ctrl+W|ps/commands.close_document',
+		'Close All|Alt+Ctrl+W|ps/commands.close_all',
 		'Close and Go to Bridge...|Shift+Ctrl+W',
 		'Save|Ctrl+S|ps/commands.save',
 		'Save As...|Shift+Ctrl+S|file/save.save',
@@ -375,7 +375,7 @@ const M = [
 		{ name: 'Options', target: 'ps/commands.toggle_options_bar', checked: 'options_bar' },
 		{ name: 'Tools', target: 'ps/commands.toggle_toolbox', checked: 'toolbox' },
 		'-',
-		{ name: '1 Untitled-1', target: 'ps/commands.noop', checked: true, dynamic_name: 'document_label' },
+		//open documents are appended here by workspace.update_window_menu()
 	]],
 	['Help', [
 		'Photoshop Online Help...|F1|help/shortcuts.shortcuts',

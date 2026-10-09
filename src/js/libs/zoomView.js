@@ -131,6 +131,15 @@ const zoomView = (() => {
 			pos.y += move_y;
 			dirty = true;
 		},
+		/**
+		 * pshot: restore a saved view (document tabs)
+		 */
+		setView(new_scale, x, y) {
+			scale = new_scale;
+			pos.x = x;
+			pos.y = y;
+			dirty = true;
+		},
 		setContext(context) {
 			ctx = context;
 			dirty = true;

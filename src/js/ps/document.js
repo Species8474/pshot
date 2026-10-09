@@ -1,9 +1,8 @@
 /*
  * pshot - opening and saving documents, including Photoshop PSD (via ag-psd).
  *
- * CS6 opens every file in a new document tab. pshot has a single document,
- * so File > Open replaces it (asking first when there is unsaved work) and
- * File > Place adds the file as a layer.
+ * File > Open opens the file in a new document tab, File > Place adds it to
+ * the current document as a layer (CS6).
  */
 
 import app from './../app.js';
@@ -122,12 +121,8 @@ function pick_files(accept, multiple) {
 
 const ACCEPT = 'image/*,.psd,.pdd,.json';
 
-function has_unsaved_work() {
-	return app.State.action_history.length > 0;
-}
-
 /**
- * File > Open: replaces the current document
+ * File > Open: opens the file in a new document tab
  */
 async function open_document(files) {
 	if (!files) {
@@ -137,12 +132,11 @@ async function open_document(files) {
 	if (!file) {
 		return;
 	}
-	if (has_unsaved_work() && !window.confirm('Discard the changes to ' + app.GUI.Ps_workspace.document_name() + '?\n\n(pshot has one document at a time; opening a file replaces it.)')) {
-		return;
-	}
 	if (/\.json$/i.test(file.name)) {
-		app.GUI.modules['file/open'].load_json(await read_file(file, 'text'));
-		app.GUI.Ps_workspace.set_document_name(base_name(file));
+		const text = await read_file(file, 'text');
+		app.GUI.Ps_workspace.Documents.add(base_name(file), file.name);
+		await app.GUI.modules['file/open'].load_json(text);
+		app.GUI.modules['ps/commands'].purge_histories();
 		return;
 	}
 	let doc;
@@ -153,6 +147,8 @@ async function open_document(files) {
 		console.error(error);
 		return;
 	}
+	//CS6: every opened file gets its own document tab
+	app.GUI.Ps_workspace.Documents.add(base_name(file), file.name);
 	const actions = [
 		new app.Actions.Prepare_canvas_action('undo'),
 		new app.Actions.Update_config_action({ WIDTH: doc.width, HEIGHT: doc.height }),
@@ -164,7 +160,6 @@ async function open_document(files) {
 	actions.push(new app.Actions.Prepare_canvas_action('do'));
 	await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', actions));
 	app.GUI.modules['ps/commands'].purge_histories();
-	app.GUI.Ps_workspace.set_document_name(base_name(file), file.name);
 	app.GUI.GUI_preview.zoom_auto(true);
 	app.GUI.GUI_layers.render_layers();
 	config.need_render = true;
