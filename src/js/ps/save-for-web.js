@@ -8,6 +8,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { quantize, encode_gif, encode_png8 } from './indexed.js';
+import { make_zip } from './zip.js';
 
 const PRESETS = {
 	'GIF 128 Dithered': { format: 'GIF', colors: 128, dither: 88 },
@@ -151,9 +152,9 @@ class Ps_save_for_web_class {
 		return c;
 	}
 
-	encode() {
+	encode(canvas) {
 		var s = this.state;
-		var c = this.output();
+		var c = canvas || this.output();
 		if (s.format == 'GIF' || s.format == 'PNG-8') {
 			var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
 			var q = quantize(d, c.width, c.height, { colors: s.colors, reduction: s.reduction, dither: s.dither_type == 'No Dither' ? 0 : s.dither, transparency: s.transparency });
@@ -192,10 +193,37 @@ class Ps_save_for_web_class {
 
 	async save() {
 		var s = this.state;
-		var enc = await this.encode();
-		var a = document.createElement('a');
 		var base = app.GUI.Ps_workspace.document_name().replace(/\.[^.]+$/, '');
-		a.download = base + (s.format == 'JPEG' ? '.jpg' : (s.format == 'GIF' ? '.gif' : '.png'));
+		var ext = s.format == 'JPEG' ? '.jpg' : (s.format == 'GIF' ? '.gif' : '.png');
+		var a = document.createElement('a');
+		var Slices = app.GUI.Ps_workspace.Slices;
+		if (Slices && Slices.has()) {
+			//CS6 HTML and Images: every slice optimized into images/, and a page that puts them together
+			var full = this.output(), k = full.width / config.WIDTH;
+			var files = [], cells = '';
+			for (var sl of Slices.export_list()) {
+				var r = sl.rect, sx = Math.round(r.x * k), sy = Math.round(r.y * k), sw = Math.max(1, Math.round(r.w * k)), sh = Math.max(1, Math.round(r.h * k));
+				var piece = document.createElement('canvas');
+				piece.width = sw;
+				piece.height = sh;
+				piece.getContext('2d').drawImage(full, sx, sy, sw, sh, 0, 0, sw, sh);
+				var enc_s = await this.encode(piece);
+				files.push({ name: 'images/' + sl.name + ext, data: new Uint8Array(await enc_s.blob.arrayBuffer()) });
+				var esc = (v) => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+				var img = '<img src="images/' + esc(sl.name) + ext + '" width="' + sw + '" height="' + sh + '" alt="' + esc(sl.alt) + '" style="position:absolute;left:' + sx + 'px;top:' + sy + 'px">';
+				cells += '\t\t' + (sl.url ? '<a href="' + esc(sl.url) + '"' + (sl.target ? ' target="' + esc(sl.target) + '"' : '') + '>' + img + '</a>' : img) + '\n';
+			}
+			var html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<title>' + base + '</title>\n</head>\n<body style="margin:0">\n\t<div style="position:relative;width:' + full.width + 'px;height:' + full.height + 'px">\n' + cells + '\t</div>\n</body>\n</html>\n';
+			files.unshift({ name: base + '.html', data: new TextEncoder().encode(html) });
+			a.download = base + '.zip';
+			a.href = URL.createObjectURL(make_zip(files));
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+			this.close();
+			return;
+		}
+		var enc = await this.encode();
+		a.download = base + ext;
 		a.href = URL.createObjectURL(enc.blob);
 		a.click();
 		setTimeout(() => URL.revokeObjectURL(a.href), 5000);

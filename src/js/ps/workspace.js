@@ -33,6 +33,7 @@ import Ps_auto_align_class from './auto-align.js';
 import Ps_automate_class from './automate.js';
 import Ps_import_export_class from './import-export.js';
 import Ps_fill_layers_class from './fill-layers.js';
+import Ps_slices_class from './slices.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -125,6 +126,7 @@ class Ps_workspace_class {
 		this.Automate = new Ps_automate_class();
 		this.Import_export = new Ps_import_export_class();
 		this.Fill_layers = new Ps_fill_layers_class();
+		this.Slices = new Ps_slices_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -186,6 +188,7 @@ class Ps_workspace_class {
 		this.Notes.install();
 		this.Clone_source.install();
 		this.Tool_presets.install();
+		this.Slices.install();
 		this.snapshot_tool_defaults();
 
 		setInterval(() => this.tick(), 250);
@@ -1148,6 +1151,8 @@ class Ps_workspace_class {
 			case 'grid': return app.GUI.grid == true;
 			case 'pixel_grid': return this.pixel_grid !== false;
 			case 'layer_edges': return this.layer_edges === true;
+			case 'show_slices': return this.Slices.show;
+			case 'lock_slices': return this.Slices.locked;
 			case 'proof_colors': return this.Proof.colors;
 			case 'gamut_warning': return this.Proof.gamut;
 			case 'measure_log': return this.Measure_log.open;

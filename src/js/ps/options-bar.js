@@ -289,6 +289,27 @@ const LAYOUTS = {
 			{ icon: SVG('<circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.8 13.2l8.4-8.4" stroke="currentColor" stroke-width="1.5"/>'), title: 'Cancel current crop operation (Esc)', action: () => { const c = app.GUI.GUI_tools.tools_modules.crop.object; c.selection = { x: null, y: null, width: null, height: null }; config.need_render = true; } },
 		] },
 	],
+	slice: [
+		{ type: 'select', label: 'Style:', values: ['Normal', 'Fixed Aspect Ratio', 'Fixed Size'], bind: 'slice_style', map: { 'Normal': 'Normal', 'Fixed Aspect Ratio': 'Fixed Aspect Ratio', 'Fixed Size': 'Fixed Size' }, rerender: true },
+		{ type: 'num', label: 'Width:', width: 46, get bind() { return config.TOOL.attributes.slice_style != 'Normal' ? 'slice_w' : null; } },
+		{ type: 'num', label: 'Height:', width: 46, get bind() { return config.TOOL.attributes.slice_style != 'Normal' ? 'slice_h' : null; } },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Slices From Guides', action: () => app.GUI.Ps_workspace.Slices.from_guides() },
+	],
+	slice_select: [
+		{ type: 'icons', items: [
+			{ icon: SVG('<rect x="3" y="3" width="8" height="8" fill="currentColor"/><rect x="7" y="7" width="8" height="8" fill="none" stroke="currentColor"/>'), title: 'Bring to Front', action: () => app.GUI.Ps_workspace.Slices.arrange('front') },
+			{ icon: SVG('<rect x="5" y="5" width="8" height="8" fill="currentColor"/><path d="M3 11V3h8" fill="none" stroke="currentColor"/>'), title: 'Bring Forward', action: () => app.GUI.Ps_workspace.Slices.arrange('forward') },
+			{ icon: SVG('<rect x="5" y="5" width="8" height="8" fill="none" stroke="currentColor"/><path d="M3 11V3h8" fill="none" stroke="currentColor"/>'), title: 'Send Backward', action: () => app.GUI.Ps_workspace.Slices.arrange('backward') },
+			{ icon: SVG('<rect x="7" y="7" width="8" height="8" fill="currentColor"/><rect x="3" y="3" width="8" height="8" fill="none" stroke="currentColor"/>'), title: 'Send to Back', action: () => app.GUI.Ps_workspace.Slices.arrange('back') },
+		] },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Promote', action: () => app.GUI.GUI_tools.tools_modules.ps_slice.object.promote() },
+		{ type: 'button', text: 'Divide...', action: () => app.GUI.Ps_workspace.Slices.divide() },
+		{ type: 'sep' },
+		{ type: 'button', text: 'Hide Auto Slices', action: () => { var S = app.GUI.Ps_workspace.Slices; S.hide_auto = !S.hide_auto; S.refresh(); } },
+		{ type: 'icon', icon: IC.gear, title: 'Set options for the current slice', action: () => { var S = app.GUI.Ps_workspace.Slices, sel = S.selected(); S.options(sel ? S.numbered().find(e => e.slice && e.slice.id == sel.id) : app.GUI.GUI_tools.tools_modules.ps_slice.object.entry); } },
+	],
 	eyedropper: [
 		{ type: 'select', label: 'Sample Size:', values: SAMPLE_SIZES, bind: 'sample_size', map: Object.fromEntries(SAMPLE_SIZES.map(v => [v, v])) },
 		{ type: 'select', label: 'Sample:', values: EYEDROPPER_SAMPLES, bind: 'sample', map: Object.fromEntries(EYEDROPPER_SAMPLES.map(v => [v, v])) },

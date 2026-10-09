@@ -103,8 +103,8 @@ const groups = [
 	{ separator: true, members: [
 		{ id: 'crop', name: 'Crop Tool', key: 'C', tool: 'crop', icon: I.crop },
 		{ id: 'perspective_crop', name: 'Perspective Crop Tool', key: 'C', tool: 'ps_pcrop', icon: I.perspective_crop },
-		{ id: 'slice', name: 'Slice Tool', key: 'C', tool: null, icon: I.slice },
-		{ id: 'slice_select', name: 'Slice Select Tool', key: 'C', tool: null, icon: I.slice_select },
+		{ id: 'slice', name: 'Slice Tool', key: 'C', tool: 'ps_slice', preset: { mode: 'slice' }, icon: I.slice },
+		{ id: 'slice_select', name: 'Slice Select Tool', key: 'C', tool: 'ps_slice', preset: { mode: 'slice_select' }, icon: I.slice_select },
 	]},
 	{ members: [
 		{ id: 'eyedropper', name: 'Eyedropper Tool', key: 'I', tool: 'pick_color', icon: I.eyedropper },

@@ -758,6 +758,10 @@ class Ps_commands_class {
 	paths_to_illustrator() { app.GUI.Ps_workspace.Import_export.paths_to_illustrator(); }
 	video_frames_to_layers() { app.GUI.Ps_workspace.Import_export.video_frames(); }
 	hdr_pro() { app.GUI.Ps_workspace.Automate.hdr_pro(); }
+	toggle_show_slices() { var S = app.GUI.Ps_workspace.Slices; S.show = !S.show; S.refresh(); }
+	toggle_lock_slices() { var S = app.GUI.Ps_workspace.Slices; S.locked = !S.locked; }
+	clear_slices() { app.GUI.Ps_workspace.Slices.clear(); }
+	layer_based_slice() { app.GUI.Ps_workspace.Slices.layer_based(); }
 	photomerge() { app.GUI.Ps_workspace.Automate.photomerge(); }
 	crop_straighten() { app.GUI.Ps_workspace.Automate.crop_straighten(); }
 	contact_sheet() { app.GUI.Ps_workspace.Automate.contact_sheet(); }

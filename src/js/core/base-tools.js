@@ -606,6 +606,14 @@ class Base_tools_class {
 					snap_positions.y.push(guide.y);
 			}
 		}
+		//pshot: slice edges
+		if(snap_to.slices && this.Base_gui.Ps_workspace && this.Base_gui.Ps_workspace.Slices){
+			for(var sl of this.Base_gui.Ps_workspace.Slices.list()){
+				var sr = this.Base_gui.Ps_workspace.Slices.rect(sl);
+				snap_positions.x.push(sr.x, sr.x + sr.w);
+				snap_positions.y.push(sr.y, sr.y + sr.h);
+			}
+		}
 		for(var i in config.layers){
 			if(!snap_to.layers)
 				break;

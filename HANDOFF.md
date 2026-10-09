@@ -141,6 +141,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Healing Brush: Mode (Normal / Replace = raw source / Multiply ... Luminosity, blended with the pre-stroke pixels), Source Sampled or Pattern, Aligned, Sample Current Layer / Current & Below / All Layers; Clone Source panel button. Spot Healing Brush Mode. Spot Healing Type and Sample All Layers stay greyed.
   - Magic Eraser rebuilt (Tolerance 0-255, real Contiguous, Anti-alias, Sample All Layers, Opacity; Background becomes Layer 0). Quick Selection Auto-Enhance (smoothed, re-thresholded, slightly softened edge).
   - Patch: Normal / Content-Aware (seam band rebuilt by inpainting), Source / Destination, Transparent (50% texture), Use Pattern (+ pattern picker). Content-Aware Move: Move / Extend, Adaptation (edge feather 0-10 px), Sample All Layers.
+  - Slices (`ps/slices.js`, `tools/ps_slice.js`): Slice Tool (Style Normal / Fixed Aspect Ratio / Fixed Size, Slices From Guides) and Slice Select Tool (select, move, resize handles, Delete, double-click Slice Options, stacking order, Promote, Divide, Hide Auto Slices); user, layer-based (Layer > New Layer Based Slice) and auto slices numbered as in CS6; View > Show > Slices, Snap To > Slices, Lock Slices, Clear Slices; per document; History steps. Save for Web with slices writes a zip (HTML + images/, slice names, URLs, targets, alt; `ps/zip.js`). PSD round trip of user slices (layer slices are saved at their bounds).
   - Live fill layers (`ps/fill-layers.js`, `type: 'ps_fill'`): Layer > New Fill Layer > Solid Color / Gradient (gradient, Linear/Radial/Angle/Reflected/Diamond, angle, scale, reverse, dither) / Pattern (pattern, scale); fill the whole document at any size; double-click the thumbnail or Layer Content Options to edit (live preview, one History step); Layer > Rasterize > Fill Content; painting asks to rasterize; PSD round trip as fill layers (vectorFill without vector mask). The selection becomes the fill layer's mask.
   - Layers panel: thumbnail double-clicks are detected from two quick presses (the first click re-renders the rows, so the browser's dblclick could land on a detached element).
   - Auto-Blend masks: a layer reveals what it or any upper layer owns, so only its seam with lower layers is feathered (alphas add to 1), and the feather is kept off the outer edges / document border.
@@ -220,6 +221,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
 
 ## Known gaps / next
+
+- Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
 - Filters: Adaptive Wide Angle, Vanishing Point.
 - Actions: droplets and recording of tool strokes, Freeform Pen's Magnetic option, Slice tools, 3D.  Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning has no Toning Curve (presets are approximations). Match Color has no selection-based statistics or Save/Load Statistics.
