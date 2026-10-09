@@ -65,6 +65,7 @@ class Ps_selection_class {
 		this.phase = 0;
 		this.preview = null; //{type, points|rect} while dragging
 		this.overlay = null;
+		this.offset = null;
 		setInterval(() => {
 			if (this.mask || this.preview) {
 				this.phase = (this.phase + 1) % 8;
@@ -388,6 +389,30 @@ class Ps_selection_class {
 		return out;
 	}
 
+	/**
+	 * a pixel tool produced `canvas` (layer pixel space) for `layer`: keep the
+	 * original pixels outside the selection (CS6 tools only change selected pixels)
+	 */
+	restrict(canvas, layer) {
+		if (!this.mask || !layer || !layer.link) {
+			return canvas;
+		}
+		var mask = this.mask_for_layer(layer);
+		var inside = new_canvas(canvas.width, canvas.height);
+		var ictx = inside.getContext('2d');
+		ictx.drawImage(canvas, 0, 0);
+		ictx.globalCompositeOperation = 'destination-in';
+		ictx.drawImage(mask, 0, 0);
+		var out = new_canvas(canvas.width, canvas.height);
+		var octx = out.getContext('2d');
+		octx.drawImage(layer.link, 0, 0);
+		octx.globalCompositeOperation = 'destination-out';
+		octx.drawImage(mask, 0, 0);
+		octx.globalCompositeOperation = 'source-over';
+		octx.drawImage(inside, 0, 0);
+		return out;
+	}
+
 	// ---------- marching ants ----------
 
 	compute_edges() {
@@ -454,6 +479,10 @@ class Ps_selection_class {
 		}
 		var m = zoomView.matrix;
 		ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+		if (this.offset) {
+			//selection being dragged with the Move tool
+			ctx.translate(this.offset.x, this.offset.y);
+		}
 		ctx.imageSmoothingEnabled = false;
 		if (this.mask) {
 			if (!this.edges || this.edges.w != this.mask.width) {

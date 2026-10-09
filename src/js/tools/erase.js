@@ -112,6 +112,25 @@ class Erase_class extends Base_tools_class {
 		config.need_render = true;
 	}
 
+	/**
+	 * pshot: on the Background layer CS6's eraser paints the background color
+	 */
+	ps_background_fill(canvas) {
+		var layers = this.Base_layers.get_sorted_layers();
+		var bottom = layers[layers.length - 1];
+		if (config.layer.name != 'Background' || bottom !== config.layer) {
+			return canvas;
+		}
+		var out = document.createElement('canvas');
+		out.width = canvas.width;
+		out.height = canvas.height;
+		var ctx = out.getContext('2d');
+		ctx.fillStyle = config.BG_COLOR;
+		ctx.fillRect(0, 0, out.width, out.height);
+		ctx.drawImage(canvas, 0, 0);
+		return out;
+	}
+
 	mouseup(e) {
 		if (this.started == false) {
 			return;
@@ -120,7 +139,7 @@ class Erase_class extends Base_tools_class {
 
 		app.State.do_action(
 			new app.Actions.Bundle_action('erase_tool', 'Erase Tool', [
-				new app.Actions.Update_layer_image_action(this.tmpCanvas)
+				new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.ps_background_fill(this.tmpCanvas), config.layer))
 			])
 		);
 

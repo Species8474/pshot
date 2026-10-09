@@ -93,7 +93,7 @@ class Blur_class extends Base_tools_class {
 
 		app.State.do_action(
 			new app.Actions.Bundle_action('blur_tool', 'Blur Tool', [
-				new app.Actions.Update_layer_image_action(this.tmpCanvas)
+				new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.tmpCanvas, config.layer))
 			])
 		);
 

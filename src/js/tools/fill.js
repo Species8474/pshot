@@ -106,7 +106,7 @@ class Fill_class extends Base_tools_class {
 			//update
 			app.State.do_action(
 				new app.Actions.Bundle_action('fill_tool', 'Fill Tool', [
-					new app.Actions.Update_layer_image_action(canvas)
+					new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(canvas, config.layer))
 				])
 			);
 		}

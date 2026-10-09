@@ -17,6 +17,7 @@ import Ps_options_bar_class from './options-bar.js';
 import Ps_documents_class from './documents.js';
 import Ps_selection_class from './selection.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
+import { install_move_selection } from './move-selection.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -82,6 +83,7 @@ class Ps_workspace_class {
 		this.hook_state();
 		this.Keymap.install();
 		install_pixel_layer_guard();
+		install_move_selection();
 		this.render_document_tab();
 		this.render_history();
 		this.render_channels();
