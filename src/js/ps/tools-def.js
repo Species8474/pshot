@@ -163,10 +163,10 @@ const groups = [
 		{ id: 'convert_point', name: 'Convert Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'convert' }, icon: I.convert_point },
 	]},
 	{ members: [
-		{ id: 'type', name: 'Horizontal Type Tool', key: 'T', tool: 'text', icon: I.type },
-		{ id: 'vertical_type', name: 'Vertical Type Tool', key: 'T', tool: null, icon: I.vertical_type },
-		{ id: 'type_mask', name: 'Horizontal Type Mask Tool', key: 'T', tool: null, icon: I.type_mask },
-		{ id: 'vertical_type_mask', name: 'Vertical Type Mask Tool', key: 'T', tool: null, icon: I.vertical_type_mask },
+		{ id: 'type', name: 'Horizontal Type Tool', key: 'T', tool: 'text', preset: { vertical: false, mask: false }, icon: I.type },
+		{ id: 'vertical_type', name: 'Vertical Type Tool', key: 'T', tool: 'text', preset: { vertical: true, mask: false }, icon: I.vertical_type },
+		{ id: 'type_mask', name: 'Horizontal Type Mask Tool', key: 'T', tool: 'text', preset: { vertical: false, mask: true }, icon: I.type_mask },
+		{ id: 'vertical_type_mask', name: 'Vertical Type Mask Tool', key: 'T', tool: 'text', preset: { vertical: true, mask: true }, icon: I.vertical_type_mask },
 	]},
 	{ members: [
 		{ id: 'path_selection', name: 'Path Selection Tool', key: 'A', tool: 'ps_path_select', preset: { mode: 'path' }, icon: I.path_selection },

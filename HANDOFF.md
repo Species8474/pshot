@@ -86,6 +86,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Path Selection and Direct Selection (A): drag subpaths, anchors and handles (smooth points stay smooth; Alt breaks them); Delete removes an anchor or subpath.
   - Paths panel: Work Path (replaced when a new one is drawn), Save/Rename (double-click), New, Duplicate, Delete; Fill Path, Stroke Path (Brush size/hardness), Load as Selection (Ctrl+Enter; Shift adds, Alt subtracts), Make Work Path from selection.
   - `config.ps_paths` is per document and every change is an undoable `Update_config_action`.
+- **Type**: Horizontal and Vertical Type (vertical columns run right to left; miniPaint's vertical layout bugs fixed in `tools/text.js`); Horizontal/Vertical Type Mask tools type over a 50% red overlay and turn the text into a selection when editing ends (History shows only "Type Mask"). Character and Paragraph panels.
 - **Selections**
   - Rect, Ellipse, Row and Column marquees; Lasso, Polygonal Lasso, Magnetic Lasso (snaps to the strongest edge within Width; Contrast threshold; Frequency sets anchor spacing; Backspace removes back to the last anchor); Quick Selection; Magic Wand.
   - Quick Mask mode.

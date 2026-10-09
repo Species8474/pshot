@@ -527,7 +527,7 @@ class Ps_selection_class {
 		ctx.clearRect(0, 0, overlay.width, overlay.height);
 		var Paths = app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Paths : null;
 		var show_path = Paths && Paths.active();
-		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview && !this.quick_mask && !show_path) {
+		if (!this.mask && !this.preview && !this.decorate && !this.quick_preview && !this.quick_mask && !show_path && !this.type_mask_layer) {
 			return;
 		}
 		var m = zoomView.matrix;
@@ -537,6 +537,16 @@ class Ps_selection_class {
 			ctx.translate(this.offset.x, this.offset.y);
 		}
 		ctx.imageSmoothingEnabled = false;
+		if (this.type_mask_layer && config.layers.includes(this.type_mask_layer)) {
+			//Type Mask tools: the document in 50% red, the typed text clear (CS6)
+			var tm = new_canvas(config.WIDTH, config.HEIGHT);
+			var tmctx = tm.getContext('2d');
+			tmctx.fillStyle = 'rgba(255,0,0,0.5)';
+			tmctx.fillRect(0, 0, tm.width, tm.height);
+			tmctx.globalCompositeOperation = 'destination-out';
+			app.Layers.render_object(tmctx, this.type_mask_layer);
+			ctx.drawImage(tm, 0, 0);
+		}
 		if (this.quick_mask) {
 			//Quick Mask: masked (unselected) areas in 50% red
 			var tint = new_canvas(config.WIDTH, config.HEIGHT);

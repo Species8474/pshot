@@ -512,7 +512,10 @@ config.TOOLS = [
 				min: -999,
 				max: 999,
 				step: 1
-			}
+			},
+			//pshot: Vertical Type / Type Mask tools
+			vertical: false,
+			mask: false,
 		},
 	},
 	{

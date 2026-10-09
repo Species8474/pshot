@@ -1603,8 +1603,13 @@ class Text_editor_class {
 							' ' + (span.meta.size || metaDefaults.size) + 'px' +
 							' ' + family;
 					}
-					let spanAscenderSize = isHorizontalTextDirection ? fontMetrics.baseline : ctx.measureText(character).width;
-					let spanDescenderSize = isHorizontalTextDirection ? Math.abs(fontMetrics.baseline - fontMetrics.height) : ctx.measureText(character).width;
+					//pshot: vertical columns are as wide as the widest glyph (half each side of the center line)
+					let columnWidth = 0;
+					if (!isHorizontalTextDirection) {
+						for (const ch of span.text) columnWidth = Math.max(columnWidth, ctx.measureText(ch).width);
+					}
+					let spanAscenderSize = isHorizontalTextDirection ? fontMetrics.baseline : columnWidth / 2;
+					let spanDescenderSize = isHorizontalTextDirection ? Math.abs(fontMetrics.baseline - fontMetrics.height) : columnWidth / 2;
 					if (leading) {
 						spanAscenderSize += leading;
 						if (spanAscenderSize < 0) {
@@ -1649,9 +1654,6 @@ class Text_editor_class {
 			let options = options || {};
 			let isSelectionEmpty = this.selection.is_empty();
 
-			ctx.textAlign = 'left';
-			ctx.textBaseline = 'alphabetic';
-
 			const boundary = layer.params.boundary;
 			let drawOffsetTop = layer.y + 1;
 			let drawOffsetLeft = layer.x + 1;
@@ -1659,6 +1661,13 @@ class Text_editor_class {
 			const wrapDirection = layer.params.wrap_direction;
 			const isHorizontalTextDirection = ['ltr', 'rtl'].includes(textDirection);
 			const isNegativeTextDirection = ['rtl', 'btt'].includes(textDirection);
+			//pshot: vertical type draws each glyph centered in its column, columns right to left
+			ctx.textAlign = isHorizontalTextDirection ? 'left' : 'center';
+			ctx.textBaseline = isHorizontalTextDirection ? 'alphabetic' : 'top';
+			const totalWrapSize = this.lineRenderInfo.wrapSizes.reduce((a, w) => Math.max(a, w.offset + w.size), 0);
+			const columnStart = (wi) => wrapDirection === 'rtl'
+				? drawOffsetLeft + totalWrapSize - this.lineRenderInfo.wrapSizes[wi].offset - this.lineRenderInfo.wrapSizes[wi].size
+				: drawOffsetLeft + this.lineRenderInfo.wrapSizes[wi].offset;
 
 			const wrapSizes = this.lineRenderInfo.wrapSizes;
 			let lineIndex = 0;
@@ -1732,12 +1741,12 @@ class Text_editor_class {
 						// Loop through each letter in each span and draw it
 						for (let c = 0; c < span.text.length; c++) {
 							const letter = span.text.charAt(c);
-							const lineStart = Math.round(drawOffsetTop + wrapSizes[wrapIndex].offset);
+							const lineStart = Math.round(isHorizontalTextDirection ? drawOffsetTop + wrapSizes[wrapIndex].offset : columnStart(wrapIndex));
 							const letterWidth = characterOffsets[characterIndex + 1] - characterOffsets[characterIndex];
 							const letterHeight = Math.round(wrapSizes[wrapIndex].size);
-							const textDirectionOffset = drawOffsetLeft + characterOffsets[characterIndex];
+							const textDirectionOffset = (isHorizontalTextDirection ? drawOffsetLeft : drawOffsetTop) + characterOffsets[characterIndex];
 							const wrapDirectionOffset = Math.round(drawOffsetTop + wrapSizes[wrapIndex].offset + wrapSizes[wrapIndex].baseline);
-							const letterDrawX = isHorizontalTextDirection ? textDirectionOffset + kerning : wrapDirectionOffset;
+							const letterDrawX = isHorizontalTextDirection ? textDirectionOffset + kerning : columnStart(wrapIndex) + wrapSizes[wrapIndex].size / 2;
 							const letterDrawY = isHorizontalTextDirection ? wrapDirectionOffset : textDirectionOffset + kerning;
 							let isLetterSelected = false;
 							if (this.selection.isVisible) {
@@ -2084,11 +2093,15 @@ class Text_class extends Base_tools_class {
 								settings.name = new_text;
 							}
 						}
-						app.State.do_action(
+						var updated = app.State.do_action(
 							new app.Actions.Bundle_action('type_tool', 'Type Tool', [
 								new app.Actions.Update_layer_action(this.layer.id, settings)
 							])
 						);
+					}
+					if (this.layer && this.layer.ps_type_mask) {
+						var mask_layer = this.layer;
+						Promise.resolve(updated).then(() => this.finish_type_mask(mask_layer));
 					}
 				}
 				this.focusedValue = null;
@@ -2337,8 +2350,8 @@ class Text_class extends Base_tools_class {
 				params: {
 					boundary: 'dynamic',
 					kerning: 'metrics',
-					text_direction: 'ltr',
-					wrap_direction: 'ttb',
+					text_direction: config.TOOL.attributes.vertical ? 'ttb' : 'ltr',
+					wrap_direction: config.TOOL.attributes.vertical ? 'rtl' : 'ttb',
 					halign: 'left',
 					valign: 'top',
 					wrap: 'letter'
@@ -2356,7 +2369,41 @@ class Text_class extends Base_tools_class {
 				])
 			);
 			this.layer = config.layer;
+			//pshot: Type Mask tools type into a temporary layer that becomes a selection
+			if (config.TOOL.attributes.mask) {
+				this.layer.ps_type_mask = true;
+				app.GUI.Ps_workspace.Selection.type_mask_layer = this.layer;
+			}
 		}
+	}
+
+	/**
+	 * Type Mask tools: when editing ends, the typed text becomes a selection and
+	 * the temporary type layer is removed (History shows only "Type Mask")
+	 */
+	async finish_type_mask(layer) {
+		var Selection = app.GUI.Ps_workspace.Selection;
+		Selection.type_mask_layer = null;
+		var mask = document.createElement('canvas');
+		mask.width = config.WIDTH;
+		mask.height = config.HEIGHT;
+		var ctx = mask.getContext('2d');
+		this.Base_layers.render_object(ctx, layer);
+		ctx.globalCompositeOperation = 'source-in';
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, mask.width, mask.height);
+		var has = ctx.getImageData(0, 0, mask.width, mask.height).data.some((v, i) => i % 4 == 3 && v > 0);
+		for (var i = 0; i < 3 && config.layers.includes(layer) && app.State.can_undo(); i++) {
+			await app.State.undo_action();
+		}
+		if (config.layers.includes(layer)) {
+			await app.State.do_action(new app.Actions.Delete_layer_action(layer.id, true));
+		}
+		if (has) {
+			Selection.commit(Selection.combine(mask, 'new'), 'Type Mask');
+		}
+		Selection.draw_overlay();
+		this.Base_layers.render();
 	}
 
 	mousemove(e) {

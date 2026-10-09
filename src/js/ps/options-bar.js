@@ -471,6 +471,7 @@ const LAYOUTS = {
 	],
 };
 LAYOUTS.direct_selection = LAYOUTS.path_selection;
+LAYOUTS.vertical_type = LAYOUTS.type_mask = LAYOUTS.vertical_type_mask = LAYOUTS.type;
 
 function run(command) {
 	app.GUI.modules['ps/commands'][command]();
