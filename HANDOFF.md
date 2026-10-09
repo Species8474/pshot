@@ -78,6 +78,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Eraser, bucket, clone (Alt+click sets the source), blur, sharpen, sponge, dodge, burn and smudge.
   - Retouching: Spot Healing Brush, Healing Brush (Alt+click source), Patch, Content-Aware Move and Red Eye (`tools/retouch.js`, `tools/ps_patch.js`, `ps/inpaint.js`).
   - All of them respect the selection, layer locks and mask targeting.
+  - Patterns (`ps/patterns.js`): Edit > Define Pattern, Edit > Fill > Pattern, Pattern Stamp Tool (S), Pattern Overlay style, Pattern fill layers. Six built-in patterns; shared by all documents.
   - Color Replacement Tool (B): Hue/Saturation/Color/Luminosity, Continuous/Once/Background Swatch sampling, Contiguous/Discontiguous, Tolerance.
   - History Brush (Y): paints back the document's opening snapshot, which is captured just before the first edit (`Documents.before_action`, hooked in `base-state.js`).
   - Quick Mask (Q): painting edits the selection, shown as a red overlay.
@@ -99,7 +100,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Layers**
   - New layers go above the active layer.
   - Groups (Ctrl+G and Shift+Ctrl+G; drag into and out of groups; the Move tool moves the whole group).
-  - Masks, styles (Bevel & Emboss, Stroke, Inner Shadow, Inner Glow, Satin, Color and Gradient Overlay, Outer Glow, Drop Shadow) and Fill Opacity.
+  - Masks, styles (Bevel & Emboss, Stroke Outside/Inside/Center, Inner Shadow, Inner Glow, Satin, Color/Gradient/Pattern Overlay, Outer Glow, Drop Shadow; stacked in CS6 order) and Fill Opacity.
+  - Fill layers: Solid Color, Gradient (Linear/Radial/Reflected, angle, scale, reverse), Pattern; a selection becomes the fill layer's mask.
   - Adjustment layers: Brightness/Contrast, Levels, Curves, Exposure, Vibrance, Hue/Saturation, Color Balance, Black & White, Photo Filter, Channel Mixer, Invert, Posterize, Threshold, Gradient Map, Selective Color.
   - Locks; clipping mask; blend modes.
   - Layer Mask > From Transparency; New > Background from Layer; Arrange > Reverse; Matting (Defringe, Remove Black/White Matte); Scripts > Delete All Empty Layers.
@@ -121,7 +123,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 ## Known gaps / next
 - Warp transform. Mixer Brush, Art History Brush, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Shape layers / vector masks (Pen 'Shape' and 'Mask' modes are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup, HDR Toning, Variations, Match Color. Shadows/Highlights has only the basic two sliders (no Show More Options).
-- Styles: Pattern Overlay, Contour, Texture; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
+- Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart Objects.
 - Brush flow and the Brush panel.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 

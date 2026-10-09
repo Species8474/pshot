@@ -11,6 +11,7 @@ import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
 import { inpaint } from './../ps/inpaint.js';
 import { alert_box } from './../ps/pixel-layer.js';
+import Patterns from './../ps/patterns.js';
 
 class Retouch_class extends Base_tools_class {
 
@@ -50,6 +51,11 @@ class Retouch_class extends Base_tools_class {
 			return;
 		}
 		var mode = this.getParams().mode;
+		if (mode == 'pattern_stamp') {
+			//pattern aligned to the document (CS6 "Aligned")
+			var pl = config.layer;
+			this.history_source = Patterns.tiled(this.getParams().pattern, pl.width_original, pl.height_original, 100, pl.x, pl.y);
+		}
 		if (mode == 'history') {
 			this.history_source = app.GUI.Ps_workspace.Documents.snapshot_for_layer(config.layer);
 			if (!this.history_source) {
@@ -97,7 +103,7 @@ class Retouch_class extends Base_tools_class {
 			this.replace_target = this.sample_at(this.last);
 			this.replace_dab(this.last);
 		}
-		if (mode == 'history') {
+		if (mode == 'history' || mode == 'pattern_stamp') {
 			this.original = this.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height);
 			this.source_data = this.history_source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.canvas.width, this.canvas.height).data;
 			this.history_mask = new Float32Array(this.canvas.width * this.canvas.height);
@@ -145,7 +151,7 @@ class Retouch_class extends Base_tools_class {
 				this.last = cp;
 			}
 		}
-		else if (mode == 'history') {
+		else if (mode == 'history' || mode == 'pattern_stamp') {
 			if (dist >= step) {
 				var hp = this.last;
 				for (var tb = step; tb <= dist; tb += step) {
@@ -191,7 +197,7 @@ class Retouch_class extends Base_tools_class {
 			this.box_end = null;
 		}
 		delete config.layer.link_canvas;
-		var labels = { color_replace: 'Color Replacement Tool', history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
+		var labels = { pattern_stamp: 'Pattern Stamp', color_replace: 'Color Replacement Tool', history: 'History Brush', smudge: 'Smudge Tool', spot_healing: 'Spot Healing Brush', healing: 'Healing Brush', red_eye: 'Red Eye Tool' };
 		app.State.do_action(new app.Actions.Bundle_action('retouch', labels[mode] || 'Retouch', [
 			new app.Actions.Update_layer_image_action(app.GUI.Ps_workspace.Selection.restrict(this.canvas, config.layer)),
 		]));

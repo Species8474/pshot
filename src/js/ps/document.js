@@ -133,7 +133,7 @@ function effects_to_styles(fx) {
 	if (fx.outerGlow) styles.outer_glow = glow(fx.outerGlow);
 	if (fx.innerGlow) styles.inner_glow = glow(fx.innerGlow);
 	var stroke = first(fx.stroke);
-	if (stroke) styles.stroke = { enabled: stroke.enabled !== false, blend: blend_from_psd(stroke.blendMode), color: rgb_to_hex(stroke.color), opacity: Math.round((stroke.opacity === undefined ? 1 : stroke.opacity) * 100), size: val(stroke.size), position: stroke.position == 'center' ? 'Center' : 'Outside' };
+	if (stroke) styles.stroke = { enabled: stroke.enabled !== false, blend: blend_from_psd(stroke.blendMode), color: rgb_to_hex(stroke.color), opacity: Math.round((stroke.opacity === undefined ? 1 : stroke.opacity) * 100), size: val(stroke.size), position: stroke.position == 'center' ? 'Center' : (stroke.position == 'inside' ? 'Inside' : 'Outside') };
 	var title = (v) => (v || '').replace(/\b\w/g, c => c.toUpperCase());
 	if (fx.bevel) {
 		var b = fx.bevel;

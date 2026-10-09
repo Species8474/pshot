@@ -44,8 +44,8 @@ function adjustment_items(include_fill) {
 	var items = [];
 	if (include_fill) {
 		items.push({ name: 'Solid Color...', action: () => run_target('ps/commands.new_fill_layer') });
-		items.push({ name: 'Gradient...' });
-		items.push({ name: 'Pattern...' });
+		items.push({ name: 'Gradient...', action: () => run_target('ps/commands.new_gradient_fill_layer') });
+		items.push({ name: 'Pattern...', action: () => run_target('ps/commands.new_pattern_fill_layer') });
 		items.push({ divider: true });
 	}
 	for (var adj of ADJUSTMENTS) {
@@ -72,7 +72,7 @@ function layer_style_items() {
 		{ name: 'Satin...', action: open('satin') },
 		{ name: 'Color Overlay...', action: open('color_overlay') },
 		{ name: 'Gradient Overlay...', action: open('gradient_overlay') },
-		{ name: 'Pattern Overlay...' },
+		{ name: 'Pattern Overlay...', action: open('pattern_overlay') },
 		{ name: 'Outer Glow...', action: open('outer_glow') },
 		{ name: 'Drop Shadow...', action: open('drop_shadow') },
 	];

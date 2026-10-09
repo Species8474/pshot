@@ -116,6 +116,7 @@ config.TOOLS = [
 			mode: 'smudge',
 			strength: 50,
 			opacity: 100,
+			pattern: 'Checkerboard',
 			replace_mode: 'Color',
 			sampling: 'Continuous',
 			limits: 'Contiguous',

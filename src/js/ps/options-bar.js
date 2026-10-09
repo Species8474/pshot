@@ -10,6 +10,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { tool_icons } from './tools-def.js';
+import Patterns from './patterns.js';
 
 function paths() {
 	return app.GUI.Ps_workspace.Paths;
@@ -322,6 +323,19 @@ const LAYOUTS = {
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
 		{ type: 'check', label: 'Sample All Layers', value: false },
 		{ type: 'check', label: 'Finger Painting', value: false },
+	],
+	pattern_stamp: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Mode:', values: MODES },
+		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
+		{ type: 'pct', label: 'Flow:', value: 100 },
+		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'sep' },
+		{ type: 'pattern', bind: 'pattern' },
+		{ type: 'check', label: 'Aligned', value: true },
+		{ type: 'check', label: 'Impressionist', value: false },
 	],
 	color_replacement: [
 		{ type: 'brush', bind: 'size' },
@@ -685,6 +699,20 @@ class Ps_options_bar_class {
 				caret.innerHTML = '&#9662;';
 				wrap.appendChild(caret);
 			}
+			return wrap;
+		}
+		if (c.type == 'pattern') {
+			var psel = document.createElement('select');
+			psel.className = 'ps_opt_select';
+			psel.title = 'Pattern';
+			for (var pname of Patterns.names()) {
+				var popt = document.createElement('option');
+				popt.textContent = pname;
+				popt.selected = bound && this.get(c.bind) == pname;
+				psel.appendChild(popt);
+			}
+			if (bound) psel.addEventListener('change', () => this.set(c.bind, psel.value));
+			wrap.appendChild(psel);
 			return wrap;
 		}
 		if (c.type == 'brush') {

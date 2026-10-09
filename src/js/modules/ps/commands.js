@@ -12,6 +12,7 @@ import { open_document, place, save_psd } from './../../ps/document.js';
 import Ps_adjust_class from './../../ps/adjust.js';
 import { show_new_dialog } from './../../ps/new-dialog.js';
 import Ps_size_dialogs_class from './../../ps/size-dialogs.js';
+import Patterns from './../../ps/patterns.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -279,7 +280,8 @@ class Ps_commands_class {
 		var settings = {
 			title: 'Fill',
 			params: [
-				{name: 'use', title: 'Use:', value: 'Foreground Color', values: ['Foreground Color', 'Background Color', 'Black', '50% Gray', 'White']},
+				{name: 'use', title: 'Use:', value: 'Foreground Color', values: ['Foreground Color', 'Background Color', 'Pattern', 'Black', '50% Gray', 'White'], type: 'select'},
+				{name: 'pattern', title: 'Custom Pattern:', value: Patterns.names()[0], values: Patterns.names(), type: 'select'},
 				{name: 'opacity', title: 'Opacity (%):', value: 100, range: [1, 100]},
 			],
 			on_finish: function (params) {
@@ -290,6 +292,15 @@ class Ps_commands_class {
 					'50% Gray': '#808080',
 					'White': '#ffffff',
 				};
+				if (params.use == 'Pattern') {
+					//patterns are aligned to the document origin
+					var probe = document.createElement('canvas').getContext('2d');
+					var pattern = Patterns.pattern(probe, params.pattern, 100);
+					var layer = config.layer;
+					if (pattern && layer && pattern.setTransform) pattern.setTransform(new DOMMatrix().translate(-(layer.x || 0), -(layer.y || 0)));
+					_this.fill_with(pattern, params.opacity / 100, 'Fill');
+					return;
+				}
 				_this.fill_with(colors[params.use], params.opacity / 100, 'Fill');
 			},
 		};
@@ -838,6 +849,104 @@ class Ps_commands_class {
 		app.State.do_action(
 			new app.Actions.Bundle_action('clear_layer_style', 'Clear Layer Style', actions)
 		);
+	}
+
+	/**
+	 * Edit > Define Pattern: the selection's bounding box (or the document), all visible layers
+	 */
+	define_pattern() {
+		var sel = this.selection();
+		var b = sel.has() && sel.bounds ? sel.bounds : { x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT };
+		var flat = document.createElement('canvas');
+		flat.width = config.WIDTH;
+		flat.height = config.HEIGHT;
+		this.Base_layers.convert_layers_to_canvas(flat.getContext('2d'), null, false);
+		var piece = document.createElement('canvas');
+		piece.width = Math.max(1, Math.round(b.width));
+		piece.height = Math.max(1, Math.round(b.height));
+		piece.getContext('2d').drawImage(flat, -b.x, -b.y);
+		this.POP.show({
+			title: 'Pattern Name',
+			params: [{ name: 'name', title: 'Name:', value: Patterns.next_name() }],
+			on_finish: (params) => Patterns.add(params.name || Patterns.next_name(), piece),
+		});
+	}
+
+	/**
+	 * Layer > New Fill Layer > Gradient / Pattern (rendered into a pixel layer)
+	 */
+	new_gradient_fill_layer() {
+		this.POP.show({
+			title: 'Gradient Fill',
+			params: [
+				{ name: 'style', title: 'Style:', values: ['Linear', 'Radial', 'Reflected'], value: 'Linear', type: 'select' },
+				{ name: 'angle', title: 'Angle:', value: 90, range: [-180, 180] },
+				{ name: 'scale', title: 'Scale (%):', value: 100, range: [10, 150] },
+				{ name: 'reverse', title: 'Reverse', value: false },
+			],
+			on_finish: (params) => {
+				var W = config.WIDTH, H = config.HEIGHT;
+				var canvas = document.createElement('canvas');
+				canvas.width = W;
+				canvas.height = H;
+				var ctx = canvas.getContext('2d');
+				var a = parseFloat(params.angle) * Math.PI / 180, s = (parseFloat(params.scale) || 100) / 100;
+				var c1 = params.reverse ? config.BG_COLOR : config.COLOR, c2 = params.reverse ? config.COLOR : config.BG_COLOR;
+				var cx = W / 2, cy = H / 2, len = (Math.abs(Math.cos(a)) * W + Math.abs(Math.sin(a)) * H) / 2 * s;
+				var grad;
+				if (params.style == 'Radial') {
+					grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(W, H) / 2 * s);
+					grad.addColorStop(0, c1);
+					grad.addColorStop(1, c2);
+				}
+				else {
+					grad = ctx.createLinearGradient(cx - Math.cos(a) * len, cy + Math.sin(a) * len, cx + Math.cos(a) * len, cy - Math.sin(a) * len);
+					if (params.style == 'Reflected') {
+						grad.addColorStop(0, c2); grad.addColorStop(0.5, c1); grad.addColorStop(1, c2);
+					}
+					else {
+						grad.addColorStop(0, c1); grad.addColorStop(1, c2);
+					}
+				}
+				ctx.fillStyle = grad;
+				ctx.fillRect(0, 0, W, H);
+				this.insert_fill_layer(canvas, 'Gradient Fill');
+			},
+		});
+	}
+
+	new_pattern_fill_layer() {
+		this.POP.show({
+			title: 'Pattern Fill',
+			params: [
+				{ name: 'pattern', title: 'Pattern:', values: Patterns.names(), value: Patterns.names()[0], type: 'select' },
+				{ name: 'scale', title: 'Scale (%):', value: 100, range: [1, 1000] },
+			],
+			on_finish: (params) => {
+				this.insert_fill_layer(Patterns.tiled(params.pattern, config.WIDTH, config.HEIGHT, parseFloat(params.scale) || 100), 'Pattern Fill');
+			},
+		});
+	}
+
+	insert_fill_layer(canvas, base) {
+		var n = 1;
+		while (config.layers.some(l => l.name == base + ' ' + n)) n++;
+		var sel = this.selection();
+		var settings = {
+			name: base + ' ' + n, type: 'image', x: 0, y: 0, width: canvas.width, height: canvas.height,
+			width_original: canvas.width, height_original: canvas.height, data: canvas.toDataURL('image/png'),
+		};
+		if (sel.has()) {
+			//CS6: a selection becomes the fill layer's mask
+			var mask = document.createElement('canvas');
+			mask.width = sel.mask.width;
+			mask.height = sel.mask.height;
+			mask.getContext('2d').drawImage(sel.mask, 0, 0);
+			Object.assign(settings, { ps_mask: mask, ps_mask_x: 0, ps_mask_y: 0 });
+		}
+		return app.State.do_action(new app.Actions.Bundle_action('fill_layer', 'New Fill Layer', [
+			new app.Actions.Insert_layer_action(settings),
+		])).then(() => { if (sel.has()) sel.deselect(); });
 	}
 
 	new_fill_layer() {

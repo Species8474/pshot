@@ -10,6 +10,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
+import Patterns from './patterns.js';
 
 const BLEND = {
 	'Normal': 'source-over', 'Multiply': 'multiply', 'Screen': 'screen', 'Overlay': 'overlay', 'Darken': 'darken',
@@ -31,6 +32,7 @@ const DEFAULTS = {
 	satin: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 50, angle: 19, distance: 11, size: 14, invert: true },
 	color_overlay: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100 },
 	gradient_overlay: { enabled: false, blend: 'Normal', opacity: 100, color_1: '#000000', color_2: '#ffffff', angle: 90, reverse: false },
+	pattern_overlay: { enabled: false, blend: 'Normal', opacity: 100, pattern: 'Checkerboard', scale: 100 },
 };
 
 // left column of the CS6 Layer Style dialog (null = not available yet)
@@ -43,7 +45,7 @@ const LIST = [
 	['satin', 'Satin'],
 	['color_overlay', 'Color Overlay'],
 	['gradient_overlay', 'Gradient Overlay'],
-	[null, 'Pattern Overlay'],
+	['pattern_overlay', 'Pattern Overlay'],
 	['outer_glow', 'Outer Glow'],
 	['drop_shadow', 'Drop Shadow'],
 ];
@@ -238,28 +240,6 @@ class Ps_styles_class {
 			ctx.drawImage(glow, 0, 0);
 			ctx.drawImage(glow, 0, 0);
 		}
-		if (on('stroke')) {
-			var st = s.stroke;
-			var r = Math.max(1, st.size * scale);
-			var ring = canvas_like(content);
-			var rctx = ring.getContext('2d');
-			var shape = this.colored(content, st.color);
-			var steps = Math.max(16, Math.round(r * 4));
-			for (var i = 0; i < steps; i++) {
-				var a = i / steps * Math.PI * 2;
-				rctx.drawImage(shape, Math.cos(a) * r, Math.sin(a) * r);
-			}
-			rctx.drawImage(shape, 0, 0);
-			if (st.position == 'Outside') {
-				rctx.globalCompositeOperation = 'destination-out';
-				rctx.drawImage(content, 0, 0);
-			}
-			ctx.globalCompositeOperation = BLEND[st.blend] || 'source-over';
-			ctx.globalAlpha = st.opacity / 100;
-			ctx.drawImage(ring, 0, 0);
-			ctx.globalAlpha = 1;
-		}
-
 		//outer part of Bevel & Emboss
 		var bevel = on('bevel') ? this.bevel(content, s.bevel, scale) : null;
 		if (bevel && (s.bevel.style || 'Inner Bevel') != 'Inner Bevel') {
@@ -291,28 +271,15 @@ class Ps_styles_class {
 			cctx.drawImage(content, 0, 0);
 			return c;
 		};
-		if (on('inner_shadow')) {
-			var is = s.inner_shadow, io = offset(is);
-			bctx.globalCompositeOperation = BLEND[is.blend] || 'multiply';
-			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), is.color, is.opacity, io.dx, io.dy, is.size * scale)), 0, 0);
-		}
-		if (on('inner_glow')) {
-			var ig = s.inner_glow;
-			bctx.globalCompositeOperation = BLEND[ig.blend] || 'screen';
-			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), ig.color, ig.opacity, 0, 0, ig.size * scale * 1.2)), 0, 0);
-		}
-		if (on('satin')) {
-			bctx.globalCompositeOperation = BLEND[s.satin.blend] || 'multiply';
-			bctx.drawImage(clip_to_shape(this.satin(content, s.satin, scale)), 0, 0);
-		}
-		if (on('color_overlay')) {
-			var co = s.color_overlay;
-			var fillc = canvas_like(content);
-			var fctx = fillc.getContext('2d');
-			fctx.fillStyle = rgba(co.color, co.opacity / 100);
-			fctx.fillRect(0, 0, fillc.width, fillc.height);
-			bctx.globalCompositeOperation = BLEND[co.blend] || 'source-over';
-			bctx.drawImage(clip_to_shape(fillc), 0, 0);
+		if (on('pattern_overlay')) {
+			var po = s.pattern_overlay;
+			var pc = canvas_like(content);
+			var pctx = pc.getContext('2d');
+			pctx.globalAlpha = po.opacity / 100;
+			pctx.fillStyle = Patterns.pattern(pctx, po.pattern, (po.scale || 100) * scale);
+			pctx.fillRect(0, 0, pc.width, pc.height);
+			bctx.globalCompositeOperation = BLEND[po.blend] || 'source-over';
+			bctx.drawImage(clip_to_shape(pc), 0, 0);
 		}
 		if (on('gradient_overlay')) {
 			var go = s.gradient_overlay;
@@ -329,6 +296,29 @@ class Ps_styles_class {
 			bctx.globalCompositeOperation = BLEND[go.blend] || 'source-over';
 			bctx.drawImage(clip_to_shape(gc), 0, 0);
 		}
+		if (on('color_overlay')) {
+			var co = s.color_overlay;
+			var fillc = canvas_like(content);
+			var fctx = fillc.getContext('2d');
+			fctx.fillStyle = rgba(co.color, co.opacity / 100);
+			fctx.fillRect(0, 0, fillc.width, fillc.height);
+			bctx.globalCompositeOperation = BLEND[co.blend] || 'source-over';
+			bctx.drawImage(clip_to_shape(fillc), 0, 0);
+		}
+		if (on('satin')) {
+			bctx.globalCompositeOperation = BLEND[s.satin.blend] || 'multiply';
+			bctx.drawImage(clip_to_shape(this.satin(content, s.satin, scale)), 0, 0);
+		}
+		if (on('inner_glow')) {
+			var ig = s.inner_glow;
+			bctx.globalCompositeOperation = BLEND[ig.blend] || 'screen';
+			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), ig.color, ig.opacity, 0, 0, ig.size * scale * 1.2)), 0, 0);
+		}
+		if (on('inner_shadow')) {
+			var is = s.inner_shadow, io = offset(is);
+			bctx.globalCompositeOperation = BLEND[is.blend] || 'multiply';
+			bctx.drawImage(clip_to_shape(this.shadow_only(this.inverted(content), is.color, is.opacity, io.dx, io.dy, is.size * scale)), 0, 0);
+		}
 		if (bevel && (s.bevel.style || 'Inner Bevel') != 'Outer Bevel') {
 			bctx.globalCompositeOperation = BLEND[s.bevel.highlight_blend] || 'screen';
 			bctx.drawImage(clip_to_shape(bevel[0]), 0, 0);
@@ -337,6 +327,41 @@ class Ps_styles_class {
 		}
 		ctx.globalCompositeOperation = 'source-over';
 		ctx.drawImage(body, 0, 0);
+		//Stroke sits above the layer's pixels (CS6)
+		if (on('stroke')) {
+			var st = s.stroke;
+			var r = Math.max(1, st.size * scale);
+			var grow = (src, rr) => {
+				var g = canvas_like(content);
+				var gctx = g.getContext('2d');
+				gctx.drawImage(src, 0, 0);
+				if (rr <= 0) return g;
+				var steps = Math.max(16, Math.round(rr * 4));
+				for (var i = 0; i < steps; i++) {
+					var a = i / steps * Math.PI * 2;
+					for (var k = Math.max(1, rr / 2); k <= rr; k += Math.max(1, rr / 2)) gctx.drawImage(src, Math.cos(a) * k, Math.sin(a) * k);
+				}
+				return g;
+			};
+			var erode = (rr) => rr <= 0 ? content : this.inverted(grow(this.inverted(content), rr));
+			var pos = st.position || 'Outside';
+			var outer = pos == 'Outside' ? grow(content, r) : (pos == 'Center' ? grow(content, r / 2) : content);
+			var inner = pos == 'Outside' ? content : erode(pos == 'Center' ? r / 2 : r);
+			var ring = canvas_like(content);
+			var rctx = ring.getContext('2d');
+			rctx.drawImage(outer, 0, 0);
+			rctx.globalCompositeOperation = 'destination-out';
+			rctx.drawImage(inner, 0, 0);
+			rctx.globalCompositeOperation = 'source-in';
+			rctx.fillStyle = st.color;
+			rctx.fillRect(0, 0, ring.width, ring.height);
+			ctx.globalCompositeOperation = BLEND[st.blend] || 'source-over';
+			ctx.globalAlpha = st.opacity / 100;
+			ctx.drawImage(ring, 0, 0);
+			ctx.globalAlpha = 1;
+		}
+
+		ctx.globalCompositeOperation = 'source-over';
 		return out;
 	}
 
@@ -444,7 +469,7 @@ class Ps_styles_class {
 			html += '<div class="ps_fx_head">' + TITLES[key] + '</div><div class="ps_fx_group">Structure</div>';
 			if (key == 'stroke') {
 				html += row('Size:', num('size', e.size, 'px', 1, 250))
-					+ row('Position:', select('position', ['Outside', 'Center'], e.position))
+					+ row('Position:', select('position', ['Outside', 'Inside', 'Center'], e.position))
 					+ row('Blend Mode:', select('blend', BLEND_NAMES, e.blend))
 					+ row('Opacity:', num('opacity', e.opacity, '%', 0, 100))
 					+ row('Color:', swatch('color', e.color));
@@ -464,6 +489,12 @@ class Ps_styles_class {
 					+ row('Opacity:', num('highlight_opacity', e.highlight_opacity, '%', 0, 100))
 					+ row('Shadow Mode:', select('shadow_blend', BLEND_NAMES, e.shadow_blend) + swatch('shadow_color', e.shadow_color))
 					+ row('Opacity:', num('shadow_opacity', e.shadow_opacity, '%', 0, 100));
+			}
+			else if (key == 'pattern_overlay') {
+				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend))
+					+ row('Opacity:', num('opacity', e.opacity, '%', 0, 100))
+					+ row('Pattern:', select('pattern', Patterns.names(), e.pattern))
+					+ row('Scale:', num('scale', e.scale, '%', 1, 1000));
 			}
 			else if (key == 'satin') {
 				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend) + swatch('color', e.color))
