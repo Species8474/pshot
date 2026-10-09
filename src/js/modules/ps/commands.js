@@ -754,6 +754,9 @@ class Ps_commands_class {
 	effects_label() { return app.GUI.Ps_workspace.Extras.effects_label(); }
 	pdf_presentation() { app.GUI.Ps_workspace.Automate.pdf_presentation(); }
 	comps_to_pdf() { app.GUI.Ps_workspace.Automate.comps_to_pdf(); }
+	import_notes() { app.GUI.Ps_workspace.Import_export.import_notes(); }
+	paths_to_illustrator() { app.GUI.Ps_workspace.Import_export.paths_to_illustrator(); }
+	video_frames_to_layers() { app.GUI.Ps_workspace.Import_export.video_frames(); }
 	hdr_pro() { app.GUI.Ps_workspace.Automate.hdr_pro(); }
 	photomerge() { app.GUI.Ps_workspace.Automate.photomerge(); }
 	crop_straighten() { app.GUI.Ps_workspace.Automate.crop_straighten(); }
