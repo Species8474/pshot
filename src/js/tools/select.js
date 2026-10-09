@@ -31,7 +31,8 @@ class Select_tool_class extends Base_tools_class {
 			enable_rotation: true,
 			enable_move: true,
 			data_function: function () {
-				return config.layer;
+				//pshot: CS6 shows the bounding box only with Show Transform Controls
+				return config.TOOL && config.TOOL.attributes && config.TOOL.attributes.show_transform ? config.layer : null;
 			},
 		};
 		this.Base_selection = new Base_selection_class(ctx, sel_config, this.name);

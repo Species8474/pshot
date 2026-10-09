@@ -421,6 +421,20 @@ class GUI_layers_class {
 			ctx.fill();
 			return;
 		}
+		if (layer.type == 'text') {
+			//CS6 type layer thumbnail: a "T" tile
+			ctx.clearRect(0, 0, size, size);
+			ctx.fillStyle = '#ffffff';
+			ctx.fillRect(2, 2, size - 4, size - 4);
+			ctx.strokeStyle = '#9a9a9a';
+			ctx.strokeRect(2.5, 2.5, size - 5, size - 5);
+			ctx.fillStyle = '#2a2a2a';
+			ctx.font = 'bold ' + Math.round(size * 0.62) + 'px Times New Roman, serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText('T', size / 2, size / 2 + 1);
+			return;
+		}
 		var W = config.WIDTH;
 		var H = config.HEIGHT;
 		var scale = Math.min(size / W, size / H);
