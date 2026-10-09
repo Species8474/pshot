@@ -6,6 +6,7 @@
  *   mode 'add'      Add Anchor Point Tool
  *   mode 'delete'   Delete Anchor Point Tool
  *   mode 'convert'  Convert Point Tool: click = corner, drag = smooth handles
+ *   mode 'freeform' Freeform Pen Tool: drag draws; the trail is fitted to a path (Curve Fit)
  */
 
 import app from './../app.js';
@@ -73,6 +74,12 @@ class Ps_pen_class extends Base_tools_class {
 		var Paths = this.paths();
 		var p = this.world(e);
 		var mode = this.mode();
+		if (mode == 'freeform') {
+			//Freeform Pen: collect the pointer trail, fit a path on release
+			this.drag = { kind: 'freeform', pts: [p], after: () => this.finish_freeform() };
+			this.install_overlay();
+			return;
+		}
 		var path = Paths.active();
 		var auto = mode == 'pen' && config.TOOL.attributes.auto_add !== false;
 
@@ -143,6 +150,72 @@ class Ps_pen_class extends Base_tools_class {
 		this.drag = { kind: 'handles', hit: { sub: subs.length - 1, index: current.pts.length - 1 }, mirror: true };
 	}
 
+	install_overlay() {
+		if (this.overlay_installed) return;
+		this.overlay_installed = true;
+		var Selection = app.GUI.Ps_workspace.Selection;
+		Selection.overlays = Selection.overlays || [];
+		Selection.overlays.push({
+			active: () => this.freeform && this.freeform.length > 1,
+			draw: (ctx, scale) => {
+				ctx.save();
+				ctx.lineWidth = 1 / scale;
+				ctx.strokeStyle = '#1a1a1a';
+				ctx.beginPath();
+				this.freeform.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y));
+				ctx.stroke();
+				ctx.restore();
+			},
+		});
+	}
+
+	/**
+	 * the trail -> a smooth subpath (Douglas-Peucker with Curve Fit px, Catmull-Rom handles)
+	 */
+	async finish_freeform() {
+		var pts = this.freeform || [];
+		this.freeform = null;
+		app.GUI.Ps_workspace.Selection.draw_overlay();
+		if (pts.length < 2) return;
+		var tol = Math.max(0.5, config.TOOL.attributes.curve_fit || 2);
+		var simplify = (list) => {
+			if (list.length < 3) return list;
+			var a = list[0], b = list[list.length - 1], best = -1, bd = 0;
+			var len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+			for (var i = 1; i < list.length - 1; i++) {
+				var d = Math.abs((b.x - a.x) * (a.y - list[i].y) - (a.x - list[i].x) * (b.y - a.y)) / len;
+				if (d > bd) { bd = d; best = i; }
+			}
+			if (bd <= tol) return [a, b];
+			return simplify(list.slice(0, best + 1)).slice(0, -1).concat(simplify(list.slice(best)));
+		};
+		var first = pts[0], end = pts[pts.length - 1];
+		var closed = pts.length > 4 && Math.hypot(end.x - first.x, end.y - first.y) * (config.ZOOM || 1) < 10;
+		var simple;
+		if (closed) {
+			//a loop: split at the point farthest from the start, simplify both halves
+			var far = 0, fd = 0;
+			pts.forEach((q, i) => { var d = Math.hypot(q.x - first.x, q.y - first.y); if (d > fd) { fd = d; far = i; } });
+			simple = simplify(pts.slice(0, far + 1)).slice(0, -1).concat(simplify(pts.slice(far)));
+			if (simple.length > 2) simple.pop();
+		}
+		else simple = simplify(pts);
+		var n = simple.length;
+		var anchors = simple.map((q, i) => {
+			var prev = simple[closed ? (i - 1 + n) % n : Math.max(0, i - 1)], next = simple[closed ? (i + 1) % n : Math.min(n - 1, i + 1)];
+			var corner = !closed && (i == 0 || i == n - 1);
+			var tx = corner ? 0 : (next.x - prev.x) / 6, ty = corner ? 0 : (next.y - prev.y) / 6;
+			return { x: q.x, y: q.y, ix: q.x - tx, iy: q.y - ty, ox: q.x + tx, oy: q.y + ty };
+		});
+		var Paths = this.paths();
+		if (config.TOOL.attributes.pen_mode == 'Shape' && !(config.ps_path_active == 'layer' && config.layer && config.layer.type == 'ps_shape')) {
+			await app.GUI.Ps_workspace.Shapes.create_empty(first.x, first.y);
+		}
+		var ed = Paths.editable();
+		ed.path.subpaths.push({ closed: closed, pts: anchors });
+		await Paths.commit(ed.paths, ed.index, ed.path.subpaths.length == 1 && !ed.paths._layer_path ? 'New Work Path' : 'Freeform Pen');
+	}
+
 	/**
 	 * the first point of the path being drawn
 	 */
@@ -166,6 +239,13 @@ class Ps_pen_class extends Base_tools_class {
 	 */
 	mousemove(e) {
 		var d = this.drag;
+		if (d.kind == 'freeform') {
+			var fp = this.world(e), last = d.pts[d.pts.length - 1];
+			if (Math.hypot(fp.x - last.x, fp.y - last.y) * (config.ZOOM || 1) >= 2) d.pts.push(fp);
+			this.freeform = d.pts;
+			app.GUI.Ps_workspace.Selection.draw_overlay();
+			return;
+		}
 		if (d.kind != 'handles') return;
 		var p = this.world(e);
 		var path = this.paths().active();

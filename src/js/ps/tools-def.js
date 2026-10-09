@@ -157,7 +157,7 @@ const groups = [
 	]},
 	{ separator: true, members: [
 		{ id: 'pen', name: 'Pen Tool', key: 'P', tool: 'ps_pen', preset: { mode: 'pen' }, icon: I.pen },
-		{ id: 'freeform_pen', name: 'Freeform Pen Tool', key: 'P', tool: null, icon: I.freeform_pen },
+		{ id: 'freeform_pen', name: 'Freeform Pen Tool', key: 'P', tool: 'ps_pen', preset: { mode: 'freeform' }, icon: I.freeform_pen },
 		{ id: 'add_anchor', name: 'Add Anchor Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'add' }, icon: I.add_anchor },
 		{ id: 'delete_anchor', name: 'Delete Anchor Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'delete' }, icon: I.delete_anchor },
 		{ id: 'convert_point', name: 'Convert Point Tool', key: '', tool: 'ps_pen', preset: { mode: 'convert' }, icon: I.convert_point },

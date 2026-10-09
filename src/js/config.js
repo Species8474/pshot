@@ -113,6 +113,7 @@ config.TOOLS = [
 			mode: 'pen',
 			pen_mode: 'Path',
 			auto_add: true,
+			curve_fit: 2,
 		},
 	},
 	{
