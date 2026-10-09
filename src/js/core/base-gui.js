@@ -97,12 +97,9 @@ class Base_gui_class {
 			//default
 			config.TRANSPARENCY = false;
 		}
-		if (transparency_cookie) {
-			config.TRANSPARENCY = true;
-		}
-		else {
-			config.TRANSPARENCY = false;
-		}
+		//pshot: the startup document always has a white Background (CS6); transparency
+		//is chosen per document in File > New
+		config.TRANSPARENCY = false;
 		
 		//transparency_type
 		var transparency_type = this.Helper.getCookie('transparency_type');

@@ -1297,3 +1297,12 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: #f0f0f0 !important
 #nd_preset { width: 196px; }
 .ps_new_size { display: flex; gap: 8px; margin-top: 6px; padding-left: 70px; }
 #popups .popup:has(.ps_new) { max-width: 520px; }
+
+/* layer groups */
+.ps_indent { flex: none; display: inline-block; }
+.ps_group_row { height: 26px; }
+.ps_group_toggle { width: 16px; height: 100%; display: flex; align-items: center; justify-content: center; cursor: default; }
+.ps_group_toggle::before { content: ""; border-left: 5px solid #d8d8d8; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.ps_group_toggle.open::before { border-top: 5px solid #d8d8d8; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: none; }
+.ps_folder { line-height: 0; margin: 0 6px 0 2px; }
+.ps_group_row .ps_eye { height: 100%; }

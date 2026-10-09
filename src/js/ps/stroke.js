@@ -37,7 +37,7 @@ async function commit_stroke(tool, pending, label) {
 			new app.Actions.Bundle_action(tool.name + '_tool', label, [
 				new app.Actions.Delete_layer_action(temp.id, true),
 				new app.Actions.Insert_layer_action({
-					name: temp.name, type: 'image', order: temp.order,
+					name: temp.name, type: 'image', order: temp.order, ps_parent: temp.ps_parent || null,
 					x: 0, y: 0, width: full.width, height: full.height,
 					width_original: full.width, height_original: full.height,
 					opacity: temp.opacity == null ? 100 : temp.opacity,

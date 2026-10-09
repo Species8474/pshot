@@ -71,6 +71,20 @@ Phase 1 (CS6 workspace) is built:
   - Brush, pencil and gradient have working Opacity and Mode.
 - **Robustness**: the render loop survives exceptions, and the zoomView scale is resynced to `config.ZOOM` (it used to stay clamped after the canvas shrank).
 
+- **Layer groups** (`ps/groups.js`):
+  - Groups are `ps_group` header layers; members carry `ps_parent`, and `normalize()` keeps the stack in panel order.
+  - Ctrl+G groups, Shift+Ctrl+G ungroups, New Group works, and deleting a group deletes its contents.
+  - The panel shows disclosure triangles and indented members; drag-and-drop moves layers into and out of groups.
+  - A group's visibility and opacity apply to its members. PSD groups (nested, hidden, collapsed) survive open and save.
+- **CS6 insertion**: new layers go directly above the active layer (inside its group), not at the top of the stack.
+- **Other CS6 behaviour**:
+  - File > New is a CS6 dialog (`ps/new-dialog.js`).
+  - Free Transform (`ps/transform.js`).
+  - Paste centres on the canvas; Paste in Place keeps the original position.
+  - Duplicates are named "X copy".
+  - Crop commits with Enter.
+- **Startup**: the first document always has a white Background (miniPaint's transparency cookie is ignored).
+
 ### Known gaps (next)
 - Quick Selection and Magnetic Lasso. The bucket, eraser, blur and clone tools don't respect the selection yet.
 - Layer groups, masks, adjustment layers, layer styles beyond Drop Shadow.

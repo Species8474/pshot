@@ -106,6 +106,8 @@ export class Insert_layer_action extends Base_action {
 			color: config.COLOR,
 			filters: [],
 			render_function: null,
+			ps_parent: null,
+			ps_collapsed: false,
 		};
 
 		// Build data
@@ -115,6 +117,18 @@ export class Insert_layer_action extends Base_action {
 				continue;
 			}
 			layer[i] = this.settings[i];
+		}
+
+		// pshot: CS6 adds a new layer directly above the active layer, in the same group
+		const previous = this.previous_selected_layer;
+		if (previous && config.layers.includes(previous) && !('order' in (this.settings || {}))) {
+			layer.order = previous.order + 0.5;
+			if (!('ps_parent' in (this.settings || {}))) {
+				layer.ps_parent = previous.type == 'ps_group' && !previous.ps_collapsed ? previous.id : (previous.ps_parent || null);
+				if (previous.type == 'ps_group' && !previous.ps_collapsed) {
+					layer.order = previous.order - 0.5;
+				}
+			}
 		}
 
 		// Prepare image

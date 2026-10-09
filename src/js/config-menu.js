@@ -133,9 +133,9 @@ const M = [
 		['Analysis', [['Set Measurement Scale', ['Default', 'Custom...']], ['Select Data Points', ['Default', 'Custom...']], 'Record Measurements|Shift+Ctrl+M', '-', 'Ruler Tool', 'Count Tool', '-', 'Place Scale Marker...']],
 	]],
 	['Layer', [
-		['New', ['Layer...|Shift+Ctrl+N|layer/new.new', 'Background from Layer', 'Group...', 'Group from Layers...', '-', 'Layer via Copy|Ctrl+J|ps/commands.layer_via_copy', 'Layer via Cut|Shift+Ctrl+J|ps/commands.layer_via_cut']],
+		['New', ['Layer...|Shift+Ctrl+N|layer/new.new', 'Background from Layer', 'Group...|ps/commands.new_group', 'Group from Layers...|ps/commands.group_layers', '-', 'Layer via Copy|Ctrl+J|ps/commands.layer_via_copy', 'Layer via Cut|Shift+Ctrl+J|ps/commands.layer_via_cut']],
 		'Duplicate Layer...|layer/duplicate.duplicate',
-		['Delete', ['Layer|layer/delete.delete', 'Hidden Layers|ps/commands.delete_hidden_layers']],
+		['Delete', ['Layer|ps/commands.delete_layer', 'Hidden Layers|ps/commands.delete_hidden_layers']],
 		'-',
 		['Layer Style', [
 			'Blending Options...|layer/composition.composition', '-',
@@ -159,8 +159,8 @@ const M = [
 		'-',
 		'New Layer Based Slice',
 		'-',
-		'Group Layers|Ctrl+G',
-		'Ungroup Layers|Shift+Ctrl+G',
+		'Group Layers|Ctrl+G|ps/commands.group_layers',
+		'Ungroup Layers|Shift+Ctrl+G|ps/commands.ungroup_layers',
 		'Hide Layers|Ctrl+,|layer/visibility.toggle',
 		'-',
 		['Arrange', ['Bring to Front|Shift+Ctrl+]|ps/commands.bring_to_front', 'Bring Forward|Ctrl+]|layer/move.up', 'Send Backward|Ctrl+[|layer/move.down', 'Send to Back|Shift+Ctrl+[|ps/commands.send_to_back', '-', 'Reverse']],

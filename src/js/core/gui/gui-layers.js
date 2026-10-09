@@ -41,6 +41,7 @@ const ICON = {
 	lock_image: '<svg viewBox="0 0 16 16" width="13" height="13"><path d="M12 1.5c.4.4-3.3 5.3-4.6 6.4L6.2 6.7C7.5 5.4 11.6 1.1 12 1.5z" fill="currentColor"/><path d="M5.6 7.2c-1.2 0-2.1.7-2.3 2-.1 1.1-.6 1.6-1.4 2 1.9.9 4.6.4 5-1.5.1-.7-.2-1.7-1.3-2.5z" fill="currentColor"/></svg>',
 	lock_position: '<svg viewBox="0 0 16 16" width="13" height="13"><path d="M8 1v14M1 8h14M8 1L6 3.2M8 1l2 2.2M8 15l-2-2.2M8 15l2-2.2M1 8l2.2-2M1 8l2.2 2M15 8l-2.2-2M15 8l-2.2 2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
 	lock_all: '<svg viewBox="0 0 16 16" width="13" height="13"><rect x="3" y="7" width="10" height="7.5" rx="1" fill="currentColor"/><path d="M5.2 7V5a2.8 2.8 0 0 1 5.6 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+	folder: '<svg viewBox="0 0 18 16" width="18" height="16"><path d="M1.5 3h5l1.5 1.5h8.5v9.5h-15z" fill="#c9a24a" stroke="#6b5523" stroke-width="1"/></svg>',
 	clip: '<svg viewBox="0 0 10 10" width="9" height="9"><path d="M2 1v5h6M8 6L5.5 3.5M8 6L5.5 8.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
 	filter_kinds: '<svg viewBox="0 0 70 14" width="70" height="14"><rect x="1" y="2" width="10" height="10" fill="none" stroke="currentColor"/><circle cx="20" cy="7" r="5" fill="none" stroke="currentColor"/><path d="M20 2a5 5 0 0 1 0 10z" fill="currentColor"/><text x="34" y="11.5" font-size="11" font-family="Times New Roman, serif" fill="currentColor">T</text><rect x="44" y="2.5" width="10" height="9" rx="1" fill="none" stroke="currentColor"/><path d="M47 5h4v4h-4z" fill="currentColor"/><rect x="58" y="2" width="10" height="10" fill="none" stroke="currentColor"/><path d="M60 10l3-4 3 4z" fill="currentColor"/></svg>',
 };
@@ -71,7 +72,7 @@ var template = `
 		<button type="button" id="ps_layer_fx" title="Add a layer style">${ICON.fx}</button>
 		<button type="button" id="ps_layer_mask" title="Add layer mask">${ICON.mask}</button>
 		<button type="button" id="ps_layer_adjust" title="Create new fill or adjustment layer">${ICON.adjust}</button>
-		<button type="button" class="disabled" title="Create a new group">${ICON.group}</button>
+		<button type="button" id="ps_layer_group" title="Create a new group">${ICON.group}</button>
 		<button type="button" id="insert_layer" title="Create a new layer">${ICON.new}</button>
 		<button type="button" id="ps_layer_delete" title="Delete layer">${ICON.trash}</button>
 	</div>
@@ -124,7 +125,18 @@ class GUI_layers_class {
 				app.State.do_action(new app.Actions.Insert_layer_action());
 			}
 			else if (target.id == 'ps_layer_delete') {
-				app.State.do_action(new app.Actions.Delete_layer_action(config.layer.id));
+				if (config.layer.type == 'ps_group') {
+					app.GUI.Ps_workspace.Groups.delete_group(config.layer);
+				}
+				else {
+					app.State.do_action(new app.Actions.Delete_layer_action(config.layer.id));
+				}
+			}
+			else if (target.id == 'ps_layer_group') {
+				app.GUI.Ps_workspace.Groups.new_group();
+			}
+			else if (action == 'toggle_group') {
+				app.GUI.Ps_workspace.Groups.toggle_collapsed(_this.Base_layers.get_layer(target.dataset.id));
 			}
 			else if (target.id == 'ps_layer_fx') {
 				show_popup_menu(target, layer_style_items(), {placement: 'below'});
@@ -175,6 +187,9 @@ class GUI_layers_class {
 				return;
 			}
 			var row = event.target.closest('.ps_layer_row');
+			if (row && row.classList.contains('ps_group_row')) {
+				return;
+			}
 			if (row && !event.target.closest('[data-action]')) {
 				//CS6: double-click the layer row opens Layer Style > Blending Options
 				app.GUI.modules['layer/composition'].composition();
@@ -248,7 +263,13 @@ class GUI_layers_class {
 				return;
 			}
 			if (event.target.closest('#ps_layer_delete')) {
-				app.State.do_action(new app.Actions.Delete_layer_action(id));
+				var dropped = _this.Base_layers.get_layer(id);
+				if (dropped && dropped.type == 'ps_group') {
+					app.GUI.Ps_workspace.Groups.delete_group(dropped);
+				}
+				else {
+					app.State.do_action(new app.Actions.Delete_layer_action(id));
+				}
 				return;
 			}
 			if (event.target.closest('#insert_layer')) {
@@ -260,35 +281,8 @@ class GUI_layers_class {
 				return;
 			}
 			var rect = row.getBoundingClientRect();
-			_this.move_layer(id, parseInt(row.dataset.id), event.clientY < rect.top + rect.height / 2);
+			app.GUI.Ps_workspace.Groups.move(_this.Base_layers.get_layer(id), _this.Base_layers.get_layer(row.dataset.id), event.clientY < rect.top + rect.height / 2);
 		});
-	}
-
-	/**
-	 * moves layer next to the target layer (above or below it in the panel)
-	 */
-	move_layer(id, target_id, above) {
-		if (id == target_id) {
-			return;
-		}
-		var sorted = this.Base_layers.get_sorted_layers(); //top first
-		var from = sorted.findIndex(l => l.id == id);
-		var to = sorted.findIndex(l => l.id == target_id);
-		if (!above) {
-			to++;
-		}
-		if (from < to) {
-			to--;
-		}
-		var steps = from - to; //positive = move up
-		if (steps == 0) {
-			return;
-		}
-		var actions = [];
-		for (var i = 0; i < Math.abs(steps); i++) {
-			actions.push(new app.Actions.Reorder_layer_action(id, steps > 0 ? 1 : -1));
-		}
-		app.State.do_action(new app.Actions.Bundle_action('layer_order', 'Layer Order', actions));
 	}
 
 	start_rename(name_el) {
@@ -395,11 +389,27 @@ class GUI_layers_class {
 		if (!target) {
 			return;
 		}
-		var layers = config.layers.concat().sort((a, b) => b.order - a.order);
+		var Groups = app.GUI && app.GUI.Ps_workspace ? app.GUI.Ps_workspace.Groups : null;
+		var layers = Groups ? Groups.ordered() : config.layers.concat().sort((a, b) => b.order - a.order);
 		var html = '';
 
 		if (config.layer) {
 			for (var value of layers) {
+				var depth = Groups ? Groups.depth(value) : 0;
+				if (Groups && Groups.ancestors(value).some(g => g.ps_collapsed)) {
+					continue;
+				}
+				var indent = depth ? '<span class="ps_indent" style="width:' + (depth * 16) + 'px"></span>' : '';
+				if (value.type == 'ps_group') {
+					html += '<div class="ps_layer_row ps_group_row' + (value.id == config.layer.id ? ' active' : '') + (value.visible != true ? ' hidden_layer' : '') + '" data-id="' + value.id + '" draggable="true">';
+					html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
+					html += indent;
+					html += '<span class="ps_group_toggle' + (value.ps_collapsed ? '' : ' open') + '" data-action="toggle_group" data-id="' + value.id + '"></span>';
+					html += '<span class="ps_folder">' + ICON.folder + '</span>';
+					html += '<span class="ps_layer_name" data-id="' + value.id + '">' + this.Helper.escapeHtml(value.name) + '</span>';
+					html += '</div>';
+					continue;
+				}
 				var classes = 'ps_layer_row';
 				var clipped = value.composition === 'source-atop';
 				if (clipped) classes += ' clipped';
@@ -409,6 +419,7 @@ class GUI_layers_class {
 				var has_filters = value.filters && value.filters.length > 0;
 				html += '<div class="' + classes + '" data-id="' + value.id + '" draggable="true">';
 				html += '<button type="button" class="ps_eye' + (value.visible == true ? ' on' : '') + '" data-action="visibility" data-id="' + value.id + '" title="Indicates layer visibility">' + ICON.eye + '</button>';
+				html += indent;
 				if (clipped) {
 					html += '<span class="ps_clip_arrow">' + ICON.clip + '</span>';
 				}

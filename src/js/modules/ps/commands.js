@@ -37,6 +37,18 @@ class Ps_commands_class {
 
 	levels() { this.Adjust.levels(); }
 
+	group_layers() { app.GUI.Ps_workspace.Groups.group_layers(); }
+	ungroup_layers() { app.GUI.Ps_workspace.Groups.ungroup(); }
+	new_group() { app.GUI.Ps_workspace.Groups.new_group(); }
+
+	delete_layer() {
+		var layer = config.layer;
+		if (layer && layer.type == 'ps_group') {
+			return app.GUI.Ps_workspace.Groups.delete_group(layer);
+		}
+		return app.GUI.modules['layer/delete'].delete();
+	}
+
 	mask_add(hide) { app.GUI.Ps_workspace.Mask.add(hide); }
 	mask_reveal_all() { app.GUI.Ps_workspace.Mask.reveal_all(); }
 	mask_hide_all() { app.GUI.Ps_workspace.Mask.hide_all(); }

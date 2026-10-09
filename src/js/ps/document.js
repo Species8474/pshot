@@ -96,10 +96,22 @@ async function file_to_layers(file) {
 		const buffer = await read_file(file, 'buffer');
 		const psd = readPsd(buffer, { skipThumbnail: true });
 		const layers = [];
-		const walk = (children, hidden_parent) => {
+		let group_key = 0;
+		const walk = (children, parent_key) => {
 			for (const child of children || []) {
 				if (child.children) {
-					walk(child.children, hidden_parent || child.hidden);
+					//group: members first (bottom-up), then the group header above them
+					const key = ++group_key;
+					walk(child.children, key);
+					layers.push({
+						name: child.name || 'Group',
+						type: 'ps_group',
+						visible: !child.hidden,
+						opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
+						ps_collapsed: child.opened === false,
+						_group_key: key,
+						_parent_key: parent_key,
+					});
 					continue;
 				}
 				if (!child.canvas || child.canvas.width == 0 || child.canvas.height == 0) {
@@ -115,14 +127,15 @@ async function file_to_layers(file) {
 					width_original: child.canvas.width,
 					height_original: child.canvas.height,
 					opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
-					visible: !(child.hidden || hidden_parent),
+					visible: !child.hidden,
 					composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
 					data: child.canvas.toDataURL('image/png'),
 					_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+					_parent_key: parent_key,
 				});
 			}
 		};
-		walk(psd.children, false);
+		walk(psd.children, null);
 		if (layers.length == 0 && psd.canvas) {
 			//flat PSD: use the composite image
 			layers.push({
@@ -203,14 +216,31 @@ async function open_document(files) {
 		new app.Actions.Update_config_action({ WIDTH: doc.width, HEIGHT: doc.height }),
 		new app.Actions.Reset_layers_action(),
 	];
-	for (const settings of doc.layers) {
+	doc.layers.forEach((settings, i) => {
+		settings.order = i + 1;
+		settings.ps_parent = null;
 		actions.push(new app.Actions.Insert_layer_action(settings, false));
-	}
+	});
 	actions.push(new app.Actions.Prepare_canvas_action('do'));
 	await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', actions));
+	//groups: connect members to their group headers
+	const by_key = {};
+	for (const settings of doc.layers) {
+		if (settings._group_key) {
+			by_key[settings._group_key] = config.layers.find(l => l.order == settings.order);
+		}
+	}
+	for (const settings of doc.layers) {
+		if (settings._parent_key && by_key[settings._parent_key]) {
+			const layer = config.layers.find(l => l.order == settings.order);
+			if (layer) {
+				layer.ps_parent = by_key[settings._parent_key].id;
+			}
+		}
+	}
 	for (const settings of doc.layers) {
 		if (settings._ps_mask_canvas) {
-			const layer = config.layers.find(l => l.name == settings.name && l.order == settings.order) || config.layers.find(l => l.name == settings.name);
+			const layer = config.layers.find(l => l.order == settings.order);
 			if (layer) {
 				layer.ps_mask = settings._ps_mask_canvas;
 				layer.ps_mask_x = layer.x;
@@ -244,6 +274,8 @@ async function place(files) {
 		return;
 	}
 	const actions = [];
+	//placing flattens the file's groups
+	doc.layers = doc.layers.filter(l => l.type != 'ps_group');
 	const dx = Math.round((config.WIDTH - doc.width) / 2);
 	const dy = Math.round((config.HEIGHT - doc.height) / 2);
 	for (const settings of doc.layers) {
@@ -258,54 +290,72 @@ async function place(files) {
 /**
  * builds the PSD structure from the current layers
  */
-function build_psd() {
-	const layers = app.Layers.get_sorted_layers().slice().reverse(); //bottom first
-	const children = [];
-	for (const layer of layers) {
-		if (layer.type == null) {
-			continue;
-		}
-		let canvas, left, top;
-		if (layer.type == 'image' && layer.link && !layer.rotate && (!layer.filters || layer.filters.length == 0)) {
-			canvas = document.createElement('canvas');
-			canvas.width = Math.max(1, Math.round(layer.width));
-			canvas.height = Math.max(1, Math.round(layer.height));
-			canvas.getContext('2d').drawImage(layer.link, 0, 0, canvas.width, canvas.height);
-			left = Math.round(layer.x);
-			top = Math.round(layer.y);
-		}
-		else {
-			//vector, text and filtered layers are rasterized at document size
-			const visible = layer.visible;
-			const opacity = layer.opacity;
-			const mask_disabled = layer.ps_mask_disabled;
-			layer.visible = true;
-			layer.opacity = 100;
-			layer.ps_mask_disabled = true;
-			canvas = app.Layers.convert_layer_to_canvas(layer.id, false, false);
-			layer.visible = visible;
-			layer.opacity = opacity;
-			layer.ps_mask_disabled = mask_disabled;
-			left = 0;
-			top = 0;
-		}
-		children.push({
-			name: layer.name,
-			left: left,
-			top: top,
-			canvas: canvas,
-			opacity: (layer.opacity == null ? 100 : layer.opacity) / 100,
-			hidden: layer.visible == false,
-			blendMode: TO_PSD_BLEND[layer.composition] || 'normal',
-			clipping: layer.composition == 'source-atop',
-			mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
-		});
+function psd_node(layer) {
+	let canvas, left, top;
+	if (layer.type == 'image' && layer.link && !layer.rotate && (!layer.filters || layer.filters.length == 0)) {
+		canvas = document.createElement('canvas');
+		canvas.width = Math.max(1, Math.round(layer.width));
+		canvas.height = Math.max(1, Math.round(layer.height));
+		canvas.getContext('2d').drawImage(layer.link, 0, 0, canvas.width, canvas.height);
+		left = Math.round(layer.x);
+		top = Math.round(layer.y);
 	}
+	else {
+		//vector, text and filtered layers are rasterized at document size
+		const saved = { visible: layer.visible, opacity: layer.opacity, ps_mask_disabled: layer.ps_mask_disabled };
+		layer.visible = true;
+		layer.opacity = 100;
+		layer.ps_mask_disabled = true;
+		layer._ps_ignore_groups = true;
+		canvas = app.Layers.convert_layer_to_canvas(layer.id, false, false);
+		Object.assign(layer, saved);
+		layer._ps_ignore_groups = false;
+		left = 0;
+		top = 0;
+	}
+	return {
+		name: layer.name,
+		left: left,
+		top: top,
+		canvas: canvas,
+		opacity: (layer.opacity == null ? 100 : layer.opacity) / 100,
+		hidden: layer.visible == false,
+		blendMode: TO_PSD_BLEND[layer.composition] || 'normal',
+		clipping: layer.composition == 'source-atop',
+		mask: layer.ps_mask ? alpha_to_psd_mask(layer) : undefined,
+	};
+}
+
+/**
+ * builds the PSD structure from the current layers (groups become PSD groups)
+ */
+function build_psd() {
+	const build = (parent_id) => {
+		const members = config.layers
+			.filter(l => (l.ps_parent || null) === parent_id)
+			.sort((a, b) => a.order - b.order); //bottom first
+		const nodes = [];
+		for (const layer of members) {
+			if (layer.type == 'ps_group') {
+				nodes.push({
+					name: layer.name,
+					opened: !layer.ps_collapsed,
+					hidden: layer.visible == false,
+					opacity: (layer.opacity == null ? 100 : layer.opacity) / 100,
+					children: build(layer.id),
+				});
+			}
+			else if (layer.type != null) {
+				nodes.push(psd_node(layer));
+			}
+		}
+		return nodes;
+	};
 	const composite = document.createElement('canvas');
 	composite.width = config.WIDTH;
 	composite.height = config.HEIGHT;
 	app.Layers.convert_layers_to_canvas(composite.getContext('2d'), null, false);
-	return { width: config.WIDTH, height: config.HEIGHT, children: children, canvas: composite };
+	return { width: config.WIDTH, height: config.HEIGHT, children: build(null), canvas: composite };
 }
 
 function save_psd(file_name) {

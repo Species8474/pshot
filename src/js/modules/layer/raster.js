@@ -19,6 +19,7 @@ class Layer_raster_class {
 			type: 'image',
 			name: config.layer.name, //pshot: CS6 keeps the layer name
 			order: current_layer.order,
+			ps_parent: current_layer.ps_parent || null,
 			data: canvas.toDataURL("image/png"),
 			x: parseInt(canvas.dataset.x),
 			y: parseInt(canvas.dataset.y),

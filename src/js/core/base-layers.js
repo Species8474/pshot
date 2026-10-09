@@ -401,6 +401,14 @@ class Base_layers_class {
 	render_object(ctx, object, is_preview) {
 		if (object.visible == false || object.type == null) return;
 
+		//pshot: groups draw nothing; their visibility and opacity apply to members
+		if (object.type == "ps_group") return;
+		if (object.ps_parent && !object._ps_masking && !object._ps_ignore_groups && this.Base_gui.Ps_workspace) {
+			var Groups = this.Base_gui.Ps_workspace.Groups;
+			if (!Groups.effectively_visible(object)) return;
+			ctx.globalAlpha *= Groups.group_opacity(object);
+		}
+
 		//pshot: layer mask - render the layer offscreen, then keep only the revealed pixels
 		if (object.ps_mask && !object.ps_mask_disabled && !object._ps_masking) {
 			var transform = ctx.getTransform();

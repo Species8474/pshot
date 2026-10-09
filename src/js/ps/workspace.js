@@ -18,6 +18,7 @@ import Ps_documents_class from './documents.js';
 import Ps_selection_class from './selection.js';
 import Ps_mask_class from './mask.js';
 import Ps_transform_class from './transform.js';
+import Ps_groups_class from './groups.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 
@@ -57,6 +58,7 @@ class Ps_workspace_class {
 		this.Selection = new Ps_selection_class();
 		this.Mask = new Ps_mask_class();
 		this.Transform = new Ps_transform_class();
+		this.Groups = new Ps_groups_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();
 		this.two_column = false;
@@ -115,6 +117,7 @@ class Ps_workspace_class {
 		var signature = app.State.action_history_index + ':' + app.State.action_history.length;
 		if (signature !== this.last_history_signature) {
 			this.last_history_signature = signature;
+			this.Groups.normalize();
 			this.render_history();
 			app.GUI.GUI_layers.render_layers();
 			this.render_channels();
@@ -479,10 +482,11 @@ class Ps_workspace_class {
 			items = [
 				{ name: 'New Layer...', shortcut: 'Shift+Ctrl+N', action: () => run_target('layer/new.new') },
 				{ name: 'Duplicate Layer...', action: () => run_target('layer/duplicate.duplicate') },
-				{ name: 'Delete Layer', action: () => run_target('layer/delete.delete') },
+				{ name: 'Delete Layer', action: () => run_target('ps/commands.delete_layer') },
 				{ name: 'Delete Hidden Layers', action: () => run_target('ps/commands.delete_hidden_layers') },
 				{ divider: true },
-				{ name: 'New Group...' }, { name: 'New Group from Layers...' },
+				{ name: 'New Group...', action: () => run_target('ps/commands.new_group') },
+				{ name: 'New Group from Layers...', action: () => run_target('ps/commands.group_layers') },
 				{ divider: true },
 				{ name: 'Lock Layers...' },
 				{ divider: true },

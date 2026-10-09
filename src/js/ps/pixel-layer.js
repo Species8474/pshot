@@ -88,6 +88,14 @@ function install_pixel_layer_guard() {
 			return;
 		}
 		var tool = config.TOOL.name;
+		if ((PAINT_TOOLS.includes(tool) || PIXEL_TOOLS.includes(tool)) && config.layer && config.layer.type == 'ps_group') {
+			event.stopPropagation();
+			event.preventDefault();
+			blocked = true;
+			var group_member = app.GUI.Ps_workspace.active_member;
+			alert_box('Could not use the ' + (group_member ? group_member.name : 'tool') + ' because the target layer is a group.');
+			return;
+		}
 		if (PAINT_TOOLS.includes(tool) && config.layer && config.layer.visible == false) {
 			event.stopPropagation();
 			event.preventDefault();
