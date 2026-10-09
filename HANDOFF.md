@@ -139,5 +139,5 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T, so those commands only work from the menus.
 
 ## Testing
-- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 260 targets, 0 errors at last run.
+- Menu sweep: run every enabled menu target via `pshot.GUI.modules[...]` and dismiss its dialog (close popouts with `Ps_workspace.close_popout()`, never by removing them: they hold panel hosts). 301 targets, 0 errors at last run.
 - Feature checks run through the Playwright MCP browser. Screenshots are in `docs/screens/`.
