@@ -489,6 +489,349 @@ class Ps_filters_class {
 		});
 	}
 
+	// ---------- more Blur / Sharpen ----------
+
+	surface_blur() {
+		this.dialog('surface_blur', 'Surface Blur', [
+			{ key: 'radius', label: 'Radius:', min: 1, max: 100, value: 5, unit: 'Pixels' },
+			{ key: 'threshold', label: 'Threshold:', min: 2, max: 255, value: 15, unit: 'levels' },
+		], (s) => (src, dst, w, h) => {
+			//edge-preserving: neighbours closer in value than Threshold are averaged
+			var r = Math.round(s.radius), t = s.threshold;
+			var step = Math.max(1, Math.round(r / 4));
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var o = (y * w + x) * 4;
+					for (var c = 0; c < 3; c++) {
+						var v0 = src[o + c], sum = 0, wsum = 0;
+						for (var yy = Math.max(0, y - r); yy <= Math.min(h - 1, y + r); yy += step) {
+							for (var xx = Math.max(0, x - r); xx <= Math.min(w - 1, x + r); xx += step) {
+								var v = src[(yy * w + xx) * 4 + c], dv = Math.abs(v - v0);
+								if (dv > t) continue;
+								var wt = 1 - dv / t;
+								sum += v * wt; wsum += wt;
+							}
+						}
+						dst[o + c] = wsum ? sum / wsum : v0;
+					}
+				}
+			}
+		});
+	}
+
+	smart_blur() {
+		this.dialog('smart_blur', 'Smart Blur', [
+			{ key: 'radius', label: 'Radius:', min: 0.1, max: 100, step: 0.1, value: 3 },
+			{ key: 'threshold', label: 'Threshold:', min: 0.1, max: 100, step: 0.1, value: 25 },
+		], (s) => (src, dst, w, h) => {
+			var blur = gaussian(src, w, h, s.radius), t = s.threshold * 2.55;
+			for (var i = 0; i < src.length; i += 4) {
+				for (var c = 0; c < 3; c++) dst[i + c] = Math.abs(src[i + c] - blur[i + c]) < t ? blur[i + c] : src[i + c];
+			}
+		});
+	}
+
+	sharpen_edges() {
+		this.direct('sharpen_edges', 'Sharpen Edges', (src, dst, w, h) => {
+			var blur = gaussian(src, w, h, 1);
+			for (var i = 0; i < src.length; i += 4) {
+				for (var c = 0; c < 3; c++) {
+					var diff = src[i + c] - blur[i + c];
+					if (Math.abs(diff) > 6) dst[i + c] = src[i + c] + diff * 1.2;
+				}
+			}
+		});
+	}
+
+	// ---------- more Distort ----------
+
+	wave() {
+		this.dialog('wave', 'Wave', [
+			{ key: 'wavelength', label: 'Wavelength:', min: 2, max: 999, value: 60 },
+			{ key: 'amplitude', label: 'Amplitude:', min: 1, max: 999, value: 15 },
+			{ key: 'type', label: 'Type:', type: 'radio', values: ['Sine', 'Triangle', 'Square'], value: 'Sine' },
+		], (s) => (src, dst, w, h) => {
+			var wave = (t) => {
+				var p = t - Math.floor(t);
+				if (s.type == 'Triangle') return 1 - 4 * Math.abs(p - 0.5);
+				if (s.type == 'Square') return p < 0.5 ? 1 : -1;
+				return Math.sin(p * Math.PI * 2);
+			};
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					sample(src, w, h, x + wave(y / s.wavelength) * s.amplitude, y + wave(x / s.wavelength) * s.amplitude, dst, (y * w + x) * 4);
+				}
+			}
+		});
+	}
+
+	zigzag() {
+		this.dialog('zigzag', 'ZigZag', [
+			{ key: 'amount', label: 'Amount:', min: -100, max: 100, value: 10 },
+			{ key: 'ridges', label: 'Ridges:', min: 1, max: 20, value: 5 },
+		], (s) => (src, dst, w, h) => distort(src, dst, w, h, (r, a) => [r + Math.sin(r * s.ridges * Math.PI * 2) * s.amount / 100 * 0.1 * (1 - r), a]));
+	}
+
+	shear() {
+		this.dialog('shear', 'Shear', [
+			{ key: 'amount', label: 'Amount:', min: -100, max: 100, value: 30 },
+			{ key: 'edge', label: 'Undefined Areas:', type: 'radio', values: ['Wrap Around', 'Repeat Edge Pixels'], value: 'Wrap Around' },
+		], (s) => (src, dst, w, h) => {
+			for (var y = 0; y < h; y++) {
+				var t = y / Math.max(1, h - 1);
+				var off = Math.sin(t * Math.PI) * s.amount / 100 * w * 0.25;
+				for (var x = 0; x < w; x++) {
+					var sx = x - off;
+					if (s.edge == 'Wrap Around') sx = ((sx % w) + w) % w;
+					sample(src, w, h, sx, y, dst, (y * w + x) * 4);
+				}
+			}
+		});
+	}
+
+	// ---------- Pixelate ----------
+
+	/**
+	 * random cells (Crystallize / Pointillize): nearest-seed lookup on a grid
+	 */
+	cells(w, h, size) {
+		var gw = Math.ceil(w / size), gh = Math.ceil(h / size), seeds = [];
+		for (var gy = 0; gy < gh; gy++) for (var gx = 0; gx < gw; gx++) seeds.push({ x: (gx + Math.random()) * size, y: (gy + Math.random()) * size });
+		var nearest = (x, y) => {
+			var gx = Math.floor(x / size), gy = Math.floor(y / size), best = 0, bd = 1e18;
+			for (var j = gy - 1; j <= gy + 1; j++) for (var i = gx - 1; i <= gx + 1; i++) {
+				if (i < 0 || j < 0 || i >= gw || j >= gh) continue;
+				var k = j * gw + i, sd = seeds[k], d = (sd.x - x) * (sd.x - x) + (sd.y - y) * (sd.y - y);
+				if (d < bd) { bd = d; best = k; }
+			}
+			return [best, Math.sqrt(bd)];
+		};
+		return { seeds: seeds, nearest: nearest };
+	}
+
+	crystallize() {
+		this.dialog('crystallize', 'Crystallize', [{ key: 'size', label: 'Cell Size:', min: 3, max: 300, value: 10 }], (s) => (src, dst, w, h) => {
+			var cells = this.cells(w, h, s.size);
+			var sum = new Float64Array(cells.seeds.length * 4), n = new Uint32Array(cells.seeds.length), owner = new Int32Array(w * h);
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var k = cells.nearest(x + 0.5, y + 0.5)[0], i = (y * w + x) * 4;
+				owner[y * w + x] = k; n[k]++;
+				for (var c = 0; c < 4; c++) sum[k * 4 + c] += src[i + c];
+			}
+			for (var p = 0; p < w * h; p++) { var o = owner[p]; for (var c2 = 0; c2 < 4; c2++) dst[p * 4 + c2] = sum[o * 4 + c2] / n[o]; }
+		});
+	}
+
+	pointillize() {
+		var bg = config.BG_COLOR;
+		var b = [parseInt(bg.substr(1, 2), 16), parseInt(bg.substr(3, 2), 16), parseInt(bg.substr(5, 2), 16)];
+		this.dialog('pointillize', 'Pointillize', [{ key: 'size', label: 'Cell Size:', min: 3, max: 300, value: 5 }], (s) => (src, dst, w, h) => {
+			var cells = this.cells(w, h, s.size);
+			var r = s.size * 0.55;
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var nd = cells.nearest(x + 0.5, y + 0.5), sd = cells.seeds[nd[0]], o = (y * w + x) * 4;
+				if (nd[1] > r) { dst[o] = b[0]; dst[o + 1] = b[1]; dst[o + 2] = b[2]; continue; }
+				var sx = Math.max(0, Math.min(w - 1, Math.round(sd.x))), sy = Math.max(0, Math.min(h - 1, Math.round(sd.y))), i = (sy * w + sx) * 4;
+				dst[o] = src[i]; dst[o + 1] = src[i + 1]; dst[o + 2] = src[i + 2];
+			}
+		});
+	}
+
+	facet() {
+		this.direct('facet', 'Facet', (src, dst, w, h) => {
+			//flatten small variations into blocks of solid color (median, then posterize)
+			rank_filter(src, dst, w, h, 2, 0.5);
+			for (var i = 0; i < dst.length; i += 4) for (var c = 0; c < 3; c++) dst[i + c] = Math.round(dst[i + c] / 24) * 24;
+		});
+	}
+
+	fragment() {
+		this.direct('fragment', 'Fragment', (src, dst, w, h) => {
+			//four copies offset by 4 px, averaged
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var o = (y * w + x) * 4;
+				for (var c = 0; c < 4; c++) {
+					var v = 0;
+					for (var [dx, dy] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) {
+						var sx = Math.max(0, Math.min(w - 1, x + dx)), sy = Math.max(0, Math.min(h - 1, y + dy));
+						v += src[(sy * w + sx) * 4 + c];
+					}
+					dst[o + c] = v / 4;
+				}
+			}
+		});
+	}
+
+	mezzotint() {
+		this.dialog('mezzotint', 'Mezzotint', [{ key: 'type', label: 'Type:', type: 'select', values: ['Fine Dots', 'Medium Dots', 'Grainy Dots', 'Coarse Dots', 'Short Lines', 'Medium Lines', 'Long Lines'], value: 'Fine Dots' }],
+			(s) => (src, dst, w, h) => {
+				var len = { 'Short Lines': 3, 'Medium Lines': 7, 'Long Lines': 14 }[s.type] || 1;
+				var grain = { 'Fine Dots': 1, 'Medium Dots': 2, 'Grainy Dots': 1, 'Coarse Dots': 3 }[s.type] || 1;
+				for (var y = 0; y < h; y += grain) for (var x = 0; x < w; x += (len > 1 ? len : grain)) {
+					var rnd = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
+					for (var yy = y; yy < Math.min(h, y + grain); yy++) for (var xx = x; xx < Math.min(w, x + Math.max(len, grain)); xx++) {
+						var o = (yy * w + xx) * 4;
+						for (var c = 0; c < 3; c++) dst[o + c] = src[o + c] > (s.type == 'Grainy Dots' ? Math.random() * 255 : rnd[c]) ? 255 : 0;
+					}
+				}
+			});
+	}
+
+	// ---------- more Render ----------
+
+	fibers() {
+		var fg = hex(config.COLOR), bg = hex(config.BG_COLOR);
+		this.dialog('fibers', 'Fibers', [
+			{ key: 'variance', label: 'Variance:', min: 1, max: 64, value: 16 },
+			{ key: 'strength', label: 'Strength:', min: 1, max: 64, value: 4 },
+		], (s) => {
+			var seed = Math.random() * 1000;
+			return (src, dst, w, h) => {
+				//vertical streaks: noise stretched along y by Strength
+				var n = clouds(Math.ceil(w), Math.max(1, Math.ceil(h / (s.strength * 4))), seed);
+				var nh = Math.max(1, Math.ceil(h / (s.strength * 4)));
+				for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+					var v = n[Math.min(nh - 1, Math.floor(y / (s.strength * 4))) * w + x];
+					v = Math.max(0, Math.min(1, 0.5 + (v - 0.5) * s.variance / 8));
+					var o = (y * w + x) * 4;
+					for (var c = 0; c < 3; c++) dst[o + c] = fg[c] + (bg[c] - fg[c]) * v;
+					dst[o + 3] = 255;
+				}
+			};
+		});
+	}
+
+	lens_flare() {
+		this.dialog('lens_flare', 'Lens Flare', [
+			{ key: 'brightness', label: 'Brightness:', min: 10, max: 300, value: 100, unit: '%' },
+			{ key: 'x', label: 'Center X:', min: 0, max: 100, value: 30, unit: '%' },
+			{ key: 'y', label: 'Center Y:', min: 0, max: 100, value: 30, unit: '%' },
+			{ key: 'lens', label: 'Lens Type:', type: 'radio', values: ['50-300mm Zoom', '35mm Prime', '105mm Prime', 'Movie Prime'], value: '50-300mm Zoom' },
+		], (s) => (src, dst, w, h) => {
+			var c = canvas_of(src, w, h), ctx = c.getContext('2d', { willReadFrequently: true });
+			var cx = s.x / 100 * w, cy = s.y / 100 * h, k = s.brightness / 100, R = Math.max(w, h);
+			ctx.globalCompositeOperation = 'screen';
+			var glow = (x, y, r, col, a) => {
+				var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+				g.addColorStop(0, 'rgba(' + col + ',' + Math.min(1, a * k) + ')');
+				g.addColorStop(1, 'rgba(' + col + ',0)');
+				ctx.fillStyle = g;
+				ctx.fillRect(x - r, y - r, r * 2, r * 2);
+			};
+			glow(cx, cy, R * 0.12, '255,255,240', 1);
+			glow(cx, cy, R * 0.35, '255,220,160', 0.35);
+			//ghosts along the line through the center of the image
+			var ex = w / 2 - cx, ey = h / 2 - cy;
+			[[0.5, 0.03, '120,200,255', 0.35], [0.8, 0.05, '255,160,80', 0.25], [1.3, 0.02, '160,255,160', 0.4], [1.7, 0.08, '200,140,255', 0.18]].forEach(([t, r, col, a]) => glow(cx + ex * 2 * t, cy + ey * 2 * t, R * r, col, a));
+			dst.set(ctx.getImageData(0, 0, w, h).data);
+		});
+	}
+
+	// ---------- Stylize ----------
+
+	tiles() {
+		this.dialog('tiles', 'Tiles', [
+			{ key: 'number', label: 'Number Of Tiles:', min: 1, max: 99, value: 10 },
+			{ key: 'offset', label: 'Maximum Offset:', min: 1, max: 99, value: 10, unit: '%' },
+		], (s) => (src, dst, w, h) => {
+			var size = Math.max(2, Math.floor(Math.min(w, h) / s.number));
+			var bg = hex(config.BG_COLOR);
+			for (var i = 0; i < dst.length; i += 4) { dst[i] = bg[0]; dst[i + 1] = bg[1]; dst[i + 2] = bg[2]; dst[i + 3] = 255; }
+			for (var ty = 0; ty < h; ty += size) for (var tx = 0; tx < w; tx += size) {
+				var ox = Math.round((Math.random() * 2 - 1) * size * s.offset / 100), oy = Math.round((Math.random() * 2 - 1) * size * s.offset / 100);
+				for (var y = ty; y < Math.min(h, ty + size); y++) for (var x = tx; x < Math.min(w, tx + size); x++) {
+					var dx = x + ox, dy = y + oy;
+					if (dx < 0 || dy < 0 || dx >= w || dy >= h) continue;
+					var si = (y * w + x) * 4, di = (dy * w + dx) * 4;
+					dst[di] = src[si]; dst[di + 1] = src[si + 1]; dst[di + 2] = src[si + 2]; dst[di + 3] = src[si + 3];
+				}
+			}
+		});
+	}
+
+	trace_contour() {
+		this.dialog('trace_contour', 'Trace Contour', [
+			{ key: 'level', label: 'Level:', min: 0, max: 255, value: 128 },
+			{ key: 'edge', label: 'Edge:', type: 'radio', values: ['Lower', 'Upper'], value: 'Upper' },
+		], (s) => (src, dst, w, h) => {
+			for (var i = 0; i < dst.length; i += 4) { dst[i] = dst[i + 1] = dst[i + 2] = 255; }
+			for (var y = 0; y < h - 1; y++) for (var x = 0; x < w - 1; x++) {
+				var o = (y * w + x) * 4;
+				for (var c = 0; c < 3; c++) {
+					var a = src[o + c] >= s.level, b = src[o + 4 + c] >= s.level, d = src[o + w * 4 + c] >= s.level;
+					if ((a != b || a != d) && (s.edge == 'Upper' ? a : !a)) dst[o + c] = 0;
+				}
+			}
+		});
+	}
+
+	wind() {
+		this.dialog('wind', 'Wind', [
+			{ key: 'method', label: 'Method:', type: 'radio', values: ['Wind', 'Blast', 'Stagger'], value: 'Wind' },
+			{ key: 'direction', label: 'Direction:', type: 'radio', values: ['From the Right', 'From the Left'], value: 'From the Right' },
+		], (s) => (src, dst, w, h) => {
+			var len = { Wind: 12, Blast: 30, Stagger: 18 }[s.method], dir = s.direction == 'From the Right' ? 1 : -1;
+			for (var y = 0; y < h; y++) {
+				for (var x = 0; x < w; x++) {
+					var o = (y * w + x) * 4;
+					//streaks trail from bright edges in the wind direction
+					var best = [src[o], src[o + 1], src[o + 2]];
+					var l = (s.method == 'Stagger' ? (y % 3 + 1) * len / 2 : len) * (0.5 + ((x * 7 + y * 13) % 10) / 20);
+					for (var k = 1; k <= l; k++) {
+						var sx = x + dir * k;
+						if (sx < 0 || sx >= w) break;
+						var j = (y * w + sx) * 4, f = 1 - k / l;
+						for (var c = 0; c < 3; c++) best[c] = Math.max(best[c], src[j + c] * f + src[o + c] * (1 - f));
+					}
+					dst[o] = best[0]; dst[o + 1] = best[1]; dst[o + 2] = best[2];
+				}
+			}
+		});
+	}
+
+	extrude() {
+		this.dialog('extrude', 'Extrude', [
+			{ key: 'size', label: 'Size:', min: 2, max: 255, value: 30, unit: 'pixels' },
+			{ key: 'depth', label: 'Depth:', min: 1, max: 255, value: 30 },
+		], (s) => (src, dst, w, h) => {
+			//flat-faced blocks: each block's face is its average color, sides darkened
+			var b = s.size;
+			for (var by = 0; by < h; by += b) for (var bx = 0; bx < w; bx += b) {
+				var sum = [0, 0, 0], n = 0;
+				for (var y = by; y < Math.min(h, by + b); y++) for (var x = bx; x < Math.min(w, bx + b); x++) { var i = (y * w + x) * 4; sum[0] += src[i]; sum[1] += src[i + 1]; sum[2] += src[i + 2]; n++; }
+				var edge = Math.max(1, Math.round(b * s.depth / 255 * 0.3));
+				for (var y2 = by; y2 < Math.min(h, by + b); y2++) for (var x2 = bx; x2 < Math.min(w, bx + b); x2++) {
+					var o = (y2 * w + x2) * 4, side = x2 - bx < edge ? 1.25 : (y2 - by < edge ? 1.15 : (bx + b - 1 - x2 < edge ? 0.7 : (by + b - 1 - y2 < edge ? 0.8 : 1)));
+					for (var c = 0; c < 3; c++) dst[o + c] = sum[c] / n * side;
+				}
+			}
+		});
+	}
+
+	// ---------- Other ----------
+
+	custom() {
+		var fields = [];
+		for (var i = 0; i < 9; i++) fields.push({ key: 'k' + i, label: ['Top-left', 'Top', 'Top-right', 'Left', 'Center', 'Right', 'Bottom-left', 'Bottom', 'Bottom-right'][i] + ':', min: -999, max: 999, value: i == 4 ? 5 : ([1, 3, 5, 7].includes(i) ? -1 : 0) });
+		fields.push({ key: 'scale', label: 'Scale:', min: 1, max: 9999, value: 1 });
+		fields.push({ key: 'offset', label: 'Offset:', min: -9999, max: 9999, value: 0 });
+		this.dialog('custom', 'Custom', fields, (s) => (src, dst, w, h) => {
+			var k = [];
+			for (var i = 0; i < 9; i++) k.push(s['k' + i]);
+			for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+				var o = (y * w + x) * 4;
+				for (var c = 0; c < 3; c++) {
+					var v = 0, n = 0;
+					for (var j = -1; j <= 1; j++) for (var ii = -1; ii <= 1; ii++) {
+						var sx = Math.max(0, Math.min(w - 1, x + ii)), sy = Math.max(0, Math.min(h - 1, y + j));
+						v += src[(sy * w + sx) * 4 + c] * k[n++];
+					}
+					dst[o + c] = v / s.scale + s.offset;
+				}
+			}
+		});
+	}
+
 	// ---------- Stylize ----------
 
 	diffuse() {
