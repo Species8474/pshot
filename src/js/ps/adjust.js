@@ -961,6 +961,128 @@ class Ps_adjust_class {
 	}
 
 	/**
+	 * CS6 HDR Toning (on a flattened image): Local Adaptation (Edge Glow, Tone
+	 * and Detail, Advanced), Equalize Histogram, Exposure and Gamma, Highlight Compression
+	 */
+	hdr_toning() {
+		var P = {
+			'Default': { radius: 16, strength: 0.52, gamma: 1, exposure: 0, detail: 30, shadow: 0, highlight: 0, vibrance: 0, saturation: 20 },
+			'Flat': { radius: 16, strength: 0.3, gamma: 1.2, exposure: 0, detail: 0, shadow: 20, highlight: -20, vibrance: 0, saturation: 0 },
+			'Monochromatic': { radius: 16, strength: 0.52, gamma: 1, exposure: 0, detail: 50, shadow: 0, highlight: 0, vibrance: 0, saturation: -100 },
+			'Photorealistic': { radius: 30, strength: 0.6, gamma: 1, exposure: 0, detail: 40, shadow: 10, highlight: -10, vibrance: 10, saturation: 25 },
+			'Saturated': { radius: 20, strength: 0.6, gamma: 1, exposure: 0, detail: 40, shadow: 0, highlight: 0, vibrance: 40, saturation: 60 },
+			'Surrealistic': { radius: 100, strength: 2, gamma: 1, exposure: 0, detail: 150, shadow: 0, highlight: 0, vibrance: 30, saturation: 40 },
+		};
+		var F = [
+			['radius', 'Radius:', 1, 500, 1, 'px', 'edge'], ['strength', 'Strength:', 0.1, 4, 0.01, '', 'edge'],
+			['gamma', 'Gamma:', 0.1, 2, 0.01, '', 'tone'], ['exposure', 'Exposure:', -5, 5, 0.01, '', 'tone'], ['detail', 'Detail:', -100, 300, 1, '%', 'tone'],
+			['shadow', 'Shadow:', -100, 100, 1, '%', 'adv'], ['highlight', 'Highlight:', -100, 100, 1, '%', 'adv'], ['vibrance', 'Vibrance:', -100, 100, 1, '%', 'adv'], ['saturation', 'Saturation:', -100, 100, 1, '%', 'adv'],
+		];
+		var row = (f) => '<div class="ps_adj_slider" data-hdr="' + f[0] + '"><span>' + f[1] + '</span><input type="number" id="hdr_' + f[0] + '_n" min="' + f[2] + '" max="' + f[3] + '" step="' + f[4] + '"><span class="ps_adj_unit">' + f[5] + '</span>'
+			+ '<input type="range" id="hdr_' + f[0] + '" min="' + f[2] + '" max="' + f[3] + '" step="' + f[4] + '"></div>';
+		var group = (key, title) => '<div class="ps_hdr_group" data-group="' + key + '"><div class="ps_adj_label">' + title + '</div>' + F.filter(f => f[6] == key).map(row).join('') + '</div>';
+		var html = '<div class="ps_adj_row"><span>Preset:</span><select id="hdr_preset">' + Object.keys(P).map(k => '<option>' + k + '</option>').join('') + '<option>Custom</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Method:</span><select id="hdr_method"><option>Local Adaptation</option><option>Equalize Histogram</option><option>Exposure and Gamma</option><option>Highlight Compression</option></select></div>'
+			+ group('edge', 'Edge Glow') + group('tone', 'Tone and Detail') + group('adv', 'Advanced');
+		var open = () => this.show('HDR Toning', html, (root, state, update) => {
+			Object.assign(state, P.Default, { method: 'Local Adaptation' });
+			var refresh = () => {
+				for (var f of F) {
+					root.querySelector('#hdr_' + f[0]).value = root.querySelector('#hdr_' + f[0] + '_n').value = state[f[0]];
+					var show = state.method == 'Local Adaptation' || (state.method == 'Exposure and Gamma' && (f[0] == 'gamma' || f[0] == 'exposure'));
+					root.querySelector('[data-hdr="' + f[0] + '"]').style.display = show ? '' : 'none';
+				}
+				root.querySelectorAll('.ps_hdr_group').forEach((g) => {
+					var any = [...g.querySelectorAll('[data-hdr]')].some(r => r.style.display != 'none');
+					g.style.display = any ? '' : 'none';
+				});
+			};
+			var preset = root.querySelector('#hdr_preset');
+			for (let f of F) {
+				let r = root.querySelector('#hdr_' + f[0]), n = root.querySelector('#hdr_' + f[0] + '_n');
+				let set = (v) => { if (isNaN(v)) return; state[f[0]] = Math.max(f[2], Math.min(f[3], v)); r.value = n.value = state[f[0]]; preset.value = 'Custom'; update(); };
+				r.addEventListener('input', () => set(parseFloat(r.value)));
+				n.addEventListener('change', () => set(parseFloat(n.value)));
+			}
+			preset.addEventListener('change', () => { if (P[preset.value]) { Object.assign(state, P[preset.value]); refresh(); update(); } });
+			root.querySelector('#hdr_method').addEventListener('change', (e) => { state.method = e.target.value; refresh(); update(); });
+			refresh();
+		}, (state) => this.build_hdr_toning(state), 'hdr_toning');
+		//CS6 flattens the document first
+		if (config.layers.length > 1) {
+			if (!window.confirm('HDR Toning will flatten the document. Flatten the image?')) return;
+			var res = app.GUI.modules['ps/commands'].flatten_image();
+			if (res && res.then) return res.then(open);
+		}
+		return open();
+	}
+
+	build_hdr_toning(state) {
+		return (src, dst, w, h) => {
+			var n = w * h, L = new Float32Array(n);
+			for (var i = 0; i < n; i++) L[i] = (src[i * 4] * 0.299 + src[i * 4 + 1] * 0.587 + src[i * 4 + 2] * 0.114) / 255;
+			var out = new Float32Array(n);
+			var method = state.method || 'Local Adaptation';
+			if (method == 'Equalize Histogram') {
+				var hist = new Float64Array(256);
+				for (var a = 0; a < n; a++) hist[Math.round(L[a] * 255)]++;
+				for (var b = 1; b < 256; b++) hist[b] += hist[b - 1];
+				for (var c = 0; c < n; c++) out[c] = hist[Math.round(L[c] * 255)] / n;
+			}
+			else if (method == 'Highlight Compression') {
+				//the brightest values roll off smoothly instead of clipping
+				for (var d = 0; d < n; d++) out[d] = L[d] * (1 + L[d] / 1.44) / (1 + L[d]) * 1.44 / 1.2;
+			}
+			else if (method == 'Exposure and Gamma') {
+				for (var e = 0; e < n; e++) out[e] = Math.pow(Math.max(0, L[e] * Math.pow(2, state.exposure)), 1 / state.gamma);
+			}
+			else {
+				//local adaptation: compress the blurred base, keep / boost the detail around it
+				var lum = document.createElement('canvas');
+				lum.width = w;
+				lum.height = h;
+				var lctx = lum.getContext('2d', { willReadFrequently: true });
+				var img = lctx.createImageData(w, h);
+				for (var f = 0; f < n; f++) { img.data[f * 4] = img.data[f * 4 + 1] = img.data[f * 4 + 2] = L[f] * 255; img.data[f * 4 + 3] = 255; }
+				lctx.putImageData(img, 0, 0);
+				var blur = document.createElement('canvas');
+				blur.width = w;
+				blur.height = h;
+				var bctx = blur.getContext('2d', { willReadFrequently: true });
+				//pad with the edge pixels so the blur does not darken the borders
+				var r = Math.max(1, state.radius);
+				bctx.filter = 'blur(' + r + 'px)';
+				bctx.drawImage(lum, -r * 2, -r * 2, w + r * 4, h + r * 4);
+				bctx.drawImage(lum, 0, 0);
+				var B = bctx.getImageData(0, 0, w, h).data;
+				var comp = 1 / (1 + state.strength), boost = (1 + state.strength) * (1 + state.detail / 100);
+				var sh = state.shadow / 100, hi = state.highlight / 100;
+				for (var g = 0; g < n; g++) {
+					var base = B[g * 4] / 255;
+					var v = 0.5 + (base - 0.5) * comp + (L[g] - base) * boost;
+					v = Math.pow(Math.max(0, v * Math.pow(2, state.exposure)), 1 / state.gamma);
+					if (sh) v += sh * 0.5 * Math.pow(Math.max(0, 1 - v * 2), 2);
+					if (hi) v += hi * 0.5 * Math.pow(Math.max(0, v * 2 - 1), 2);
+					out[g] = v;
+				}
+			}
+			var vib = method == 'Local Adaptation' ? state.vibrance / 100 : 0, sat = method == 'Local Adaptation' ? state.saturation / 100 : 0;
+			for (var k = 0; k < n; k++) {
+				var o = k * 4, ratio = out[k] / Math.max(L[k], 1 / 255);
+				var R = src[o] * ratio, G = src[o + 1] * ratio, Bc = src[o + 2] * ratio;
+				if (L[k] < 1 / 255) R = G = Bc = out[k] * 255;
+				if (vib || sat) {
+					var m = (R + G + Bc) / 3, mx = Math.max(R, G, Bc), mn = Math.min(R, G, Bc);
+					var cur = mx > 0 ? (mx - mn) / mx : 0;
+					var amt = Math.max(-1, sat + vib * (1 - cur));
+					R = m + (R - m) * (1 + amt); G = m + (G - m) * (1 + amt); Bc = m + (Bc - m) * (1 + amt);
+				}
+				dst[o] = R; dst[o + 1] = G; dst[o + 2] = Bc;
+			}
+		};
+	}
+
+	/**
 	 * one-step adjustments (no dialog in CS6): Invert, Desaturate
 	 */
 	direct(title, fn) {

@@ -106,7 +106,7 @@ const M = [
 			'Brightness/Contrast...|ps/commands.brightness_contrast', 'Levels...|Ctrl+L|ps/commands.levels', 'Curves...|Ctrl+M|ps/commands.curves', 'Exposure...|ps/commands.exposure', '-',
 			'Vibrance...|ps/commands.vibrance', 'Hue/Saturation...|Ctrl+U|ps/commands.hue_saturation', 'Color Balance...|Ctrl+B|ps/commands.color_balance', 'Black & White...|Alt+Shift+Ctrl+B|ps/commands.black_white', 'Photo Filter...|ps/commands.photo_filter', 'Channel Mixer...|ps/commands.channel_mixer', 'Color Lookup...', '-',
 			'Invert|Ctrl+I|ps/commands.invert', 'Posterize...|ps/commands.posterize', 'Threshold...|ps/commands.threshold', 'Gradient Map...|ps/commands.gradient_map', 'Selective Color...|ps/commands.selective_color', '-',
-			'Shadows/Highlights...|ps/commands.shadows_highlights', 'HDR Toning...', 'Variations...|ps/commands.variations', '-',
+			'Shadows/Highlights...|ps/commands.shadows_highlights', 'HDR Toning...|ps/commands.hdr_toning', 'Variations...|ps/commands.variations', '-',
 			'Desaturate|Shift+Ctrl+U|ps/commands.desaturate', 'Match Color...|ps/commands.match_color', 'Replace Color...|ps/commands.replace_color', 'Equalize|ps/commands.equalize',
 		]],
 		'-',

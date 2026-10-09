@@ -68,6 +68,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - The dock: Color, Swatches, Adjustments, Styles, Layers, Channels, Paths. The icon strip holds History and Properties; Navigator and Info open from the Window menu.
   - Character and Paragraph panels (Window menu, Type > Panels): font, style, size, leading, tracking, colour, faux styles, alignment. With a type layer selected but not being edited, changes apply to all its text.
   - Screen modes (F) and Tab to hide panels.
+  - HDR Toning: flattens first (confirm), Local Adaptation (Edge Glow radius/strength, Gamma, Exposure, Detail, Shadow, Highlight, Vibrance, Saturation), Equalize Histogram, Exposure and Gamma, Highlight Compression, presets.
   - Match Color: Reinhard-style transfer of the YCbCr mean and spread from another open document (its merged image is cached as `flat` on the document entry when switching away) or the active document's merged image; Luminance, Color Intensity, Fade, Neutralize.
   - Variations (Image > Adjustments): CS6 thumbnail ring (Original / Current Pick, More Green..More Magenta, Lighter / Darker), Shadows / Midtones / Highlights / Saturation, Fine..Coarse step, Show Clipping (neon) in the thumbnails.
   - Content-Aware Scale (Alt+Shift+Ctrl+C, `ps/seam-carve.js`): Free Transform box, applied by seam carving (removing or duplicating the lowest-energy seams) on commit. There is no Protect alpha / Protect Skin Tones, and the preview while dragging is a plain scale.
@@ -142,7 +143,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 
 ## Known gaps / next
 - Warp presets (Arc, Bulge, Flag...). Mixer Brush, Art History Brush, Actions: batch/droplets and recording of tool strokes, setting the History Brush source to a later state, Freeform Pen, Slice tools, 3D. Real shape layers with vector paths / vector masks (shape tools' Shape mode uses miniPaint vector layers; Pen 'Shape' and 'Mask' buttons are greyed). Paths are not saved in PSD yet. Make Work Path traces corner points only (no curve fitting).
-- Adjustments: Color Lookup, HDR Toning. Match Color has no selection-based statistics or Save/Load Statistics. Shadows/Highlights has only the basic two sliders (no Show More Options).
+- Adjustments: Color Lookup. HDR Toning has no Toning Curve (presets are approximations). Match Color has no selection-based statistics or Save/Load Statistics. Shadows/Highlights has only the basic two sliders (no Show More Options).
 - Styles: Contour, Texture; Pattern Overlay is not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). Vector masks. Smart filters, and PSD placed layers (smart objects save as pixels).
 - Brush panel sections other than Tip Shape / Shape Dynamics (size jitter) / Scattering / Transfer; Brush Presets.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T in a normal window, so those commands work from the menus there. The full screen modes (F) also take the browser full screen and call the Keyboard Lock API, so the shortcuts reach pshot (not verifiable in headless tests).
