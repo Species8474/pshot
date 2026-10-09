@@ -1436,6 +1436,101 @@ class Ps_commands_class {
 		}, 'apply_image');
 	}
 
+	/**
+	 * Image > Adjustments > Match Color: the color statistics (mean / spread of
+	 * luminance and chroma) of the target are matched to a source document;
+	 * Luminance, Color Intensity, Fade and Neutralize also work without a source
+	 */
+	match_color() {
+		var docs = app.GUI.Ps_workspace.Documents;
+		var sources = [['None', null]];
+		docs.docs.forEach((d, i) => {
+			if (i == docs.active) sources.push([d.name + ' (Merged)', 'self']);
+			else if (d.flat) sources.push([d.name + ' (Merged)', d.flat]);
+		});
+		var slider = (id, label, min, max, value) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="mc_' + id + '_n" min="' + min + '" max="' + max + '" value="' + value + '"><span class="ps_adj_unit"></span><input type="range" id="mc_' + id + '" min="' + min + '" max="' + max + '" value="' + value + '"></div>';
+		var html = '<div class="ps_adj_label">Destination Image</div>'
+			+ '<div class="ps_adj_row"><span>Target:</span><span>' + app.GUI.Ps_workspace.Helper.escapeHtml(docs.current().name + ' (' + (config.layer ? config.layer.name : '') + ', RGB/8)') + '</span></div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Ignore Selection when Applying Adjustment</label>'
+			+ '<div class="ps_adj_label">Image Options</div>'
+			+ slider('lum', 'Luminance:', 1, 200, 100) + slider('int', 'Color Intensity:', 1, 200, 100) + slider('fade', 'Fade:', 0, 100, 0)
+			+ '<label class="ps_adj_check"><input type="checkbox" id="mc_neutral"> Neutralize</label>'
+			+ '<div class="ps_adj_label">Image Statistics</div>'
+			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Use Selection in Source to Calculate Colors</label>'
+			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Use Selection in Target to Calculate Adjustment</label>'
+			+ '<div class="ps_adj_row"><span>Source:</span><select id="mc_source">' + sources.map((s, i) => '<option value="' + i + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(s[0]) + '</option>').join('') + '</select></div>';
+		//Y Cb Cr mean and standard deviation of the opaque pixels
+		var stats = (d) => {
+			var n = 0, sum = [0, 0, 0], sq = [0, 0, 0], step = Math.max(1, Math.floor(d.length / 4 / 250000)) * 4;
+			for (var i = 0; i < d.length; i += step) {
+				if (d[i + 3] < 128) continue;
+				var v = ycc(d[i], d[i + 1], d[i + 2]);
+				for (var c = 0; c < 3; c++) { sum[c] += v[c]; sq[c] += v[c] * v[c]; }
+				n++;
+			}
+			if (!n) return null;
+			var mean = sum.map(s => s / n);
+			return { mean: mean, std: sq.map((s, c) => Math.max(1, Math.sqrt(Math.max(0, s / n - mean[c] * mean[c])))) };
+		};
+		var ycc = (r, g, b) => [0.299 * r + 0.587 * g + 0.114 * b, -0.168736 * r - 0.331264 * g + 0.5 * b, 0.5 * r - 0.418688 * g - 0.081312 * b];
+		var source_stats = {};
+		var get_source = (index) => {
+			if (index == 0) return null;
+			if (!source_stats[index]) {
+				var s = sources[index][1];
+				var c = s;
+				if (s == 'self') {
+					c = document.createElement('canvas');
+					c.width = config.WIDTH;
+					c.height = config.HEIGHT;
+					this.Base_layers.convert_layers_to_canvas(c.getContext('2d'), null, false);
+				}
+				source_stats[index] = stats(c.getContext('2d').getImageData(0, 0, c.width, c.height).data);
+			}
+			return source_stats[index];
+		};
+		var target_stats = null;
+		this.Adjust.show('Match Color', html, (root, state, update) => {
+			Object.assign(state, { lum: 100, int: 100, fade: 0, neutral: false, source: 0 });
+			['lum', 'int', 'fade'].forEach((k) => {
+				var r = root.querySelector('#mc_' + k), n = root.querySelector('#mc_' + k + '_n');
+				var set = (v) => { if (isNaN(v)) return; state[k] = Math.max(parseFloat(r.min), Math.min(parseFloat(r.max), v)); r.value = n.value = state[k]; update(); };
+				r.addEventListener('input', () => set(parseFloat(r.value)));
+				n.addEventListener('change', () => set(parseFloat(n.value)));
+			});
+			root.querySelector('#mc_neutral').addEventListener('change', (e) => { state.neutral = e.target.checked; update(); });
+			root.querySelector('#mc_source').addEventListener('change', (e) => { state.source = parseInt(e.target.value); update(); });
+		}, (state) => (src, dst) => {
+			if (!target_stats) target_stats = stats(src);
+			var T = target_stats;
+			if (!T) return;
+			var S = get_source(state.source);
+			var lum = state.lum / 100, inten = state.int / 100, fade = state.fade / 100;
+			//per channel: scale and offset
+			var k = [1, 1, 1], o = [0, 0, 0];
+			if (S) {
+				for (var c = 0; c < 3; c++) { k[c] = S.std[c] / T.std[c]; o[c] = S.mean[c] - T.mean[c] * k[c]; }
+			}
+			for (var i = 0; i < src.length; i += 4) {
+				var v = ycc(src[i], src[i + 1], src[i + 2]);
+				var y = v[0] * k[0] + o[0], cb = v[1] * k[1] + o[1], cr = v[2] * k[2] + o[2];
+				if (state.neutral) {
+					//remove the cast: the average chroma becomes neutral
+					var m = S ? S.mean : T.mean;
+					cb -= m[1];
+					cr -= m[2];
+				}
+				y *= lum;
+				cb *= inten;
+				cr *= inten;
+				var r = y + 1.402 * cr, g = y - 0.344136 * cb - 0.714136 * cr, b = y + 1.772 * cb;
+				dst[i] = r + (src[i] - r) * fade;
+				dst[i + 1] = g + (src[i + 1] - g) * fade;
+				dst[i + 2] = b + (src[i + 2] - b) * fade;
+			}
+		}, 'match_color');
+	}
+
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
 	toggle_pixel_grid() {

@@ -198,6 +198,12 @@ class Ps_documents_class {
 	 * The caller then builds its content (File > New, File > Open).
 	 */
 	add(name, file_name) {
+		//Match Color and other commands read inactive documents through their merged image
+		var flat = document.createElement('canvas');
+		flat.width = config.WIDTH;
+		flat.height = config.HEIGHT;
+		app.Layers.convert_layers_to_canvas(flat.getContext('2d'), null, false);
+		this.current().flat = flat;
 		this.current().state = this.capture();
 		app.GUI.Ps_workspace.Multi.clear();
 		var entry = this.make_entry(name, file_name);
