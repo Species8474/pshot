@@ -131,6 +131,13 @@ config.TOOLS = [
 		on_activate: 'on_activate',
 		attributes: {
 			mode: 'patch',
+			patch_type: 'Normal',
+			patch_dir: 'Source',
+			patch_transparent: false,
+			pattern: 'Checkerboard',
+			move_mode: 'Move',
+			adaptation: 'Medium',
+			sample_all: false,
 		},
 	},
 	{
