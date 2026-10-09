@@ -1393,3 +1393,17 @@ body.theme-cs6 #toggle_colors .ui_input_group input[type="range"] { min-width: 0
 /* Color Range */
 .ps_cr { display: flex; flex-direction: column; gap: 8px; }
 .ps_cr_preview { border: 1px solid #222; background: #000; cursor: crosshair; align-self: center; }
+
+/* Liquify */
+body.theme-cs6 #popups .popup.ps_liquify { width: auto; max-width: none; max-height: none; top: 4vh; padding: 34px 10px 10px 10px; }
+.ps_lq_body { display: flex; gap: 10px; align-items: flex-start; }
+.ps_lq_tools { display: flex; flex-direction: column; gap: 2px; }
+.ps_lq_tools button { width: 30px; height: 28px; padding: 0; background: #4a4a4a; border: 1px solid #333; border-radius: 2px; color: #e0e0e0; display: flex; align-items: center; justify-content: center; }
+.ps_lq_tools button.pressed { background: #2c2c2c; box-shadow: inset 0 1px 2px rgba(0,0,0,.6); }
+.ps_lq_view { background: #282828; border: 1px solid #1e1e1e; line-height: 0; }
+.ps_lq_view canvas { cursor: crosshair; display: block; }
+.ps_lq_side { width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.ps_lq_side fieldset { border: 1px solid #3a3a3a; padding: 6px 8px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.ps_lq_side legend { color: #d8d8d8; padding: 0 4px; }
+.ps_lq_field { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.ps_lq_field input { width: 64px; }

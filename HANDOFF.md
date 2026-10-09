@@ -111,7 +111,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - **Image**
   - Levels, Curves, Hue/Saturation, Brightness/Contrast, Exposure, Vibrance, Color Balance, Photo Filter, Channel Mixer, Gradient Map, Selective Color, Shadows/Highlights and Equalize (destructive here, as in CS6).
   - Image and Canvas Size, rotation, crop, trim, Reveal All, Duplicate (new tab, optionally merged). File > Revert (back to the opened state, undoable).
-- **Filters**: Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
+- **Filters**: Liquify (Shift+Ctrl+X: Forward Warp, Reconstruct, Pucker, Bloat, Push Left; size/density/pressure; Restore All; Show Backdrop; `ps/liquify.js`), Gaussian Blur, Motion Blur, Average, Unsharp Mask, Smart Sharpen, Add Noise, Median, Dust & Scratches, High Pass, Minimum, Maximum, Offset, Twirl, Pinch, Spherize, Polar Coordinates, Ripple, Clouds, Difference Clouds, Diffuse. Some others still use miniPaint effects (Box Blur, Tilt-Shift, Oil Paint, Emboss, Find Edges, Solarize, Mosaic, Color Halftone, Despeckle).
 - **Other**
   - Free Transform (Ctrl+T; use the menu, since Chrome reserves the key). On pixel layers Ctrl-drag a handle = Distort, Ctrl+Shift = Skew, Ctrl+Alt+Shift = Perspective; Edit > Transform > Skew/Distort/Perspective/Again. The quad is previewed as a triangle mesh and committed with an exact inverse-homography resample.
   - Guides from the rulers.

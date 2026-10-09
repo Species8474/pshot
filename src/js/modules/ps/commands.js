@@ -13,6 +13,7 @@ import Ps_adjust_class from './../../ps/adjust.js';
 import { show_new_dialog } from './../../ps/new-dialog.js';
 import Ps_size_dialogs_class from './../../ps/size-dialogs.js';
 import Patterns from './../../ps/patterns.js';
+import Ps_liquify_class from './../../ps/liquify.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -854,6 +855,11 @@ class Ps_commands_class {
 	/**
 	 * Edit > Define Pattern: the selection's bounding box (or the document), all visible layers
 	 */
+	liquify() {
+		this.Liquify = this.Liquify || new Ps_liquify_class();
+		this.Liquify.open();
+	}
+
 	define_pattern() {
 		var sel = this.selection();
 		var b = sel.has() && sel.bounds ? sel.bounds : { x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT };

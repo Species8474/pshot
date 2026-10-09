@@ -250,7 +250,7 @@ const M = [
 		'Filter Gallery...|effects/browser.browser',
 		'Adaptive Wide Angle...|Alt+Shift+Ctrl+A',
 		'Lens Correction...|Shift+Ctrl+R',
-		'Liquify...|Shift+Ctrl+X',
+		'Liquify...|Shift+Ctrl+X|ps/commands.liquify',
 		'Oil Paint...|effects/oil.oil',
 		'Vanishing Point...|Alt+Ctrl+V',
 		'-',
