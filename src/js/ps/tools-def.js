@@ -115,7 +115,7 @@ const groups = [
 		{ id: 'count', name: 'Count Tool', key: 'I', tool: null, icon: I.count },
 	]},
 	{ separator: true, members: [
-		{ id: 'spot_healing', name: 'Spot Healing Brush Tool', key: 'J', tool: null, icon: I.spot_healing },
+		{ id: 'spot_healing', name: 'Spot Healing Brush Tool', key: 'J', tool: 'retouch', preset: { mode: 'spot_healing' }, icon: I.spot_healing },
 		{ id: 'healing', name: 'Healing Brush Tool', key: 'J', tool: null, icon: I.healing },
 		{ id: 'patch', name: 'Patch Tool', key: 'J', tool: null, icon: I.patch },
 		{ id: 'content_aware_move', name: 'Content-Aware Move Tool', key: 'J', tool: null, icon: I.content_aware_move },
@@ -148,7 +148,7 @@ const groups = [
 	{ members: [
 		{ id: 'blur', name: 'Blur Tool', key: '', tool: 'blur', icon: I.blur },
 		{ id: 'sharpen', name: 'Sharpen Tool', key: '', tool: 'sharpen', icon: I.sharpen },
-		{ id: 'smudge', name: 'Smudge Tool', key: '', tool: null, icon: I.smudge },
+		{ id: 'smudge', name: 'Smudge Tool', key: '', tool: 'retouch', preset: { mode: 'smudge' }, icon: I.smudge },
 	]},
 	{ members: [
 		{ id: 'dodge', name: 'Dodge Tool', key: 'O', tool: 'dodge_burn', preset: { mode: 'dodge' }, icon: I.dodge },

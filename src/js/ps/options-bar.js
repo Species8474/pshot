@@ -279,6 +279,22 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Sample All Layers', value: false },
 		{ type: 'check', label: 'Protect Detail', value: true },
 	],
+	smudge: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Mode:', values: ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'] },
+		{ type: 'pct', label: 'Strength:', bind: 'strength' },
+		{ type: 'check', label: 'Sample All Layers', value: false },
+		{ type: 'check', label: 'Finger Painting', value: false },
+	],
+	spot_healing: [
+		{ type: 'brush', bind: 'size' },
+		{ type: 'sep' },
+		{ type: 'select', label: 'Mode:', values: ['Normal', 'Replace', 'Multiply', 'Screen', 'Darken', 'Lighten', 'Color', 'Luminosity'] },
+		{ type: 'select', label: 'Type:', values: ['Proximity Match', 'Create Texture', 'Content-Aware'], value: 'Content-Aware', disabled_values: ['Proximity Match', 'Create Texture'] },
+		{ type: 'check', label: 'Sample All Layers', value: false },
+	],
 	dodge: [
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },

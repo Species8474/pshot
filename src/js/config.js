@@ -83,6 +83,15 @@ config.FONTS = [
 
 config.TOOLS = [
 	{
+		name: 'retouch',
+		title: 'Retouch',
+		attributes: {
+			size: 30,
+			mode: 'smudge',
+			strength: 50,
+		},
+	},
+	{
 		name: 'dodge_burn',
 		title: 'Dodge / Burn',
 		attributes: {

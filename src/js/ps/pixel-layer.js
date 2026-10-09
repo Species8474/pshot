@@ -9,9 +9,9 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 
-const PIXEL_TOOLS = ['fill', 'erase', 'magic_erase', 'blur', 'sharpen', 'desaturate', 'clone', 'selection', 'pick_color', 'dodge_burn'];
+const PIXEL_TOOLS = ['fill', 'erase', 'magic_erase', 'blur', 'sharpen', 'desaturate', 'clone', 'selection', 'pick_color', 'dodge_burn', 'retouch'];
 // tools that need a pixel layer but handle an empty layer themselves
-const PAINT_TOOLS = ['brush', 'pencil', 'gradient', 'fill', 'erase', 'magic_erase', 'blur', 'sharpen', 'desaturate', 'clone', 'dodge_burn'];
+const PAINT_TOOLS = ['brush', 'pencil', 'gradient', 'fill', 'erase', 'magic_erase', 'blur', 'sharpen', 'desaturate', 'clone', 'dodge_burn', 'retouch'];
 const KIND = { text: 'type', rectangle: 'shape', ellipse: 'shape', line: 'shape', pentagon: 'shape', bezier_curve: 'shape' };
 
 function make_pixel_layer(layer) {
