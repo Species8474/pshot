@@ -89,7 +89,7 @@ class Ps_styles_class {
 
 	has(layer) {
 		var s = layer && layer.ps_styles;
-		if (!s) return false;
+		if (!s || config.ps_fx_hidden) return false;
 		for (var k in s) if (s[k] && s[k].enabled) return true;
 		return false;
 	}

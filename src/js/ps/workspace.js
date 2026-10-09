@@ -34,6 +34,7 @@ import Ps_vector_mask_class from './vector-mask.js';
 import Ps_shape_layers_class from './shape-layers.js';
 import Ps_smart_filters_class from './smart-filters.js';
 import Ps_batch_class from './batch.js';
+import Ps_extras_class from './extras.js';
 import Ps_guides_class from './guides.js';
 import Ps_multi_select_class from './multi-select.js';
 import Ps_paths_class from './paths.js';
@@ -112,6 +113,7 @@ class Ps_workspace_class {
 		this.Shapes = new Ps_shape_layers_class();
 		this.Smart_filters = new Ps_smart_filters_class();
 		this.Batch = new Ps_batch_class();
+		this.Extras = new Ps_extras_class();
 		this.Guides = new Ps_guides_class();
 		this.Documents = new Ps_documents_class();
 		this.Documents.init();

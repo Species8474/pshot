@@ -64,17 +64,35 @@ function parse(d) {
 	return subpaths;
 }
 
+//user shapes (Edit > Define Custom Shape): subpaths in the 100 box, kept in browser storage
+var USER = {};
+try { USER = JSON.parse(localStorage.getItem('pshot_custom_shapes_v1') || '{}'); } catch (e) { USER = {}; }
+
 function names() {
-	return Object.keys(SHAPES);
+	return Object.keys(SHAPES).concat(Object.keys(USER));
+}
+
+/**
+ * Edit > Define Custom Shape: document subpaths -> a named shape
+ */
+function define(name, subpaths) {
+	var xs = [], ys = [];
+	subpaths.forEach(sp => sp.pts.forEach(p => { xs.push(p.x, p.ix, p.ox); ys.push(p.y, p.iy, p.oy); }));
+	var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
+	var s = 100 / Math.max(1e-6, Math.max(Math.max.apply(null, xs) - x0, Math.max.apply(null, ys) - y0));
+	var n = (v, o) => Math.round((v - o) * s * 100) / 100;
+	USER[name] = subpaths.map(sp => ({ closed: sp.closed, pts: sp.pts.map(p => ({ x: n(p.x, x0), y: n(p.y, y0), ix: n(p.ix, x0), iy: n(p.iy, y0), ox: n(p.ox, x0), oy: n(p.oy, y0) })) }));
+	try { localStorage.setItem('pshot_custom_shapes_v1', JSON.stringify(USER)); } catch (e) { /* storage blocked */ }
 }
 
 /**
  * the shape fitted into the box (document coordinates)
  */
 function fitted(name, x, y, w, h) {
-	var d = SHAPES[name] || SHAPES[names()[0]];
+	var src = USER[name] ? JSON.parse(JSON.stringify(USER[name])) : parse(SHAPES[name] || SHAPES[Object.keys(SHAPES)[0]]);
+	//user shapes keep their proportions inside the 100 box
 	var m = (px, py) => [x + px / 100 * w, y + py / 100 * h];
-	return parse(d).map(sp => ({
+	return src.map(sp => ({
 		closed: sp.closed,
 		pts: sp.pts.map(p => {
 			var a = m(p.x, p.y), i = m(p.ix, p.iy), o = m(p.ox, p.oy);
@@ -83,4 +101,4 @@ function fitted(name, x, y, w, h) {
 	}));
 }
 
-export { names, fitted };
+export { names, fitted, define };

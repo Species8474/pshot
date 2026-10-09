@@ -161,6 +161,7 @@ class Ps_documents_class {
 			ps_alpha_active: config.ps_alpha_active,
 			ps_mode: config.ps_mode,
 			ps_color_table: config.ps_color_table,
+			ps_fx_hidden: config.ps_fx_hidden,
 			ps_comps: config.ps_comps,
 			ps_notes: config.ps_notes,
 			ps_comp_active: config.ps_comp_active,
@@ -189,6 +190,7 @@ class Ps_documents_class {
 		commands.last_selection = state.last_selection;
 		config.ps_mode = state.ps_mode || 'RGB';
 		config.ps_color_table = state.ps_color_table || null;
+		config.ps_fx_hidden = !!state.ps_fx_hidden;
 		config.ps_comps = state.ps_comps || [];
 		config.ps_notes = state.ps_notes || [];
 		config.ps_comp_active = state.ps_comp_active == null ? -1 : state.ps_comp_active;
@@ -266,6 +268,7 @@ class Ps_documents_class {
 		config.ps_alpha_active = -1;
 		config.ps_mode = 'RGB';
 		config.ps_color_table = null;
+		config.ps_fx_hidden = false;
 		config.ps_comps = [];
 		config.ps_notes = [];
 		config.ps_comp_active = -1;

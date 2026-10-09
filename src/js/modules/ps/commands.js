@@ -741,6 +741,21 @@ class Ps_commands_class {
 	transform_distort() { app.GUI.Ps_workspace.Transform.start_mode('distort'); }
 	transform_perspective() { app.GUI.Ps_workspace.Transform.start_mode('perspective'); }
 	transform_warp() { app.GUI.Ps_workspace.Transform.start_mode('warp'); }
+	define_custom_shape() { app.GUI.Ps_workspace.Extras.define_custom_shape(); }
+	purge_undo() { app.GUI.Ps_workspace.Extras.purge_undo(); }
+	purge_clipboard() { app.GUI.Ps_workspace.Extras.purge_clipboard(); }
+	fit_image() { app.GUI.Ps_workspace.Extras.fit_image(); }
+	flatten_all_effects() { return app.GUI.Ps_workspace.Extras.flatten_all_effects(); }
+	flatten_all_masks() { return app.GUI.Ps_workspace.Extras.flatten_all_masks(); }
+	load_files_into_stack() { return app.GUI.Ps_workspace.Extras.load_files_into_stack(); }
+	open_as_smart_object() { return app.GUI.Ps_workspace.Extras.open_as_smart_object(); }
+	lock_layers() { app.GUI.Ps_workspace.Extras.lock_layers(); }
+	toggle_all_effects() { app.GUI.Ps_workspace.Extras.toggle_all_effects(); }
+	effects_label() { return app.GUI.Ps_workspace.Extras.effects_label(); }
+	scale_effects() { app.GUI.Ps_workspace.Extras.scale_effects(); }
+	global_light() { app.GUI.Ps_workspace.Extras.global_light(); }
+	show_extras(on) { app.GUI.Ps_workspace.Extras.show_extras(on !== false); }
+	analysis_tool(id) { app.GUI.Ps_workspace.Extras.select_tool(id || 'ruler'); }
 	batch() { app.GUI.Ps_workspace.Batch.batch(); }
 	export_layers() { app.GUI.Ps_workspace.Batch.export_layers(); }
 	comps_to_files() { app.GUI.Ps_workspace.Batch.comps_to_files(); }
