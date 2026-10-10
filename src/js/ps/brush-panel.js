@@ -7,25 +7,27 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import Patterns from './patterns.js';
+import { tip_names } from './brush-tips.js';
 
 //[id, title, enable: attribute keys that are on when > 0 / true]
 const SECTIONS = [
 	['tip', 'Brush Tip Shape', null],
 	['dynamics', 'Shape Dynamics', ['size_jitter', 'angle_jitter', 'roundness_jitter']],
 	['scatter', 'Scattering', ['scatter']],
-	['texture', 'Texture', null],
-	['dual', 'Dual Brush', null],
+	['texture', 'Texture', ['texture']],
+	['dual', 'Dual Brush', ['dual']],
 	['color', 'Color Dynamics', ['color_dynamics']],
 	['transfer', 'Transfer', ['opacity_jitter']],
-	['pose', 'Brush Pose', null],
+	['pose', 'Brush Pose', ['pose']],
 	['noise', 'Noise', ['noise']],
 	['wet', 'Wet Edges', ['wet_edges']],
-	['buildup', 'Build-up', null],
-	['smoothing', 'Smoothing', null],
-	['protect', 'Protect Texture', null],
+	['buildup', 'Build-up', ['airbrush']],
+	['smoothing', 'Smoothing', ['smoothing']],
+	['protect', 'Protect Texture', ['protect_texture']],
 ];
 //turning a section on gives it a visible default
-const ON = { size_jitter: 50, scatter: 100, opacity_jitter: 50, color_dynamics: true, noise: true, wet_edges: true };
+const ON = { size_jitter: 50, scatter: 100, opacity_jitter: 50, color_dynamics: true, noise: true, wet_edges: true, texture: true, dual: true, pose: true, airbrush: true, smoothing: true, protect_texture: true };
 
 function attrs() {
 	return config.TOOLS.find(t => t.name == 'brush').attributes;
@@ -52,6 +54,23 @@ class Ps_brush_panel_class {
 		else if (this.section == 'color') right = row('fgbg_jitter', 'Foreground/Background Jitter:', 0, 100, '%') + row('hue_jitter', 'Hue Jitter:', 0, 100, '%')
 			+ row('sat_jitter', 'Saturation Jitter:', 0, 100, '%') + row('bright_jitter', 'Brightness Jitter:', 0, 100, '%') + row('purity', 'Purity:', -100, 100, '%');
 		else if (this.section == 'transfer') right = row('opacity_jitter', 'Opacity Jitter:', 0, 100, '%') + row('flow', 'Flow:', 1, 100, '%');
+		else if (this.section == 'texture') {
+			var sel = (key, label, values) => '<div class="ps_bp_field"><span>' + label + '</span><select data-sel="' + key + '">' + values.map(v => '<option' + (a[key] == v || (!a[key] && v == values[0]) ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>';
+			right = sel('texture_pattern', 'Pattern:', Patterns.names()) + check('texture_invert', 'Invert') + row('texture_scale', 'Scale:', 1, 1000, '%')
+				+ '<label class="ps_adj_check"><input type="checkbox" checked disabled> Texture Each Tip</label>'
+				+ sel('texture_mode', 'Mode:', ['Multiply', 'Subtract']) + row('texture_depth', 'Depth:', 0, 100, '%');
+		}
+		else if (this.section == 'dual') {
+			var tips = ['Round'].concat(tip_names());
+			right = '<div class="ps_bp_field"><span>Mode:</span><select disabled><option>Multiply</option></select></div>'
+				+ '<div class="ps_bp_field"><span>Tip:</span><select data-sel="dual_tip">' + tips.map(t => '<option value="' + (t == 'Round' ? '' : t) + '"' + ((a.dual_tip || '') == (t == 'Round' ? '' : t) ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>'
+				+ row('dual_size', 'Size:', 1, 2500, 'px') + row('dual_spacing', 'Spacing:', 1, 1000, '%') + row('dual_scatter', 'Scatter:', 0, 1000, '%') + row('dual_count', 'Count:', 1, 16, '');
+		}
+		else if (this.section == 'pose') right = '<div class="ps_bp_field"><span>Tilt X / Y:</span><input type="number" value="0" disabled><input type="number" value="0" disabled></div>'
+			+ row('pose_angle', 'Rotation:', -180, 180, '°') + row('pose_roundness', 'Roundness:', 1, 100, '%') + row('pose_pressure', 'Pressure:', 1, 100, '%');
+		else if (this.section == 'buildup') right = '<div class="ps_typ_hint">Paint keeps building up while the pointer rests (the airbrush button in the options bar).</div>';
+		else if (this.section == 'smoothing') right = '<div class="ps_typ_hint">Smooths the curves of brush strokes.</div>';
+		else if (this.section == 'protect') right = '<div class="ps_typ_hint">Keeps the current texture when another brush preset is chosen.</div>';
 		else if (this.section == 'noise') right = '<div class="ps_typ_hint">Adds randomness to the soft edges of the brush tip.</div>';
 		else if (this.section == 'wet') right = '<div class="ps_typ_hint">Paint builds up along the edges of the brush stroke, like watercolor.</div>';
 		else right = '<div class="ps_typ_hint">Not available in pshot.</div>';
@@ -87,6 +106,7 @@ class Ps_brush_panel_class {
 		host.querySelectorAll('[data-key]').forEach(i => i.addEventListener('input', () => set(i.dataset.key, parseFloat(i.value))));
 		host.querySelectorAll('[data-num]').forEach(i => i.addEventListener('change', () => set(i.dataset.num, parseFloat(i.value))));
 		host.querySelectorAll('[data-check]').forEach(i => i.addEventListener('change', () => { attrs()[i.dataset.check] = i.checked; this.preview(host); }));
+		host.querySelectorAll('[data-sel]').forEach(i => i.addEventListener('change', () => { attrs()[i.dataset.sel] = i.value; this.preview(host); }));
 		this.preview(host);
 	}
 

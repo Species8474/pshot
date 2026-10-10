@@ -13,7 +13,7 @@ import { tip_canvas, define_tip } from './brush-tips.js';
 //Brush panel settings a preset fully defines (others return to these defaults)
 const RESET = {
 	tip: '', hardness: 100, spacing: 25, angle: 0, roundness: 100, size_jitter: 0, angle_jitter: 0, roundness_jitter: 0,
-	scatter: 0, both_axes: false, count: 1, count_jitter: 0, opacity_jitter: 0, color_dynamics: false, noise: false, wet_edges: false,
+	scatter: 0, both_axes: false, count: 1, count_jitter: 0, opacity_jitter: 0, color_dynamics: false, noise: false, wet_edges: false, texture: false, dual: false, pose: false,
 };
 
 function round_presets() {
@@ -60,7 +60,10 @@ class Ps_brush_presets_class {
 	 */
 	apply(preset) {
 		var a = brush_attrs();
-		Object.assign(a, RESET, preset);
+		//Protect Texture: the texture stays when another preset is chosen
+		var keep = {};
+		if (a.protect_texture) for (var k in a) if (k.indexOf('texture') === 0 || k == 'protect_texture') keep[k] = a[k];
+		Object.assign(a, RESET, preset, keep);
 		delete a.name;
 		var t = config.TOOL.attributes;
 		if (t !== a) {

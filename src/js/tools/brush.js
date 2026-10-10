@@ -1,6 +1,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { commit_stroke } from './../ps/stroke.js';
+import Patterns from './../ps/patterns.js';
 import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
@@ -310,6 +311,18 @@ class Brush_class extends Base_tools_class {
 
 		current_group.push([mouse_x - config.layer.x, mouse_y - config.layer.y, new_size]);
 		this.Base_layers.render();
+		//Build-up (airbrush): paint keeps flowing while the pointer rests
+		clearInterval(this.buildup_timer);
+		if (params.airbrush) {
+			var group = current_group, stroke_layer = config.layer;
+			this.buildup_timer = setInterval(() => {
+				if (config.layer !== stroke_layer || !group.length) { clearInterval(this.buildup_timer); return; }
+				var last = group[group.length - 1];
+				group.push([last[0], last[1], last[2], 1]);
+				config.layer.status = 'draft';
+				this.Base_layers.render();
+			}, 80);
+		}
 	}
 
 	mousemove_action(e, index) {
@@ -356,6 +369,7 @@ class Brush_class extends Base_tools_class {
 	}
 
 	mouseup_action(e, index) {
+		clearInterval(this.buildup_timer);
 		var mouse = this.get_mouse_info(e);
 		if (mouse.click_valid == false) {
 			config.layer.status = null;
@@ -375,7 +389,7 @@ class Brush_class extends Base_tools_class {
 		return (params.spacing != null && params.spacing != 25) || (params.roundness != null && params.roundness != 100) || params.angle
 			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100)
 			|| params.angle_jitter > 0 || params.roundness_jitter > 0 || params.count > 1 || params.color_dynamics || params.noise || params.wet_edges
-			|| !!params.tip;
+			|| !!params.tip || params.texture || params.dual || params.pose || params.airbrush;
 	}
 
 	/**
@@ -441,7 +455,76 @@ class Brush_class extends Base_tools_class {
 		return c;
 	}
 
+	/**
+	 * a stroke: Smoothing, then the dabs; Dual Brush and Texture limit where the paint lands
+	 */
 	render_dabs(ctx, group, params, color) {
+		if (!group.length) return;
+		if (params.smoothing && group.length > 3) {
+			//CS6 Smoothing: a moving average of the pointer positions (ends kept)
+			var sm = group.map(p => p.slice());
+			for (var pass = 0; pass < 2; pass++) {
+				for (var i = 1; i < sm.length - 1; i++) {
+					if (sm[i][3] === 1) continue;
+					sm[i][0] = (group[i - 1][0] + group[i][0] * 2 + group[i + 1][0]) / 4;
+					sm[i][1] = (group[i - 1][1] + group[i][1] * 2 + group[i + 1][1]) / 4;
+				}
+				group = sm.map(p => p.slice());
+			}
+		}
+		if (!params.texture && !params.dual) return this.render_dabs_raw(ctx, group, params, color);
+		var T = ctx.getTransform(), W = ctx.canvas.width, H = ctx.canvas.height;
+		var off = document.createElement('canvas');
+		off.width = W;
+		off.height = H;
+		var octx = off.getContext('2d');
+		octx.setTransform(T);
+		this.render_dabs_raw(octx, group, params, color);
+		octx.setTransform(1, 0, 0, 1, 0, 0);
+		if (params.dual) {
+			//Dual Brush: a second tip along the same stroke; paint only where both are
+			var dual = document.createElement('canvas');
+			dual.width = W;
+			dual.height = H;
+			var dctx = dual.getContext('2d');
+			dctx.setTransform(T);
+			var dp = { size: params.dual_size || 25, spacing: params.dual_spacing || 25, scatter: params.dual_scatter || 0, both_axes: true, count: params.dual_count || 1, tip: params.dual_tip || '', hardness: 100, flow: 100 };
+			this.render_dabs_raw(dctx, group.map(p => [p[0], p[1], dp.size, p[3]]), dp, '#000000');
+			octx.globalCompositeOperation = 'destination-in';
+			octx.drawImage(dual, 0, 0);
+		}
+		if (params.texture) {
+			//Texture: the pattern (anchored to the document) lessens the paint in its dark areas
+			var tex = document.createElement('canvas');
+			tex.width = W;
+			tex.height = H;
+			var tctx = tex.getContext('2d', { willReadFrequently: true });
+			tctx.setTransform(T);
+			var P = Patterns, name = params.texture_pattern || P.names()[0];
+			tctx.fillStyle = P.pattern(tctx, name, params.texture_scale || 100);
+			var inv = T.inverse(), c0 = inv.transformPoint({ x: 0, y: 0 }), c1 = inv.transformPoint({ x: W, y: H });
+			tctx.fillRect(Math.min(c0.x, c1.x) - 2, Math.min(c0.y, c1.y) - 2, Math.abs(c1.x - c0.x) + 4, Math.abs(c1.y - c0.y) + 4);
+			tctx.setTransform(1, 0, 0, 1, 0, 0);
+			var img = tctx.getImageData(0, 0, W, H), d = img.data, depth = (params.texture_depth == null ? 100 : params.texture_depth) / 100;
+			var subtract = params.texture_mode == 'Subtract';
+			for (var k = 0; k < d.length; k += 4) {
+				var lum = (0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]) / 255;
+				if (params.texture_invert) lum = 1 - lum;
+				var keep = subtract ? Math.max(0, 1 - depth * (1 - lum) * 1.5) : 1 - depth * (1 - lum);
+				d[k] = d[k + 1] = d[k + 2] = 0;
+				d[k + 3] = Math.round(keep * 255);
+			}
+			tctx.putImageData(img, 0, 0);
+			octx.globalCompositeOperation = 'destination-in';
+			octx.drawImage(tex, 0, 0);
+		}
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.drawImage(off, 0, 0);
+		ctx.restore();
+	}
+
+	render_dabs_raw(ctx, group, params, color) {
 		if (!group.length) return;
 		var k = Math.abs(ctx.getTransform().a) || 1;
 		var spacing = Math.max(1, (params.spacing == null ? 25 : params.spacing));
@@ -461,9 +544,14 @@ class Brush_class extends Base_tools_class {
 			}
 			var alpha = flow * (1 - (params.opacity_jitter || 0) / 100 * rnd(dab, 4));
 			var p = params;
+			if (params.pose) {
+				//Brush Pose: a fixed rotation, roundness and pressure
+				sz *= (params.pose_pressure == null ? 100 : params.pose_pressure) / 100;
+				p = Object.assign({}, params, { angle: (params.angle || 0) + (params.pose_angle || 0), roundness: params.pose_roundness == null ? params.roundness : params.pose_roundness });
+			}
 			if (dynamic) {
 				//Shape Dynamics: angle / roundness jitter (quantized so stamps are reused)
-				var ang = (params.angle || 0) + Math.round((rnd(dab, 5) * 2 - 1) * (params.angle_jitter || 0) / 100 * 180 / 5) * 5;
+				var ang = (p.angle || 0) + Math.round((rnd(dab, 5) * 2 - 1) * (params.angle_jitter || 0) / 100 * 180 / 5) * 5;
 				var rmin = params.min_roundness == null ? 25 : params.min_roundness;
 				var rd = (params.roundness == null ? 100 : params.roundness) * (1 - (params.roundness_jitter || 0) / 100 * rnd(dab, 6) * (1 - rmin / 100));
 				p = Object.assign({}, params, { angle: ang, roundness: Math.round(rd / 5) * 5 });
@@ -484,6 +572,11 @@ class Brush_class extends Base_tools_class {
 		for (var i = 1; i < group.length; i++) {
 			var a = group[i - 1], b = group[i];
 			if (!a || !b) continue;
+			if (b[3] === 1) {
+				//Build-up: the pointer rests, the paint keeps coming
+				place(b[0], b[1], b[2] || params.size);
+				continue;
+			}
 			var base = b[2] || params.size;
 			var step = Math.max(0.5, base * spacing / 100);
 			var len = Math.hypot(b[0] - a[0], b[1] - a[1]);
