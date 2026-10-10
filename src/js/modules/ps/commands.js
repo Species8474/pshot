@@ -2417,6 +2417,7 @@ class Ps_commands_class {
 		this.Wide_angle.open();
 	}
 
+	script_events_manager() { app.GUI.Ps_workspace.Script_events.open(); }
 	variables_define() { app.GUI.Ps_workspace.Variables.define(); }
 	data_sets() { app.GUI.Ps_workspace.Variables.data_sets(); }
 	apply_data_set() { app.GUI.Ps_workspace.Variables.apply_dialog(); }

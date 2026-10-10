@@ -1828,3 +1828,9 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_vars_row input[type="text"], .ps_vars_row select { width: 100%; box-sizing: border-box; }
 .ps_vars_file { font-size: 11px; }
 .ps_vars_buttons { flex-direction: row; width: auto; justify-content: flex-end; }
+.ps_sem { width: 460px; }
+.ps_sem_list { height: 110px; overflow-y: auto; border: 1px solid var(--ps-border); background: var(--ps-panel-dark); }
+.ps_sem_row { padding: 2px 6px; cursor: default; }
+.ps_sem_row.active { background: var(--ps-select); color: #fff; }
+.ps_sem_empty { padding: 6px; color: var(--ps-text-dim, #999); }
+.ps_sem .ps_ge_row { display: flex; align-items: center; gap: 6px; }

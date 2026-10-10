@@ -64,6 +64,7 @@ import Ps_float_windows_class from './float-windows.js';
 import { cmyk_safe, channel_value } from './proof.js';
 import Ps_color_management_class from './color-management.js';
 import Ps_variables_class from './variables.js';
+import Ps_script_events_class from './script-events.js';
 import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
@@ -123,6 +124,7 @@ class Ps_workspace_class {
 		this.Comps = new Ps_layer_comps_class();
 		this.Float = new Ps_float_windows_class();
 		this.Variables = new Ps_variables_class();
+		this.Script_events = new Ps_script_events_class();
 		this.Actions = new Ps_actions_panel_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
@@ -204,6 +206,7 @@ class Ps_workspace_class {
 		this.Tool_presets.install();
 		this.Slices.install();
 		install_panel_context_menus();
+		setTimeout(() => this.Script_events.install(), 0);
 		this.snapshot_tool_defaults();
 
 		setInterval(() => this.tick(), 250);
