@@ -28,6 +28,12 @@ async function commit_stroke(tool, pending, label) {
 	}
 	var temp = config.layer;
 	var Selection = app.GUI.Ps_workspace.Selection;
+	//Actions > Allow Tool Recording: the stroke in document coordinates
+	if (temp && temp.type == tool.name && Array.isArray(temp.data) && (tool.name == 'brush' || tool.name == 'pencil')) {
+		var pts = [];
+		for (var group of temp.data) for (var q of (group || [])) if (q) pts.push([q[0] + (temp.x || 0), q[1] + (temp.y || 0), q[2]]);
+		app.GUI.Ps_workspace.Actions.record_stroke(tool.name, pts);
+	}
 	if (Selection.quick_mask && temp && temp.type == tool.name) {
 		//Quick Mask mode: the stroke edits the selection, not the pixels
 		var qstroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);

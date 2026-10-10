@@ -6,6 +6,7 @@
  */
 
 import app from './../app.js';
+import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import menuDefinition from './../config-menu.js';
 
@@ -136,6 +137,116 @@ class Ps_actions_panel_class {
 				this.render();
 			},
 		});
+	}
+
+	duplicate() {
+		var s = this.selected;
+		if (!s || !this.sets[s.set]) return;
+		if (s.action == null) {
+			var set = JSON.parse(JSON.stringify(this.sets[s.set]));
+			set.name += ' copy';
+			this.sets.splice(s.set + 1, 0, set);
+		}
+		else {
+			var a = JSON.parse(JSON.stringify(this.sets[s.set].actions[s.action]));
+			a.name += ' copy';
+			this.sets[s.set].actions.splice(s.action + 1, 0, a);
+			this.selected = { set: s.set, action: s.action + 1 };
+		}
+		this.save();
+		this.render();
+	}
+
+	clear_all() {
+		if (!window.confirm('Delete all actions?')) return;
+		this.sets = [];
+		this.selected = null;
+		this.save();
+		this.render();
+	}
+
+	reset() {
+		this.sets = JSON.parse(JSON.stringify(DEFAULTS));
+		this.selected = null;
+		this.save();
+		this.render();
+	}
+
+	save_file() {
+		var s = this.selected, sets = s && this.sets[s.set] ? [this.sets[s.set]] : this.sets;
+		var a = document.createElement('a');
+		a.href = URL.createObjectURL(new Blob([JSON.stringify({ pshot_actions: 1, sets: sets })], { type: 'application/json' }));
+		a.download = (sets.length == 1 ? sets[0].name : 'Actions') + '.json';
+		a.click();
+		setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+	}
+
+	load_file(replace) {
+		var input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.json,application/json';
+		input.addEventListener('change', async () => {
+			var f = input.files && input.files[0];
+			if (!f) return;
+			try {
+				var data = JSON.parse(await f.text());
+				if (!data || !Array.isArray(data.sets)) throw new Error('not an actions file');
+				this.sets = replace ? data.sets : this.sets.concat(data.sets);
+				this.save();
+				this.render();
+			}
+			catch (e) {
+				app.GUI.Ps_workspace.status_message('Could not load the actions: ' + e.message);
+			}
+		});
+		input.click();
+	}
+
+	/**
+	 * Allow Tool Recording (CS6): brush and pencil strokes become steps
+	 */
+	record_stroke(tool_name, points) {
+		if (!this.recording || this.playing || !this.allow_tools || !points.length) return;
+		var ws = app.GUI.Ps_workspace;
+		var member = ws.active_member;
+		this.recording.steps.push({
+			target: 'ps/commands.replay_stroke',
+			parameter: { member: member ? member.id : tool_name, attrs: JSON.parse(JSON.stringify(config.TOOL.attributes)), color: config.COLOR, points: points },
+			name: (member ? member.name.replace(/ Tool$/, '') : 'Brush') + ' Tool',
+		});
+		this.save();
+		this.render();
+	}
+
+	panel_menu_items() {
+		var has = !!this.current_action(), sel = !!this.selected;
+		return [
+			{ name: 'Button Mode' },
+			{ divider: true },
+			{ name: 'New Action...', action: () => this.new_action(true) },
+			{ name: 'New Set...', action: () => this.new_set() },
+			{ name: 'Duplicate', action: sel ? () => this.duplicate() : null },
+			{ name: 'Delete', action: sel ? () => this.remove() : null },
+			{ name: 'Play', action: has ? () => this.play() : null },
+			{ divider: true },
+			{ name: 'Start Recording', action: has && !this.recording ? () => this.start_recording() : null },
+			{ name: 'Record Again...' },
+			{ name: 'Insert Menu Item...' },
+			{ name: 'Insert Stop...' },
+			{ name: 'Insert Conditional...' },
+			{ name: 'Insert Path' },
+			{ divider: true },
+			{ name: 'Allow Tool Recording', checked: !!this.allow_tools, action: () => { this.allow_tools = !this.allow_tools; } },
+			{ divider: true },
+			{ name: 'Action Options...' },
+			{ name: 'Playback Options...' },
+			{ divider: true },
+			{ name: 'Clear All Actions', action: () => this.clear_all() },
+			{ name: 'Reset Actions', action: () => this.reset() },
+			{ name: 'Load Actions...', action: () => this.load_file(false) },
+			{ name: 'Replace Actions...', action: () => this.load_file(true) },
+			{ name: 'Save Actions...', action: () => this.save_file() },
+		];
 	}
 
 	remove() {

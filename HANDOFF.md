@@ -262,6 +262,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Bevel & Emboss: Chisel Hard / Chisel Soft techniques (Euclidean distance transform ramps), Pillow Emboss (edge pressed in), Stroke Emboss (bevel on the Stroke effect's outer edge; nothing without a stroke); the height field is smoothed in float to avoid 8-bit ridges.
   - Match Color: Ignore Selection when Applying Adjustment, Use Selection in Source (active document) / Target to Calculate, Save / Load Statistics (JSON).
   - HDR Toning: Toning Curve and Histogram (Local Adaptation): curve points over the luminance histogram (click adds, drag moves, drag off deletes, Reset Curve), applied to the toned luminance.
+  - Actions panel menu (New Action/Set, Duplicate, Delete, Play, Start Recording, Allow Tool Recording, Clear All, Reset, Load/Replace/Save Actions as JSON). Allow Tool Recording: brush and pencil strokes are recorded (commit_stroke -> Actions.record_stroke) as ps/commands.replay_stroke steps (tool, options, color, document points) and replayed by dispatching pointer events. Layers/History panel menus: Lock Layers, Edit Contents, New Snapshot, Delete, New Document wired.
 
 ## Known gaps / next
 

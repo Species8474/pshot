@@ -762,11 +762,11 @@ class Ps_workspace_class {
 				{ name: 'New Group...', action: () => run_target('ps/commands.new_group') },
 				{ name: 'New Group from Layers...', action: () => run_target('ps/commands.group_layers') },
 				{ divider: true },
-				{ name: 'Lock Layers...' },
+				{ name: 'Lock Layers...', action: () => run_target('ps/commands.lock_layers') },
 				{ divider: true },
 				{ name: 'Convert to Smart Object', action: () => run_target('ps/commands.convert_to_smart_object') },
 				{ divider: true },
-				{ name: 'Edit Contents' },
+				{ name: 'Edit Contents', action: config.layer && config.layer.ps_smart ? () => run_target('ps/commands.edit_smart_contents') : null },
 				{ name: 'Blending Options...', action: () => run_target('layer/composition.composition') },
 				{ divider: true },
 				{ name: 'Create Clipping Mask', shortcut: 'Alt+Ctrl+G', action: () => run_target('ps/commands.toggle_clipping_mask') },
@@ -787,15 +787,18 @@ class Ps_workspace_class {
 		else if (panel == 'paths') {
 			return this.Paths.panel_menu_items();
 		}
+		else if (panel == 'actions') {
+			items = this.Actions.panel_menu_items();
+		}
 		else if (panel == 'history') {
 			items = [
 				{ name: 'Step Forward', shortcut: 'Shift+Ctrl+Z', action: () => run_target('edit/redo.redo') },
 				{ name: 'Step Backward', shortcut: 'Alt+Ctrl+Z', action: () => run_target('edit/undo.undo') },
 				{ divider: true },
-				{ name: 'New Snapshot...' }, { name: 'Delete' },
+				{ name: 'New Snapshot...', action: () => this.create_snapshot() }, { name: 'Delete', action: app.State.action_history_index > 0 ? () => delete_state(app.State.action_history_index) : null },
 				{ name: 'Clear History', action: () => run_target('ps/commands.purge_histories') },
 				{ divider: true },
-				{ name: 'New Document' }, { name: 'History Options...' },
+				{ name: 'New Document', action: () => run_target('ps/commands.duplicate_document') }, { name: 'History Options...' },
 			];
 		}
 		else {

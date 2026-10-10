@@ -23,6 +23,7 @@ import { cmyk_safe } from './../../ps/proof.js';
 import { STACK_MODES, combine_stack } from './../../ps/stack-modes.js';
 import Ps_zoomify_class from './../../ps/zoomify.js';
 import { copy_css } from './../../ps/copy-css.js';
+import zoomView from './../../libs/zoomView.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2154,6 +2155,30 @@ class Ps_commands_class {
 	/**
 	 * Select > Refine Edge becomes Refine Mask while the layer mask is targeted (CS6)
 	 */
+	/**
+	 * Actions playback of a recorded tool stroke: the same tool and options, the
+	 * pointer moved along the recorded points
+	 */
+	async replay_stroke(p) {
+		if (!p || !p.points || !p.points.length) return;
+		var ws = app.GUI.Ps_workspace;
+		ws.Extras.select_tool(p.member);
+		await new Promise(r => setTimeout(r, 50));
+		ws.restore_attributes(config.TOOL.attributes, p.attrs || {});
+		if (p.color) ws.set_fg(p.color);
+		var canvas = document.getElementById('canvas_minipaint'), rect = canvas.getBoundingClientRect();
+		var screen = (q) => { var s = zoomView.toScreen({ x: q[0], y: q[1] }); return { clientX: rect.left + s.x, clientY: rect.top + s.y }; };
+		var fire = (type, q) => {
+			var c = screen(q);
+			var e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: c.clientX, clientY: c.clientY, button: 0, buttons: type == 'mouseup' ? 0 : 1 });
+			canvas.dispatchEvent(e);
+		};
+		fire('mousedown', p.points[0]);
+		for (var i = 1; i < p.points.length; i++) fire('mousemove', p.points[i]);
+		fire('mouseup', p.points[p.points.length - 1]);
+		await new Promise(r => setTimeout(r, 200));
+	}
+
 	refine_edge_or_mask() {
 		return app.GUI.Ps_workspace.Mask.is_editing(config.layer) ? this.refine_mask() : this.refine_edge();
 	}
