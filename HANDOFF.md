@@ -272,6 +272,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - History Options (History panel menu): Automatically Create First Snapshot (the opened-state row), New Snapshot When Saving, Show New Snapshot Dialog by Default (Alt+click the snapshot button also names it), Make Layer Visibility Changes Undoable (base-state skips the eye otherwise). Allow Non-Linear History greyed.
   - Layers Panel Options dialog (thumbnail size and contents); transform context menu Content-Aware Scale / Puppet Warp; Note tool context menu Export Notes (text file).
   - Paths > Clipping Path... (panel menu, path context menus): a saved path and flatness (config.ps_clip_path, per document), shown bold in the Paths panel, written to / read from PSD resource 2999.
+  - Options bar audit: every "Toggle the Brush panel" icon opens the Brush panel; Move tool Auto-Align icon runs Auto-Align Layers; Auto-Select Layer / Group (Group picks the outermost group holding the clicked layer). Zoom tool: Scrubby Zoom (drag right zooms in, left out) or, off, drag an area that then fills the window centered; Zoom All Windows, Resize Windows to Fit (floating window wraps the image). Hand Scroll All Windows and Rotate View Rotate All Windows (Float.match on release).
 
 ## Known gaps / next
 

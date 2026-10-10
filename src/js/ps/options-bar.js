@@ -193,7 +193,7 @@ const ART_STYLES = ['Tight Short', 'Tight Medium', 'Tight Long', 'Loose Medium',
 const LAYOUTS = {
 	move: [
 		{ type: 'check', label: 'Auto-Select:', bind: 'auto_select' },
-		{ type: 'select', values: ['Layer', 'Group'], value: 'Layer', disabled_values: ['Group'] },
+		{ type: 'select', values: ['Layer', 'Group'], bind: 'auto_select_target', map: { Layer: 'Layer', Group: 'Group' } },
 		{ type: 'check', label: 'Show Transform Controls', bind: 'show_transform' },
 		{ type: 'sep' },
 		{ type: 'icons', items: [
@@ -207,7 +207,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'icons', items: [{ icon: IC.dist, title: 'Distribute top edges', action: () => run('distribute_top') }, { icon: IC.dist, title: 'Distribute vertical centers', action: () => run('distribute_vcenter') }, { icon: IC.dist, title: 'Distribute bottom edges', action: () => run('distribute_bottom') },
 			{ icon: IC.dist, title: 'Distribute left edges', action: () => run('distribute_left') }, { icon: IC.dist, title: 'Distribute horizontal centers', action: () => run('distribute_hcenter') }, { icon: IC.dist, title: 'Distribute right edges', action: () => run('distribute_right') }] },
-		{ type: 'icon', icon: IC.auto_align, title: 'Auto-Align Layers' },
+		{ type: 'icon', icon: IC.auto_align, title: 'Auto-Align Layers', action: () => run('auto_align') },
 		{ type: 'sep' },
 		{ type: 'label', text: '3D Mode:', disabled: true },
 	],
@@ -320,7 +320,7 @@ const LAYOUTS = {
 	pencil: [...BRUSH_COMMON.slice(0, 5), BRUSH_COMMON[8], { type: 'sep' }, { type: 'check', label: 'Auto Erase', bind: 'auto_erase' }],
 	clone_stamp: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'icon', icon: IC.clone_source, title: 'Toggle the Clone Source panel', action: () => app.GUI.Ps_workspace.toggle_panel('clone_source') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
@@ -334,7 +334,7 @@ const LAYOUTS = {
 	],
 	eraser: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: ['Brush', 'Pencil', 'Block'], bind: 'eraser_mode', map: { 'Brush': 'Brush', 'Pencil': 'Pencil', 'Block': 'Block' } },
 		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
@@ -381,7 +381,7 @@ const LAYOUTS = {
 	],
 	blur: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
@@ -389,7 +389,7 @@ const LAYOUTS = {
 	],
 	sharpen: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
@@ -398,7 +398,7 @@ const LAYOUTS = {
 	],
 	smudge: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
@@ -447,7 +447,7 @@ const LAYOUTS = {
 	],
 	pattern_stamp: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
 		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
@@ -488,7 +488,7 @@ const LAYOUTS = {
 	],
 	history_brush: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
 		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
@@ -515,7 +515,7 @@ const LAYOUTS = {
 	],
 	art_history_brush: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: MODES },
 		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
@@ -565,7 +565,7 @@ const LAYOUTS = {
 	],
 	dodge: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Range:', values: ['Shadows', 'Midtones', 'Highlights'], bind: 'range', map: { Shadows: 'Shadows', Midtones: 'Midtones', Highlights: 'Highlights' } },
 		{ type: 'pct', label: 'Exposure:', bind: 'exposure' },
@@ -574,7 +574,7 @@ const LAYOUTS = {
 	],
 	burn: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Range:', values: ['Shadows', 'Midtones', 'Highlights'], bind: 'range', map: { Shadows: 'Shadows', Midtones: 'Midtones', Highlights: 'Highlights' } },
 		{ type: 'pct', label: 'Exposure:', bind: 'exposure' },
@@ -583,7 +583,7 @@ const LAYOUTS = {
 	],
 	sponge: [
 		{ type: 'brush', bind: 'size' },
-		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel' },
+		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: ['Desaturate', 'Saturate'], bind: 'sponge_mode', map: { 'Desaturate': 'Desaturate', 'Saturate': 'Saturate' } },
 		{ type: 'pct', label: 'Flow:', bind: 'flow' },
@@ -651,27 +651,34 @@ const LAYOUTS = {
 		{ type: 'icon', icon: IC.warp, title: 'Create warped text', action: () => app.GUI.Ps_workspace.Warp_text.open() },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Character and Paragraph panels', action: () => app.GUI.Ps_workspace.toggle_panel('character') },
 	],
-	hand: [{ type: 'check', label: 'Scroll All Windows', value: false }, { type: 'sep' }, ...ZOOM_BUTTONS],
+	hand: [{ type: 'check', label: 'Scroll All Windows', bind: 'scroll_all' }, { type: 'sep' }, ...ZOOM_BUTTONS],
 	rotate_view: [
 		{ type: 'rotation' },
-		{ type: 'button', text: 'Reset View', action: () => app.GUI.Ps_workspace.set_view_rotation(0) },
+		{ type: 'button', text: 'Reset View', action: () => { app.GUI.Ps_workspace.set_view_rotation(0); match_all('rotate_all', 'rotation'); } },
 		{ type: 'sep' },
-		{ type: 'check', label: 'Rotate All Windows', value: false },
+		{ type: 'check', label: 'Rotate All Windows', bind: 'rotate_all' },
 	],
 	zoom: [
 		{ type: 'icons', items: [
 			{ icon: IC.zoom_in, title: 'Zoom In', action: () => app.GUI.modules['view/zoom'].in() },
 			{ icon: IC.zoom_out, title: 'Zoom Out', action: () => app.GUI.modules['view/zoom'].out() },
 		] },
-		{ type: 'check', label: 'Resize Windows to Fit', value: false },
-		{ type: 'check', label: 'Zoom All Windows', value: false },
-		{ type: 'check', label: 'Scrubby Zoom', value: true },
+		{ type: 'check', label: 'Resize Windows to Fit', bind: 'resize_windows' },
+		{ type: 'check', label: 'Zoom All Windows', bind: 'zoom_all' },
+		{ type: 'check', label: 'Scrubby Zoom', bind: 'scrubby' },
 		{ type: 'sep' },
 		...ZOOM_BUTTONS,
 	],
 };
 LAYOUTS.direct_selection = LAYOUTS.path_selection;
 LAYOUTS.vertical_type = LAYOUTS.type_mask = LAYOUTS.vertical_type_mask = LAYOUTS.type;
+
+/**
+ * the "All Windows" options: the other documents take this view
+ */
+function match_all(attr, what) {
+	if (config.TOOL.attributes[attr]) app.GUI.Ps_workspace.Float.match(what, true);
+}
 
 function run(command) {
 	app.GUI.modules['ps/commands'][command]();

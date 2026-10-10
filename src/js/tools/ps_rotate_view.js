@@ -44,6 +44,7 @@ class Ps_rotate_view_class extends Base_tools_class {
 			if (!this.drag) return;
 			this.drag = null;
 			this.compass(false);
+			if (this.getParams().rotate_all) ws().Float.match('rotation', true);
 		});
 		document.addEventListener('keydown', (e) => {
 			if (config.TOOL.name != this.name || e.key != 'Escape' || e.target.tagName == 'INPUT') return;

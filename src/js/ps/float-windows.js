@@ -237,6 +237,21 @@ class Ps_float_windows_class {
 		document.addEventListener('mouseup', up, true);
 	}
 
+	/**
+	 * Zoom tool "Resize Windows to Fit": the active floating window wraps the zoomed image
+	 */
+	fit_current() {
+		var doc = this.docs().current();
+		var win = doc && doc.float ? this.layer().querySelector('.ps_float_win[data-fid="' + doc.float_id + '"]') : null;
+		var view = document.getElementById('main_wrapper');
+		if (!win || !view) return;
+		var b = this.bounds(), r = doc.float;
+		r.w = Math.max(MIN_W, Math.min(b.w - r.x, r.w + Math.ceil(config.WIDTH * config.ZOOM) - view.clientWidth));
+		r.h = Math.max(MIN_H, Math.min(b.y + b.h - r.y, r.h + Math.ceil(config.HEIGHT * config.ZOOM) - view.clientHeight));
+		Object.assign(win.style, { width: r.w + 'px', height: r.h + 'px' });
+		app.GUI.Ps_workspace.relayout();
+	}
+
 	// ---------- Window > Arrange > New Window for <document> ----------
 
 	/**
@@ -481,7 +496,7 @@ class Ps_float_windows_class {
 	/**
 	 * Match Zoom / Location / Rotation / All: the other documents take the active one's view
 	 */
-	match(what) {
+	match(what, quiet) {
 		var ws = app.GUI.Ps_workspace;
 		var cur = this.docs().capture();
 		for (var doc of this.docs().docs) {
@@ -497,7 +512,7 @@ class Ps_float_windows_class {
 			}
 			if (what == 'rotation' || what == 'all') st.view.rotation = cur.view.rotation;
 		}
-		ws.status_message('The other documents will use this view when they are shown.');
+		if (!quiet) ws.status_message('The other documents will use this view when they are shown.');
 		this.refresh();
 	}
 }

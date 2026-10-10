@@ -96,7 +96,9 @@ config.TOOLS = [
 	{
 		name: 'ps_rotate_view',
 		title: 'Rotate View',
-		attributes: {},
+		attributes: {
+			rotate_all: false,
+		},
 	},
 	{
 		name: 'ps_slice',
@@ -244,19 +246,26 @@ config.TOOLS = [
 		name: 'hand',
 		title: 'Hand Tool',
 		on_activate: 'on_activate',
-		attributes: {},
+		attributes: {
+			scroll_all: false,
+		},
 	},
 	{
 		name: 'zoom',
 		title: 'Zoom Tool',
 		on_activate: 'on_activate',
-		attributes: {},
+		attributes: {
+			resize_windows: false,
+			zoom_all: false,
+			scrubby: true,
+		},
 	},
 	{
 		name: 'select',
 		title: 'Select object tool',
 		attributes: {
 			auto_select: true,
+			auto_select_target: 'Layer',
 			show_transform: false,
 		},
 	},

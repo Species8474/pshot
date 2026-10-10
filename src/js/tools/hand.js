@@ -2,6 +2,7 @@
  * pshot - Hand Tool (H): drag to scroll the document view.
  */
 
+import app from './../app.js';
 import config from './../config.js';
 import Base_tools_class from './../core/base-tools.js';
 import GUI_preview_class from './../core/gui/gui-preview.js';
@@ -34,6 +35,7 @@ class Hand_class extends Base_tools_class {
 			if (this.last == null)
 				return;
 			this.last = null;
+			if (config.TOOL.name == this.name && this.getParams().scroll_all) app.GUI.Ps_workspace.Float.match('location', true);
 			document.getElementById('main_wrapper').style.cursor = this.is_active() ? 'grab' : '';
 		});
 	}

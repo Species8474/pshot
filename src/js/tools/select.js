@@ -533,8 +533,14 @@ class Select_tool_class extends Base_tools_class {
 			var canvas = this.Base_layers.convert_layer_to_canvas(value.id, null, false);
 
 			if (this.check_hit_region(e, canvas.getContext("2d"), value) == true) {
+				//pshot: Auto-Select Group picks the outermost group holding the layer
+				var target = value;
+				if (params.auto_select_target == 'Group') {
+					var up = app.GUI.Ps_workspace.Groups.ancestors(value);
+					if (up.length) target = up[up.length - 1];
+				}
 				await app.State.do_action(
-					new app.Actions.Select_layer_action(value.id)
+					new app.Actions.Select_layer_action(target.id)
 				);
 				break;
 			}
