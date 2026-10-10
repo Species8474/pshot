@@ -114,7 +114,7 @@ function render_paragraph(host) {
 		+ ['left', 'center', 'right'].map(a => '<button type="button" data-align="' + a + '" class="' + (a == align ? 'pressed' : '') + (layer ? '' : ' disabled') + '" title="' + a[0].toUpperCase() + a.slice(1) + ' align text">' + ICONS[a] + '</button>').join('')
 		+ [['justify', 'Justify last left', '≡'], ['justify_center', 'Justify last centered', '≡'], ['justify_right', 'Justify last right', '≡'], ['justify_all', 'Justify all', '≣']].map(([a, t, ic]) => '<button type="button" data-align="' + a + '" class="' + (a == align ? 'pressed' : '') + (layer ? '' : ' disabled') + '" title="' + t + '">' + ic + '</button>').join('')
 		+ '</div>'
-		+ [['indent_left', 'Indent left:'], ['indent_right', 'Indent right:'], ['space_before', 'Space before:'], ['space_after', 'Space after:']].map(([k, t]) => '<div class="ps_typ_row"><span>' + t + '</span><input type="number" data-para="' + k + '" value="' + (layer && layer.params[k] ? layer.params[k] : 0) + '"' + (layer ? '' : ' disabled') + '><span>pt</span></div>').join('')
+		+ [['indent_left', 'Indent left:'], ['indent_right', 'Indent right:'], ['indent_first', 'Indent first line:'], ['space_before', 'Space before:'], ['space_after', 'Space after:']].map(([k, t]) => '<div class="ps_typ_row"><span>' + t + '</span><input type="number" data-para="' + k + '" value="' + (layer && layer.params[k] ? layer.params[k] : 0) + '"' + (layer ? '' : ' disabled') + '><span>pt</span></div>').join('')
 		+ '<label class="ps_typ_row"><input type="checkbox" checked disabled> Hyphenate</label>'
 		+ (layer ? '' : '<div class="ps_typ_hint">Select a type layer to set its alignment.</div>')
 		+ '</div>';

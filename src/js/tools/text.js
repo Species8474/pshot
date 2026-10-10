@@ -1436,6 +1436,7 @@ class Text_editor_class {
 		//pshot: Paragraph panel indents (horizontal type)
 		const indentLeft = isHorizontalTextDirection ? (parseFloat(layer.params.indent_left) || 0) : 0;
 		const indentRight = isHorizontalTextDirection ? (parseFloat(layer.params.indent_right) || 0) : 0;
+		const indentFirst = isHorizontalTextDirection ? (parseFloat(layer.params.indent_first) || 0) : 0;
 		textDirectionMaxSize = Math.max(1, textDirectionMaxSize - indentLeft - indentRight);
 
 		// Determine new lines based on text wrapping, if applicable
@@ -1489,7 +1490,9 @@ class Text_editor_class {
 					}
 					else characterSize = isHorizontalTextDirection ? ctx.measureText(character).width : fontMetrics.height;
 					wrapAccumulativeSize += characterSize + fontKerning + kerning;
-					if (boundary !== 'dynamic' && wrapAccumulativeSize > textDirectionMaxSize && ![' ', '-'].includes(character)) {
+					//pshot: the first line of a paragraph is shorter by the first-line indent
+					const wrapMaxSize = lineWraps.length === 0 ? Math.max(1, textDirectionMaxSize - indentFirst) : textDirectionMaxSize;
+					if (boundary !== 'dynamic' && wrapAccumulativeSize > wrapMaxSize && ![' ', '-'].includes(character)) {
 						// Find last span with space
 						let dividerPosition = -1;
 						let bs = s;
@@ -1596,10 +1599,12 @@ class Text_editor_class {
 		// Adjust offsets for alignment along the text direction
 		//pshot: Justify last left / centered / right, Justify all, and the indents
 		const justify = isHorizontalTextDirection && typeof halign == 'string' && halign.indexOf('justify') === 0;
-		if ((isHorizontalTextDirection && (halign !== 'left' || indentLeft)) || (!isHorizontalTextDirection && valign !== 'top')) {
+		if ((isHorizontalTextDirection && (halign !== 'left' || indentLeft || indentFirst)) || (!isHorizontalTextDirection && valign !== 'top')) {
 			const maxTextDirectionSize = (boundary === 'dynamic' ? totalTextDirectionSize : (isHorizontalTextDirection ? layer.width : layer.height)) - indentLeft - indentRight;
 			for (let line of lineRenderInfo.lines) {
 				for (let [wi, wrap] of line.wraps.entries()) {
+					const first = wi === 0 ? indentFirst : 0;
+					const wrapMax = maxTextDirectionSize - first;
 					let mode = isHorizontalTextDirection ? halign : (valign === 'middle' ? 'center' : 'right');
 					if (justify) {
 						const last = wi === line.wraps.length - 1;
@@ -1613,7 +1618,7 @@ class Text_editor_class {
 						const text = this.get_wrap_text(wrap);
 						const gaps = [];
 						for (let ti = 0; ti < text.length - trailing; ti++) if (text[ti] === ' ') gaps.push(ti);
-						const extra = maxTextDirectionSize - wrapSize;
+						const extra = wrapMax - wrapSize;
 						if (gaps.length && extra > 0) {
 							let g = 0;
 							for (let oi = 0; oi < wrap.characterOffsets.length; oi++) {
@@ -1624,15 +1629,15 @@ class Text_editor_class {
 					}
 					else if (mode === 'center' || mode === 'right') {
 						const isCentered = mode === 'center';
-						const startOffset = (isCentered ? maxTextDirectionSize / 2 : maxTextDirectionSize) - (isCentered ? wrapSize / 2 : wrapSize);
+						const startOffset = (isCentered ? wrapMax / 2 : wrapMax) - (isCentered ? wrapSize / 2 : wrapSize);
 						if (startOffset > 0) {
 							for (let oi = 0; oi < wrap.characterOffsets.length; oi++) {
 								wrap.characterOffsets[oi] += startOffset;
 							}
 						}
 					}
-					if (indentLeft) {
-						for (let oi = 0; oi < wrap.characterOffsets.length; oi++) wrap.characterOffsets[oi] += indentLeft;
+					if (indentLeft || first) {
+						for (let oi = 0; oi < wrap.characterOffsets.length; oi++) wrap.characterOffsets[oi] += indentLeft + first;
 					}
 				}
 			}
