@@ -1,6 +1,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import { commit_stroke } from './../ps/stroke.js';
+import { render_bristles } from './../ps/bristle.js';
 import Patterns from './../ps/patterns.js';
 import { ensure_pixel_layer } from './../ps/pixel-layer.js';
 import Base_tools_class from './../core/base-tools.js';
@@ -660,6 +661,14 @@ class Brush_class extends Base_tools_class {
 
 		var params = layer.params;
 		var size = params.size;
+		//pshot: bristle tips draw every bristle along the stroke
+		if (params.bristle) {
+			ctx.save();
+			ctx.translate(layer.x, layer.y);
+			for (var bgroup of this.check_legacy_format(layer.data)) render_bristles(ctx, bgroup.filter(p => p), params, layer.color);
+			ctx.restore();
+			return;
+		}
 		if (this.use_dabs(params)) {
 			ctx.save();
 			ctx.translate(layer.x, layer.y);

@@ -7,6 +7,7 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import { BRISTLE_SHAPES } from './bristle.js';
 import Patterns from './patterns.js';
 import { tip_names } from './brush-tips.js';
 
@@ -45,7 +46,13 @@ class Ps_brush_panel_class {
 		var check = (key, label) => '<label class="ps_adj_check"><input type="checkbox" data-check="' + key + '"' + (a[key] ? ' checked' : '') + '> ' + label + '</label>';
 		var sel = (key, label, values) => '<div class="ps_bp_field"><span>' + label + '</span><select data-sel="' + key + '">' + values.map(v => '<option' + (a[key] == v || (!a[key] && v == values[0]) ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>';
 		var right = '';
-		if (this.section == 'tip') {
+		if (this.section == 'tip' && a.bristle) {
+			//bristle tips (CS6): their own Brush Tip Shape controls
+			right = sel('bristle_shape', 'Shape:', BRISTLE_SHAPES) + row('bristles', 'Bristles:', 1, 100, '%') + row('bristle_length', 'Length:', 25, 500, '%')
+				+ row('bristle_thickness', 'Thickness:', 1, 200, '%') + row('stiffness', 'Stiffness:', 1, 100, '%') + row('angle', 'Angle:', -180, 180, '°')
+				+ row('size', 'Size:', 1, 2500, 'px') + row('spacing', 'Spacing:', 1, 1000, '%');
+		}
+		else if (this.section == 'tip') {
 			right = row('size', 'Size:', 1, 2500, 'px') + row('angle', 'Angle:', -180, 180, '°') + row('roundness', 'Roundness:', 1, 100, '%')
 				+ row('hardness', 'Hardness:', 0, 100, '%') + '<label class="ps_adj_check"><input type="checkbox" class="ps_bp_spacing_on"' + (a.spacing_off ? '' : ' checked') + '> Spacing</label>' + row('spacing', 'Spacing:', 1, 1000, '%');
 		}
@@ -134,7 +141,7 @@ class Ps_brush_panel_class {
 		var pts = [];
 		for (var x = 20; x <= 280; x += 4) pts.push([x, 30 + Math.sin((x - 20) / 260 * Math.PI * 2) * 12, params.size]);
 		var layer = { x: 0, y: 0, data: [pts], params: params, color: '#000000' };
-		if (brush.object.use_dabs(params)) {
+		if (brush.object.use_dabs(params) && !params.bristle) {
 			ctx.save();
 			brush.object.render_dabs(ctx, pts, params, '#000000');
 			ctx.restore();

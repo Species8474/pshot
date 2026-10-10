@@ -9,12 +9,17 @@ import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import { show_popup_menu, prompt_name } from './popup-menu.js';
 import { tip_canvas, define_tip } from './brush-tips.js';
+import { bristle_thumb } from './bristle.js';
 
 //Brush panel settings a preset fully defines (others return to these defaults)
 const RESET = {
 	tip: '', hardness: 100, spacing: 25, angle: 0, roundness: 100, size_jitter: 0, angle_jitter: 0, roundness_jitter: 0,
 	scatter: 0, both_axes: false, count: 1, count_jitter: 0, opacity_jitter: 0, color_dynamics: false, noise: false, wet_edges: false, texture: false, dual: false, pose: false,
+	bristle: false,
 };
+
+//the CS6 default bristle presets (shape, bristles %, length %, thickness %, stiffness %)
+const BR = (name, size, shape, bristles, length, thickness, stiffness, angle) => ({ name: name, size: size, bristle: true, bristle_shape: shape, bristles: bristles, bristle_length: length, bristle_thickness: thickness, stiffness: stiffness, angle: angle || 0, spacing: 2 });
 
 function round_presets() {
 	var list = [];
@@ -35,6 +40,16 @@ const DEFAULTS = round_presets().concat([
 	{ name: 'Scattered Leaves', size: 95, tip: 'Scattered Leaves', spacing: 50, size_jitter: 40, angle_jitter: 100, scatter: 60 },
 	{ name: 'Flowing Stars', size: 42, tip: 'Flowing Stars', spacing: 60, size_jitter: 50, angle_jitter: 100, scatter: 80 },
 	{ name: 'Fuzzball', size: 192, tip: 'Fuzzball', spacing: 25 },
+	BR('Round Point Stiff', 25, 'Round Point', 47, 50, 2, 85),
+	BR('Round Blunt Medium Stiff', 25, 'Round Blunt', 49, 32, 3, 64),
+	BR('Round Curve Low Bristle Percent', 25, 'Round Curve', 18, 40, 2, 65),
+	BR('Round Angle Low Stiffness', 25, 'Round Angle', 45, 35, 2, 25),
+	BR('Round Fan Stiff Thin Bristles', 25, 'Round Fan', 35, 40, 1, 80, 90),
+	BR('Flat Point Medium Stiff', 25, 'Flat Point', 40, 45, 3, 60, 90),
+	BR('Flat Blunt Short Stiff', 25, 'Flat Blunt', 55, 25, 3, 85, 90),
+	BR('Flat Curve Thin Stiff Bristles', 25, 'Flat Curve', 35, 45, 1, 85, 90),
+	BR('Flat Angle Low Bristle Count', 25, 'Flat Angle', 18, 45, 3, 60, 90),
+	BR('Flat Fan High Bristle Count', 25, 'Flat Fan', 80, 50, 1, 50, 90),
 ]);
 
 var USER = [];
@@ -86,6 +101,7 @@ class Ps_brush_presets_class {
 		var g = c.getContext('2d');
 		var s = Math.max(2, Math.min(px - 4, preset.size * (preset.size > px - 4 ? (px - 4) / preset.size : 1)));
 		g.fillStyle = '#000';
+		if (preset.bristle) return bristle_thumb(preset, px);
 		if (preset.tip) {
 			var tip = tip_canvas(preset.tip);
 			if (tip) {
