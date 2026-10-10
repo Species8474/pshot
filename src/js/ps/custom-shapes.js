@@ -101,4 +101,28 @@ function fitted(name, x, y, w, h) {
 	}));
 }
 
-export { names, fitted, define };
+function user_names() {
+	return Object.keys(USER);
+}
+
+function remove(name) {
+	delete USER[name];
+	try { localStorage.setItem('pshot_custom_shapes_v1', JSON.stringify(USER)); } catch (e) { /* storage blocked */ }
+}
+
+function rename(name, to) {
+	if (!USER[name] || !to || USER[to] || SHAPES[to]) return;
+	USER[to] = USER[name];
+	remove(name);
+}
+
+function user_data() {
+	return USER;
+}
+
+function import_shapes(data) {
+	Object.assign(USER, data || {});
+	try { localStorage.setItem('pshot_custom_shapes_v1', JSON.stringify(USER)); } catch (e) { /* storage blocked */ }
+}
+
+export { names, fitted, define, user_names, remove, rename, user_data, import_shapes };

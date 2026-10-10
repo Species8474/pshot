@@ -1747,3 +1747,15 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_tstyle_row { padding: 3px 8px; cursor: default; }
 .ps_tstyle_row:hover { background: var(--ps-hover); }
 .ps_tstyle_row.active { background: var(--ps-select); color: var(--ps-text-strong); }
+
+/* Preset Manager */
+.ps_pm_wrap { z-index: 99; } /* under #popups so Rename shows on top */
+.ps_pm { width: 560px; }
+.ps_pm_list { flex: 1; height: 300px; overflow-y: auto; padding: 4px; background: var(--ps-panel-dark); border: 1px solid var(--ps-border); display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 4px; align-content: start; }
+.ps_pm_cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; border: 1px solid transparent; cursor: default; }
+.ps_pm_cell canvas, .ps_pm_swatch { width: 40px; height: 40px; background-color: #fff; border: 1px solid #222; display: block; }
+.ps_pm_cell.active { border-color: var(--ps-select-light); background: var(--ps-select); }
+.ps_pm_cell.builtin .ps_pm_name { color: var(--ps-text-dim); }
+.ps_pm_name { font-size: 10px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+.ps_pm_hint { color: var(--ps-text-dim); font-size: 11px; min-height: 14px; }
+.ps_pm .ps_ge_buttons button:disabled { opacity: 0.5; }

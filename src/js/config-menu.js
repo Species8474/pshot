@@ -83,7 +83,7 @@ const M = [
 		['Purge', ['Undo|ps/commands.purge_undo', 'Clipboard|ps/commands.purge_clipboard', 'Histories|ps/commands.purge_histories', 'Video Cache', 'All|ps/commands.purge_histories']],
 		'-',
 		'Adobe PDF Presets...',
-		['Presets', ['Preset Manager...', 'Migrate Presets', 'Export/Import Presets...']],
+		['Presets', ['Preset Manager...|ps/commands.preset_manager', 'Migrate Presets', 'Export/Import Presets...|ps/commands.export_import_presets']],
 		'Remote Connections...',
 		'-',
 		'Color Settings...|Shift+Ctrl+K',

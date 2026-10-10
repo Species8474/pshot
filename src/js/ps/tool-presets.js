@@ -67,6 +67,22 @@ class Ps_tool_presets_class {
 		});
 	}
 
+	user_list() {
+		return USER;
+	}
+
+	rename(preset, name) {
+		if (USER.includes(preset) && name) {
+			preset.name = name;
+			save();
+		}
+	}
+
+	import_presets(list) {
+		for (var p of list || []) USER.push(p);
+		save();
+	}
+
 	remove(preset) {
 		var i = USER.indexOf(preset);
 		if (i < 0) return;

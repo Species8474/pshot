@@ -758,6 +758,12 @@ class Ps_commands_class {
 	paths_to_illustrator() { app.GUI.Ps_workspace.Import_export.paths_to_illustrator(); }
 	video_frames_to_layers() { app.GUI.Ps_workspace.Import_export.video_frames(); }
 	hdr_pro() { app.GUI.Ps_workspace.Automate.hdr_pro(); }
+	preset_manager() { app.GUI.Ps_workspace.Preset_manager.open(); }
+	export_import_presets() {
+		var POP = new Dialog_class();
+		POP.show({ title: 'Export/Import Presets', params: [{ name: 'what', title: 'Action:', values: ['Export Presets', 'Import Presets'], value: 'Export Presets' }],
+			on_finish: (p) => (p.what == 'Import Presets' ? app.GUI.Ps_workspace.Preset_manager.import_presets() : app.GUI.Ps_workspace.Preset_manager.export_presets()) });
+	}
 	toggle_smart_guides() { var ws = app.GUI.Ps_workspace; ws.smart_guides = ws.smart_guides === false; config.need_render = true; }
 	toggle_show_slices() { var S = app.GUI.Ps_workspace.Slices; S.show = !S.show; S.refresh(); }
 	toggle_lock_slices() { var S = app.GUI.Ps_workspace.Slices; S.locked = !S.locked; }

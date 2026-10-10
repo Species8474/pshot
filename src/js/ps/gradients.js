@@ -320,4 +320,14 @@ function editor(initial, on_ok, on_preview) {
 	return root;
 }
 
-export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color, render, render_centered };
+/**
+ * Preset Manager: the user gradients
+ */
+const user_gradients = {
+	list: () => USER,
+	remove: (i) => { USER.splice(i, 1); save_user(); },
+	rename: (i, name) => { if (USER[i]) { USER[i].name = name; save_user(); } },
+	add: (g) => { USER.push(g); save_user(); },
+};
+
+export { PRESETS, presets, lut, css, picker, editor, clone, resolve, two_color, render, render_centered, user_gradients };

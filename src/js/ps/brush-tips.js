@@ -183,4 +183,13 @@ function define_tip(name, canvas) {
 	return out;
 }
 
-export { tip_canvas, tip_names, define_tip };
+function user_tips() {
+	return USER;
+}
+
+function import_tips(data) {
+	for (var k in data || {}) { USER[k] = data[k]; delete cache[k]; }
+	try { localStorage.setItem('pshot_brush_tips_v1', JSON.stringify(USER)); } catch (e) { /* storage full or blocked */ }
+}
+
+export { tip_canvas, tip_names, define_tip, user_tips, import_tips };

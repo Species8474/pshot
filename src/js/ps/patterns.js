@@ -83,6 +83,15 @@ class Ps_patterns_class {
 		else this.list.push(entry);
 	}
 
+	remove(name) {
+		if (this.list.length > 1) this.list = this.list.filter(p => p.name != name);
+	}
+
+	rename(name, to) {
+		var p = this.list.find(x => x.name == name);
+		if (p && to && !this.list.some(x => x.name == to)) p.name = to;
+	}
+
 	next_name() {
 		var n = 0;
 		for (var p of this.list) {
