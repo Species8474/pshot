@@ -9,7 +9,8 @@
 import app from './../app.js';
 import config from './../config.js';
 import { show_popup_menu } from './popup-menu.js';
-import { SAMPLE_SIZES, fill_screen } from './options-bar.js';
+import { SAMPLE_SIZES, CROP_RATIOS, fill_screen } from './options-bar.js';
+import { type_items } from './layer-context.js';
 
 const SELECTION_TOOLS = ['rect_marquee', 'ellipse_marquee', 'row_marquee', 'col_marquee', 'lasso', 'polygon_lasso', 'magnetic_lasso', 'quick_selection', 'magic_wand'];
 const PEN_TOOLS = ['pen', 'freeform_pen', 'add_anchor', 'delete_anchor', 'convert_point', 'path_selection', 'direct_selection'];
@@ -155,6 +156,69 @@ function pen_items() {
 	];
 }
 
+function crop_items() {
+	var crop = app.GUI.GUI_tools.tools_modules.crop.object;
+	var active = crop.selection && crop.selection.width;
+	var ratio = config.TOOL.attributes.ratio_preset;
+	var bar = app.GUI.Ps_workspace.Options_bar;
+	return [
+		{ name: 'Crop', action: active ? () => crop.on_params_update() : null },
+		{ name: 'Cancel', action: active ? () => { crop.selection = { x: null, y: null, width: null, height: null }; config.need_render = true; } : null },
+		{ divider: true },
+	].concat(CROP_RATIOS.map(r => ({ name: r, checked: ratio == r, action: () => { bar.set('ratio_preset', r); bar.render(); } })), [
+		{ divider: true },
+		{ name: 'Rotate Crop Box', action: () => { crop.swap_ratio(); bar.render(); } },
+	]);
+}
+
+function slice_items(event) {
+	var S = app.GUI.Ps_workspace.Slices;
+	var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+	var hit = S.hit(app.Layers.get_world_coords(event.clientX - rect.left, event.clientY - rect.top));
+	if (!hit) return null;
+	var user = hit.slice && hit.type == 'user';
+	if (hit.slice && config.ps_slice_selected != hit.slice.id) {
+		config.ps_slice_selected = hit.slice.id;
+		S.refresh();
+	}
+	return [
+		{ name: 'Delete Slice', action: hit.slice ? () => S.remove(hit.slice.id) : null },
+		{ name: 'Edit Slice Options...', action: () => S.options(hit) },
+		{ name: 'Promote to User Slice', action: user ? null : () => S.promote(hit) },
+		{ name: 'Divide Slice...', action: user ? () => S.divide() : null },
+		{ name: 'Combine Slices' },
+		{ divider: true },
+		{ name: 'Bring to Front', action: user ? () => S.arrange('front') : null },
+		{ name: 'Bring Forward', action: user ? () => S.arrange('forward') : null },
+		{ name: 'Send Backward', action: user ? () => S.arrange('backward') : null },
+		{ name: 'Send to Back', action: user ? () => S.arrange('back') : null },
+	];
+}
+
+function note_items(event) {
+	var N = app.GUI.Ps_workspace.Notes;
+	var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
+	var i = N.hit(app.Layers.get_world_coords(event.clientX - rect.left, event.clientY - rect.top));
+	return [
+		{ name: 'Open Note', action: i >= 0 ? () => N.open_panel() : null },
+		{ name: 'Delete Note', action: i >= 0 ? () => N.remove(i) : null },
+		{ name: 'Delete All Notes', action: N.list().length ? () => N.clear_all() : null },
+		{ divider: true },
+		{ name: 'Export Notes...' },
+	];
+}
+
+/**
+ * the Type tool while editing: text commands for the type layer
+ */
+function text_items() {
+	return [
+		{ name: 'Check Spelling...' },
+		{ name: 'Find and Replace Text...', action: cmd('find_replace_text') },
+		{ divider: true },
+	].concat(type_items(config.layer));
+}
+
 function canvas_context_menu(event) {
 	event.preventDefault();
 	var ws = app.GUI.Ps_workspace;
@@ -179,6 +243,13 @@ function canvas_context_menu(event) {
 	else if (member.id == 'zoom') items = view_items(true);
 	else if (member.id == 'eyedropper') items = eyedropper_items();
 	else if (PEN_TOOLS.includes(member.id)) items = pen_items();
+	else if (member.id == 'crop') items = crop_items();
+	else if (member.id == 'slice' || member.id == 'slice_select') items = slice_items(event);
+	else if (member.id == 'note') items = note_items(event);
+	else if (member.tool == 'text') {
+		var text = app.GUI.GUI_tools.tools_modules.text;
+		if (text && text.object.focused && config.layer && config.layer.type == 'text') items = text_items();
+	}
 	if (items && items.length) show_popup_menu(anchor, items, { point: point });
 }
 

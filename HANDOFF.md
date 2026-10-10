@@ -227,6 +227,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Layer context menus also cover: type layers (Rasterize Type, Create Work Path, Convert to Shape, Horizontal/Vertical, anti-alias, Paragraph/Point, Warp Text), smart objects (via Copy, Edit/Export/Replace Contents), the fx badge and Effects rows (layer style items, Global Light, Create Layer, Hide All Effects, Scale Effects), Smart Filters header and rows, and the eye column (hide this / all others, color labels).
   - Fix: per-tool option memory and tool presets restore only `.value` of { value, values() } attributes (`Ps_workspace.restore_attributes`); before, the Type tool's font list was lost and its options bar threw.
   - Panel right-click menus (ps/panel-context.js): Paths rows (path commands), Channels rows (Duplicate Channel — color channels become alpha channels — Delete, Channel Options), History states/snapshots (Step Forward/Backward, New Document, New Snapshot, Delete = this state and later, Clear History; footer Delete wired), document tabs (Close, Close All, New, Open), rulers (units).
+  - Canvas right-click also: Crop (Crop, Cancel, ratio presets, Rotate Crop Box), Slice / Slice Select on a slice (Delete, Options, Promote, Divide, arrange), Note tool (Open/Delete/Delete All), Type tool while editing (Find and Replace, type layer items; the editor stays focused — right mousedown on the canvas and popup-menu mousedown don't take focus).
 
 ## Known gaps / next
 

@@ -1313,4 +1313,4 @@ class Ps_options_bar_class {
 }
 
 export default Ps_options_bar_class;
-export { tool_icons, SAMPLE_SIZES, fill_screen };
+export { tool_icons, SAMPLE_SIZES, CROP_RATIOS, fill_screen };

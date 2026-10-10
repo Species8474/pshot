@@ -65,6 +65,10 @@ function show_popup_menu(anchor, items, opts = {}) {
 			html += '<span class="shortcut">' + item.shortcut + '</span>';
 		}
 		a.innerHTML = html;
+		//don't take focus (e.g. from the type editor the menu acts on)
+		a.addEventListener('mousedown', function (event) {
+			event.preventDefault();
+		});
 		a.addEventListener('mouseup', function (event) {
 			event.preventDefault();
 			//the release of the right-click that opened a context menu under the mouse

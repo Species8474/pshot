@@ -43,6 +43,33 @@ function set_color(layer, color) {
 	]));
 }
 
+/**
+ * a type layer's items (also the Type tool's menu while editing)
+ */
+function type_items(layer, raster) {
+	var aa = app.GUI.Ps_workspace.Text_aa.current();
+	var vertical = layer.params && layer.params.text_direction == 'ttb';
+	var items = [
+		{ name: 'Rasterize Type', action: raster || (() => app.GUI.modules['layer/raster'].raster()) },
+		{ name: 'Create Work Path', action: cmd('type_work_path') },
+		{ name: 'Convert to Shape', action: cmd('type_to_shape') },
+		{ divider: true },
+		{ name: 'Horizontal', checked: !vertical, action: cmd('text_horizontal') },
+		{ name: 'Vertical', checked: vertical, action: cmd('text_vertical') },
+		{ divider: true },
+	];
+	for (var m of ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth']) {
+		let mode = m.toLowerCase();
+		items.push({ name: m, checked: aa == mode, action: cmd('anti_alias', mode) });
+	}
+	items.push(
+		{ divider: true },
+		{ name: app.GUI.modules['ps/commands'].paragraph_label(), action: cmd('toggle_paragraph') },
+		{ name: 'Warp Text...', action: cmd('warp_text') },
+	);
+	return items;
+}
+
 function row_items(layer) {
 	var Multi = app.GUI.Ps_workspace.Multi;
 	var multi = Multi.multiple();
@@ -78,26 +105,7 @@ function row_items(layer) {
 	}
 	items.push({ divider: true });
 	if (layer.type == 'text') {
-		var aa = app.GUI.Ps_workspace.Text_aa.current();
-		var vertical = layer.params && layer.params.text_direction == 'ttb';
-		items.push(
-			{ name: 'Rasterize Type', action: raster },
-			{ name: 'Create Work Path', action: cmd('type_work_path') },
-			{ name: 'Convert to Shape', action: cmd('type_to_shape') },
-			{ divider: true },
-			{ name: 'Horizontal', checked: !vertical, action: cmd('text_horizontal') },
-			{ name: 'Vertical', checked: vertical, action: cmd('text_vertical') },
-			{ divider: true },
-		);
-		for (var m of ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth']) {
-			let mode = m.toLowerCase();
-			items.push({ name: m, checked: aa == mode, action: cmd('anti_alias', mode) });
-		}
-		items.push(
-			{ divider: true },
-			{ name: app.GUI.modules['ps/commands'].paragraph_label(), action: cmd('toggle_paragraph') },
-			{ name: 'Warp Text...', action: cmd('warp_text') },
-		);
+		items.push(...type_items(layer, raster));
 	}
 	else {
 		items.push({ name: 'Rasterize Layer', action: rasterizable ? raster : null });
@@ -252,4 +260,4 @@ async function layer_context_menu(event) {
 	return true;
 }
 
-export { layer_context_menu };
+export { layer_context_menu, type_items };

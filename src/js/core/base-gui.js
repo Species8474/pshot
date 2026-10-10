@@ -236,6 +236,10 @@ class Base_gui_class {
 			e.preventDefault();
 			if (app.GUI && app.GUI.Ps_workspace) canvas_context_menu(e);
 		}, false);
+		//keep the type editor focused (and editing) through a right-click
+		document.getElementById('canvas_minipaint').addEventListener('mousedown', function (e) {
+			if (e.button == 2) e.preventDefault();
+		}, false);
 	}
 
 	check_canvas_offset() {
