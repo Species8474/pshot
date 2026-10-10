@@ -3320,6 +3320,12 @@ class Ps_commands_class {
 	 */
 	save() {
 		var ws = app.GUI.Ps_workspace;
+		//History Options: Automatically Create New Snapshot When Saving
+		if (ws.history_options().snapshot_on_save) {
+			ws.create_snapshot();
+			var snaps = ws.Documents.current().snapshots;
+			snaps[snaps.length - 1].name = new Date().toLocaleTimeString();
+		}
 		if (ws.Documents.current().smart_link) {
 			return this.save_smart_contents(ws.Documents.current());
 		}

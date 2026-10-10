@@ -69,8 +69,10 @@ class Base_state_class {
 			// Action aborted. This is usually expected behavior as actions throw errors if they shouldn't run.
 			return { status: 'aborted', reason: error };
 		}
-		//pshot: CS6 doesn't record selecting a layer or toggling its visibility in History
-		if (action.action_id == 'select_layer' || action.action_id == 'toggle_layer_visibility') {
+		//pshot: CS6 doesn't record selecting a layer or (unless History Options say so) toggling its visibility
+		const ws = app.GUI && app.GUI.Ps_workspace;
+		const visibility_undoable = ws && ws.history_options && ws.history_options().visibility_undoable;
+		if (action.action_id == 'select_layer' || (action.action_id == 'toggle_layer_visibility' && !visibility_undoable)) {
 			return { status: 'completed' };
 		}
 		// Remove all redo actions from history

@@ -795,10 +795,10 @@ class Ps_workspace_class {
 				{ name: 'Step Forward', shortcut: 'Shift+Ctrl+Z', action: () => run_target('edit/redo.redo') },
 				{ name: 'Step Backward', shortcut: 'Alt+Ctrl+Z', action: () => run_target('edit/undo.undo') },
 				{ divider: true },
-				{ name: 'New Snapshot...', action: () => this.create_snapshot() }, { name: 'Delete', action: app.State.action_history_index > 0 ? () => delete_state(app.State.action_history_index) : null },
+				{ name: 'New Snapshot...', action: () => this.new_snapshot(true) }, { name: 'Delete', action: app.State.action_history_index > 0 ? () => delete_state(app.State.action_history_index) : null },
 				{ name: 'Clear History', action: () => run_target('ps/commands.purge_histories') },
 				{ divider: true },
-				{ name: 'New Document', action: () => run_target('ps/commands.duplicate_document') }, { name: 'History Options...' },
+				{ name: 'New Document', action: () => run_target('ps/commands.duplicate_document') }, { name: 'History Options...', action: () => this.history_options_dialog() },
 			];
 		}
 		else {
@@ -1617,7 +1617,8 @@ class Ps_workspace_class {
 		if (src == null) src = 0;
 		var is_src = (v) => (typeof v == 'number' && v === src) || (v && src && v.snapshot != null && src.snapshot === v.snapshot);
 		var brush = (attr, v) => '<span class="ps_history_brush' + (is_src(v) ? ' source' : '') + '" ' + attr + ' title="Sets the source for the history brush"></span>';
-		var html = '<div class="ps_history_snapshot' + (state.action_history_index == 0 ? ' active' : '') + '" data-index="0">'
+		//History Options: Automatically Create First Snapshot (the document as opened)
+		var html = !this.history_options().first_snapshot ? '' : '<div class="ps_history_snapshot' + (state.action_history_index == 0 ? ' active' : '') + '" data-index="0">'
 			+ brush('data-brush-index="0"', 0) + '<span class="ps_history_thumb"></span><span>' + this.document_name() + '</span></div>';
 		var snaps = this.Documents.current().snapshots || [];
 		snaps.forEach((snap, i) => {
@@ -1646,7 +1647,7 @@ class Ps_workspace_class {
 		el.querySelectorAll('[data-snapshot]').forEach((row) => {
 			row.addEventListener('click', () => this.restore_snapshot(parseInt(row.dataset.snapshot)));
 		});
-		el.querySelector('.ps_history_snap').addEventListener('click', () => this.create_snapshot());
+		el.querySelector('.ps_history_snap').addEventListener('click', (e) => this.new_snapshot(e.altKey));
 		el.querySelector('.ps_history_delete').addEventListener('click', () => delete_state(app.State.action_history_index));
 		el.querySelector('.ps_history_newdoc').addEventListener('click', () => app.GUI.modules['ps/commands'].duplicate_document());
 		var list = el.querySelector('.ps_history_list');
@@ -1679,6 +1680,62 @@ class Ps_workspace_class {
 			copies.push(copy);
 		}
 		return { width: config.WIDTH, height: config.HEIGHT, layers: copies };
+	}
+
+	/**
+	 * History panel > History Options (saved in the browser)
+	 */
+	history_options() {
+		if (!this.hist_opts) {
+			try { this.hist_opts = JSON.parse(localStorage.getItem('pshot_history_options_v1') || 'null'); } catch (e) { this.hist_opts = null; }
+			this.hist_opts = Object.assign({ first_snapshot: true, snapshot_on_save: false, snapshot_dialog: false, visibility_undoable: false }, this.hist_opts || {});
+		}
+		return this.hist_opts;
+	}
+
+	history_options_dialog() {
+		var o = this.history_options();
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'History Options',
+			params: [
+				{ name: 'first_snapshot', title: 'Automatically Create First Snapshot', value: o.first_snapshot },
+				{ name: 'snapshot_on_save', title: 'Automatically Create New Snapshot When Saving', value: o.snapshot_on_save },
+				{ name: 'nonlinear', title: 'Allow Non-Linear History', value: false },
+				{ name: 'snapshot_dialog', title: 'Show New Snapshot Dialog by Default', value: o.snapshot_dialog },
+				{ name: 'visibility_undoable', title: 'Make Layer Visibility Changes Undoable', value: o.visibility_undoable },
+			],
+			on_load: (params, pop) => {
+				var nl = pop.el.querySelector('#pop_data_nonlinear');
+				if (nl) nl.disabled = true;
+			},
+			on_finish: (p) => {
+				Object.assign(o, { first_snapshot: !!p.first_snapshot, snapshot_on_save: !!p.snapshot_on_save, snapshot_dialog: !!p.snapshot_dialog, visibility_undoable: !!p.visibility_undoable });
+				try { localStorage.setItem('pshot_history_options_v1', JSON.stringify(o)); } catch (e) { /* storage blocked */ }
+				this.render_history();
+			},
+		});
+	}
+
+	/**
+	 * the eye: a History step only with Make Layer Visibility Changes Undoable (CS6 default: not)
+	 */
+	toggle_visibility(id) {
+		return app.State.do_action(new app.Actions.Toggle_layer_visibility_action(id));
+	}
+
+	/**
+	 * New Snapshot: named in a dialog when the History Options ask for it (or with Alt)
+	 */
+	new_snapshot(ask) {
+		if (!ask && !this.history_options().snapshot_dialog) return this.create_snapshot();
+		var doc = this.Documents.current();
+		prompt_name('New Snapshot', 'Snapshot ' + ((doc.snapshots || []).length + 1), (name) => {
+			this.create_snapshot();
+			var snaps = this.Documents.current().snapshots;
+			snaps[snaps.length - 1].name = name;
+			this.render_history();
+		});
 	}
 
 	create_snapshot() {

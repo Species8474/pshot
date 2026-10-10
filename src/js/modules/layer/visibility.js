@@ -9,9 +9,8 @@ class Layer_visibility_class {
 	}
 
 	toggle() {
-		app.State.do_action(
-			new app.Actions.Toggle_layer_visibility_action(config.layer.id)
-		);
+		//pshot: a History step only with Make Layer Visibility Changes Undoable (CS6)
+		app.GUI.Ps_workspace.toggle_visibility(config.layer.id);
 	}
 
 }

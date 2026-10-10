@@ -269,6 +269,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Character panel All Caps / Small Caps and Superscript / Subscript (span meta caps / position, text.js span_glyph: measured and drawn as shown). Ligatures and the other OpenType features stay greyed: the type engine draws letter by letter.
   - Paragraph panel: Justify last left / centered / right and Justify all (paragraph type: extra space spread over the word gaps), Indent left / right, Space before / after (horizontal type; layer.params indent_left, indent_right, space_before, space_after). First-line indent and Hyphenate stay greyed.
   - Actions panel: step check column (unchecked steps are skipped), Insert Menu Item (any menu command, not run now), Insert Stop (message, Allow Continue), Insert Path (the active path as a Set Work Path step), Action Options (name, F2-F12 with Shift/Ctrl, color; double-click an action), Playback Options (Accelerated / Step by Step / Pause For).
+  - History Options (History panel menu): Automatically Create First Snapshot (the opened-state row), New Snapshot When Saving, Show New Snapshot Dialog by Default (Alt+click the snapshot button also names it), Make Layer Visibility Changes Undoable (base-state skips the eye otherwise). Allow Non-Linear History greyed.
 
 ## Known gaps / next
 

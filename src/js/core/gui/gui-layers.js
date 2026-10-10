@@ -210,7 +210,7 @@ class GUI_layers_class {
 				app.GUI.modules['ps/commands'].solo_visibility(_this.Base_layers.get_layer(target.dataset.id));
 			}
 			else if (action == 'visibility') {
-				app.State.do_action(new app.Actions.Toggle_layer_visibility_action(target.dataset.id));
+				app.GUI.Ps_workspace.toggle_visibility(target.dataset.id);
 			}
 			else if (action == 'delete_filter') {
 				app.State.do_action(new app.Actions.Delete_layer_filter_action(target.dataset.pid, target.dataset.id));
