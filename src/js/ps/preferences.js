@@ -39,10 +39,20 @@ const DEFAULTS = {
 	place_smart: true,
 	smart_quotes: true,
 	channels_in_color: false,
+	screen_color: 'Default',
+	screen_custom: '#646464',
+	screen_border: 'Drop Shadow',
+	open_as_tabs: true,
+	float_docking: true,
+	large_tabs: false,
+	transform_values: true,
 	painting_cursor: 'Normal Brush Tip',
 	crosshair_in_tip: false,
 	crosshair_only: false,
 };
+
+//Standard Screen Mode pasteboard colors (Default follows the color theme)
+const SCREEN_COLORS = { 'Default': null, 'Black': '#000000', 'Dark Gray': '#282828', 'Medium Gray': '#646464', 'Light Gray': '#b4b4b4', 'Custom': 'custom' };
 
 //CS6 guide / grid / slice colors
 const LINE_COLORS = { 'Light Blue': '#4a90e2', 'Light Red': '#ff6a6a', 'Green': '#00b000', 'Medium Blue': '#0050ff', 'Yellow': '#e8e800', 'Magenta': '#ff00ff', 'Cyan': '#00e5ff', 'Light Gray': '#c0c0c0', 'Black': '#000000', 'Custom': null };
@@ -117,6 +127,13 @@ class Ps_preferences_class {
 			else style.removeProperty(k);
 		}
 		document.body.classList.toggle('ps_theme_light', v.theme >= 3);
+		//Interface: the pasteboard color and the canvas border, Large Tabs
+		var paste = SCREEN_COLORS[v.screen_color];
+		if (paste) style.setProperty('--ps-pasteboard', paste == 'custom' ? v.screen_custom : paste);
+		else if (!vars) style.removeProperty('--ps-pasteboard');
+		document.body.classList.toggle('ps_border_line', v.screen_border == 'Line');
+		document.body.classList.toggle('ps_border_none', v.screen_border == 'None');
+		document.body.classList.toggle('ps_large_tabs', !!v.large_tabs);
 		app.State.action_history_max = Math.max(1, Math.min(1000, parseInt(v.history_states) || 20));
 		app.GUI.grid_size = [Math.max(2, parseInt(v.grid_every) || 50), Math.max(2, parseInt(v.grid_every) || 50)];
 		this.apply_checker();
@@ -172,9 +189,9 @@ class Ps_preferences_class {
 			['Interface', [
 				{ type: 'group', label: 'Appearance' },
 				{ type: 'theme', key: 'theme', label: 'Color Theme:' },
-				{ type: 'row', items: [{ type: 'select', label: 'Standard Screen Mode:', values: ['Default'], disabled: true }, { type: 'select', label: 'Border:', values: ['Drop Shadow'], disabled: true }] },
+				{ type: 'row', items: [{ type: 'select', key: 'screen_color', label: 'Standard Screen Mode:', values: Object.keys(SCREEN_COLORS) }, { type: 'color', key: 'screen_custom', of: 'screen_color' }, { type: 'select', key: 'screen_border', label: 'Border:', values: ['Drop Shadow', 'Line', 'None'] }] },
 				{ type: 'group', label: 'Options' },
-				...[['Auto-Collapse Iconic Panels'], ['Auto-Show Hidden Panels'], ['Open Documents as Tabs'], ['Enable Floating Document Window Docking'], ['Large Tabs'], ['Show Transformation Values'], ['Show Tool Tips'], ['Show Channels in Color', 'channels_in_color'], ['Show Menu Colors']]
+				...[['Auto-Collapse Iconic Panels'], ['Auto-Show Hidden Panels'], ['Open Documents as Tabs', 'open_as_tabs'], ['Enable Floating Document Window Docking', 'float_docking'], ['Large Tabs', 'large_tabs'], ['Show Transformation Values', 'transform_values'], ['Show Tool Tips'], ['Show Channels in Color', 'channels_in_color'], ['Show Menu Colors']]
 					.map(([l, key], i) => key ? { type: 'check', key: key, label: l } : { type: 'check', label: l, value: [1, 2, 3, 5, 6, 8].includes(i), disabled: true }),
 				{ type: 'group', label: 'Text' },
 				{ type: 'row', items: [{ type: 'select', label: 'UI Language:', values: ['English'], disabled: true }, { type: 'select', label: 'UI Font Size:', values: ['Small'], disabled: true }] },

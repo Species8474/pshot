@@ -549,7 +549,7 @@ body.theme-cs6 .middle_area {
 body.theme-cs6 .loaded .canvas_wrapper canvas,
 body.theme-cs6 .canvas_wrapper canvas {
 	border: none;
-	box-shadow: 0 0 0 1px #000;
+	box-shadow: 0 0 0 1px #000, 3px 3px 7px rgba(0, 0, 0, 0.55);
 }
 body.theme-cs6 .ruler_left, body.theme-cs6 .ruler_top { background-color: #d6d6d6; }
 
@@ -1905,3 +1905,8 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 #mouse.ps_cross::before, #mouse.ps_cross::after { content: ''; position: absolute; background: rgba(0,0,0,0.6); }
 #mouse.ps_cross::before { left: 50%; top: 50%; width: 9px; height: 1px; margin-left: -4px; }
 #mouse.ps_cross::after { left: 50%; top: 50%; width: 1px; height: 9px; margin-top: -4px; }
+/* Preferences > Interface */
+body.ps_border_line.theme-cs6 .canvas_wrapper canvas { box-shadow: 0 0 0 1px #000; }
+body.ps_border_none.theme-cs6 .canvas_wrapper canvas { box-shadow: none; }
+body.ps_large_tabs .ps_doctab { height: 26px; font-size: 12px; }
+#ps_tf_hud { position: fixed; z-index: 3000; padding: 3px 6px; background: rgba(40, 40, 40, 0.9); color: #eee; border: 1px solid #111; font-size: 11px; line-height: 14px; pointer-events: none; }

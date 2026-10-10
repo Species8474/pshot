@@ -646,6 +646,30 @@ class Ps_transform_class {
 		app.GUI.Ps_workspace.Options_bar.update_transform_fields();
 	}
 
+	/**
+	 * Preferences > Interface > Show Transformation Values: a readout by the pointer
+	 */
+	show_values(e) {
+		var hud = document.getElementById('ps_tf_hud');
+		var prefs = app.GUI.Ps_workspace.Preferences;
+		if (!e || !this.job || !this.drag || (prefs && prefs.values.transform_values === false)) {
+			if (hud) hud.remove();
+			return;
+		}
+		if (!hud) {
+			hud = document.createElement('div');
+			hud.id = 'ps_tf_hud';
+			document.body.appendChild(hud);
+		}
+		var b = this.job.box, d = this.drag, text;
+		if (d.mode == 'move') text = 'X: ' + Math.round(b.cx - b.w / 2) + ' px<br>Y: ' + Math.round(b.cy - b.h / 2) + ' px';
+		else if (d.mode == 'rotate') text = ((b.angle * 180 / Math.PI) % 360).toFixed(1) + '°';
+		else text = 'W: ' + Math.round(b.w) + ' px<br>H: ' + Math.round(b.h) + ' px';
+		hud.innerHTML = text;
+		hud.style.left = (e.clientX + 18) + 'px';
+		hud.style.top = (e.clientY + 14) + 'px';
+	}
+
 	corners() {
 		if (this.job.quad) {
 			var q = this.job.quad, mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
@@ -791,12 +815,14 @@ class Ps_transform_class {
 			e.stopImmediatePropagation();
 			this.apply_drag(this.world(e), e);
 			this.preview();
+			this.show_values(e);
 		}, true);
 
 		document.addEventListener('mouseup', (e) => {
 			if (!this.job || !this.drag) return;
 			e.stopImmediatePropagation();
 			this.drag = null;
+			this.show_values(null);
 		}, true);
 
 		document.addEventListener('dblclick', (e) => {

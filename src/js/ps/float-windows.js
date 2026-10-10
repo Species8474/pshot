@@ -384,6 +384,9 @@ class Ps_float_windows_class {
 	}
 
 	over_tabs(e) {
+		//Preferences > Interface > Enable Floating Document Window Docking (Ctrl skips it, CS6)
+		var prefs = app.GUI.Ps_workspace.Preferences;
+		if ((prefs && prefs.values.float_docking === false) || e.ctrlKey) return false;
 		var r = document.getElementById('ps_doctabs').getBoundingClientRect();
 		return r.height > 0 && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top - 4 && e.clientY <= r.bottom + 4;
 	}

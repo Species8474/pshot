@@ -311,6 +311,9 @@ class Ps_documents_class {
 		app.GUI.Ps_workspace.set_view_rotation(0);
 		app.GUI.Ps_workspace.Paths.drawing = false;
 		app.GUI.Ps_workspace.Paths.render_panel();
+		//Preferences > Interface > Open Documents as Tabs off: new documents float
+		var prefs = app.GUI.Ps_workspace.Preferences, F = app.GUI.Ps_workspace.Float;
+		if (prefs && prefs.values.open_as_tabs === false && F) F.set_float(entry, F.default_rect(this.docs.filter(d => d.float).length));
 		this.changed();
 		return entry;
 	}
