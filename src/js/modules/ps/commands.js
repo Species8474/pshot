@@ -1817,17 +1817,23 @@ class Ps_commands_class {
 			'Color Dodge': 'color-dodge', 'Color Burn': 'color-burn', 'Soft Light': 'soft-light', 'Hard Light': 'hard-light', 'Difference': 'difference',
 			'Exclusion': 'exclusion', 'Add': 'lighter' };
 		var sources = [['Merged', null]].concat(app.GUI.Ps_workspace.Groups.ordered().filter(l => l.type == 'image' || l.type == 'text').map(l => [l.name, l.id]));
-		var html = '<div class="ps_adj_row"><span>Layer:</span><select id="ai_layer">' + sources.map((s, i) => '<option value="' + i + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(s[0]) + '</option>').join('') + '</select></div>'
-			+ '<div class="ps_adj_row"><span>Channel:</span><select disabled><option>RGB</option></select></div>'
+		//Source: the open documents of the same size (another document gives its merged image)
+		var D = app.GUI.Ps_workspace.Documents, esc = app.GUI.Ps_workspace.Helper.escapeHtml;
+		var docs = D.docs.map((d, i) => ({ i: i, name: i == D.active ? app.GUI.Ps_workspace.document_name() : (d.name || 'Untitled'), flat: d.flat }))
+			.filter(d => d.i == D.active || (d.flat && d.flat.width == config.WIDTH && d.flat.height == config.HEIGHT));
+		var html = '<div class="ps_adj_row"><span>Source:</span><select id="ai_doc">' + docs.map(d => '<option value="' + d.i + '"' + (d.i == D.active ? ' selected' : '') + '>' + esc(d.name) + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><span>Layer:</span><select id="ai_layer">' + sources.map((s, i) => '<option value="' + i + '">' + esc(s[0]) + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><span>Channel:</span><select id="ai_channel"><option>RGB</option><option>Red</option><option>Green</option><option>Blue</option></select></div>'
 			+ '<label class="ps_adj_check"><input type="checkbox" id="ai_invert"> Invert</label>'
 			+ '<div class="ps_adj_row"><span>Blending:</span><select id="ai_mode">' + Object.keys(modes).map(m => '<option' + (m == 'Multiply' ? ' selected' : '') + '>' + m + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_slider"><span>Opacity:</span><input type="number" id="ai_opacity_n" min="0" max="100" value="100"><span class="ps_adj_unit">%</span><input type="range" id="ai_opacity" min="0" max="100" value="100"></div>';
-		var source_canvas = (index) => {
+		var source_canvas = (index, doc) => {
 			var c = document.createElement('canvas');
 			c.width = config.WIDTH;
 			c.height = config.HEIGHT;
 			var ctx = c.getContext('2d');
-			if (index == 0) this.Base_layers.convert_layers_to_canvas(ctx, null, false);
+			if (doc != null && doc != D.active && D.docs[doc] && D.docs[doc].flat) ctx.drawImage(D.docs[doc].flat, 0, 0);
+			else if (index == 0) this.Base_layers.convert_layers_to_canvas(ctx, null, false);
 			else {
 				var l = this.Base_layers.get_layer(sources[index][1]);
 				if (l) this.Base_layers.render_object(ctx, Object.assign(Object.create(Object.getPrototypeOf(l)), l, { visible: true, _ps_ignore_groups: true }));
@@ -1836,8 +1842,16 @@ class Ps_commands_class {
 		};
 		var cache = {};
 		this.Adjust.show('Apply Image', html, (root, state, update) => {
-			state.source = 0; state.invert = false; state.mode = 'Multiply'; state.opacity = 100;
+			state.source = 0; state.invert = false; state.mode = 'Multiply'; state.opacity = 100; state.doc = D.active; state.channel = 'RGB';
 			root.querySelector('#ai_layer').addEventListener('change', (e) => { state.source = parseInt(e.target.value); update(); });
+			root.querySelector('#ai_doc').addEventListener('change', (e) => {
+				state.doc = parseInt(e.target.value);
+				var own = state.doc == D.active;
+				root.querySelector('#ai_layer').disabled = !own;
+				if (!own) { state.source = 0; root.querySelector('#ai_layer').value = '0'; }
+				update();
+			});
+			root.querySelector('#ai_channel').addEventListener('change', (e) => { state.channel = e.target.value; update(); });
 			root.querySelector('#ai_invert').addEventListener('change', (e) => { state.invert = e.target.checked; update(); });
 			root.querySelector('#ai_mode').addEventListener('change', (e) => { state.mode = e.target.value; update(); });
 			var r = root.querySelector('#ai_opacity'), n = root.querySelector('#ai_opacity_n');
@@ -1845,8 +1859,17 @@ class Ps_commands_class {
 			r.addEventListener('input', () => set(parseFloat(r.value)));
 			n.addEventListener('change', () => set(parseFloat(n.value)));
 		}, (state) => (src, dst, w, h) => {
-			var key = state.source;
-			if (!cache[key]) cache[key] = source_canvas(key);
+			var key = state.doc + ':' + state.source + ':' + state.channel;
+			if (!cache[key]) {
+				cache[key] = source_canvas(state.source, state.doc);
+				//Channel: one channel as gray
+				var k = { Red: 0, Green: 1, Blue: 2 }[state.channel];
+				if (k != null) {
+					var cc = cache[key].getContext('2d', { willReadFrequently: true }), cd = cc.getImageData(0, 0, cache[key].width, cache[key].height);
+					for (var q = 0; q < cd.data.length; q += 4) cd.data[q] = cd.data[q + 1] = cd.data[q + 2] = cd.data[q + k];
+					cc.putImageData(cd, 0, 0);
+				}
+			}
 			var s = cache[key];
 			if (state.invert) {
 				var inv = document.createElement('canvas');

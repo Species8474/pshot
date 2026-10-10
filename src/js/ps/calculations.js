@@ -37,8 +37,18 @@ class Ps_calculations_class {
 		return app.GUI.Ps_workspace.Groups.ordered().filter(l => l.type == 'image' || l.type == 'text');
 	}
 
-	channels(layer_index) {
+	/**
+	 * Source: the open documents of the same pixel size (others by their merged image)
+	 */
+	sources() {
+		var D = app.GUI.Ps_workspace.Documents;
+		return D.docs.map((d, i) => ({ index: i, name: d.name || 'Untitled', current: i == D.active, flat: d.flat }))
+			.filter(d => d.current || (d.flat && d.flat.width == config.WIDTH && d.flat.height == config.HEIGHT));
+	}
+
+	channels(layer_index, doc) {
 		var list = ['Red', 'Green', 'Blue', 'Gray'];
+		if (doc != null && doc != app.GUI.Ps_workspace.Documents.active) return list;
 		if (layer_index > 0) list.push('Transparency');
 		if (app.GUI.Ps_workspace.Selection.has()) list.push('Selection');
 		return list.concat((config.ps_alpha || []).map(c => c.name));
@@ -62,7 +72,11 @@ class Ps_calculations_class {
 			c.width = W;
 			c.height = H;
 			var ctx = c.getContext('2d', { willReadFrequently: true });
-			if (src.layer == 0) {
+			var other = src.doc != null && src.doc != app.GUI.Ps_workspace.Documents.active ? app.GUI.Ps_workspace.Documents.docs[src.doc] : null;
+			if (other && other.flat) {
+				ctx.drawImage(other.flat, 0, 0);
+			}
+			else if (src.layer == 0) {
 				app.Layers.convert_layers_to_canvas(ctx, null, false);
 			}
 			else {
@@ -88,8 +102,10 @@ class Ps_calculations_class {
 
 	compute(s) {
 		var a = this.values(s.src1), b = this.values(s.src2), fn = BLEND[s.blend] || BLEND.Multiply, op = s.opacity / 100;
+		//Mask: a channel limits where the blend applies
+		var m = s.mask ? this.values(s.mask) : null;
 		var out = new Float32Array(a.length);
-		for (var i = 0; i < a.length; i++) out[i] = b[i] + (fn(a[i], b[i]) - b[i]) * op;
+		for (var i = 0; i < a.length; i++) out[i] = b[i] + (fn(a[i], b[i]) - b[i]) * op * (m ? m[i] : 1);
 		return out;
 	}
 
@@ -115,18 +131,21 @@ class Ps_calculations_class {
 		var doc = app.GUI.Ps_workspace.document_name();
 		var esc = app.GUI.Ps_workspace.Helper.escapeHtml;
 		var layer_opts = ['Merged'].concat(this.layers().map(l => l.name));
+		var D = app.GUI.Ps_workspace.Documents;
+		var docs = this.sources();
 		var source = (k, title) => '<div class="ps_adj_label">' + title + '</div>'
-			+ '<div class="ps_adj_row"><span>Source:</span><select disabled><option>' + esc(doc) + '</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Source:</span><select id="calc_' + k + '_doc">' + docs.map(d => '<option value="' + d.index + '"' + (d.current ? ' selected' : '') + '>' + esc(d.current ? doc : d.name) + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_row"><span>Layer:</span><select id="calc_' + k + '_layer">' + layer_opts.map((n, i) => '<option value="' + i + '">' + esc(n) + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_row"><span>Channel:</span><select id="calc_' + k + '_channel"></select><label class="ps_adj_check"><input type="checkbox" id="calc_' + k + '_invert"> Invert</label></div>';
 		var html = '<div class="ps_adj ps_calc"><div class="ps_calc_cols"><div>'
 			+ source('1', 'Source 1') + source('2', 'Source 2')
 			+ '<div class="ps_adj_row"><span>Blending:</span><select id="calc_blend">' + Object.keys(BLEND).map(m => '<option' + (m == 'Multiply' ? ' selected' : '') + '>' + m + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_slider"><span>Opacity:</span><input type="number" id="calc_opacity_n" min="0" max="100" value="100"><span class="ps_adj_unit">%</span><input type="range" id="calc_opacity" min="0" max="100" value="100"></div>'
-			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Mask...</label>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="calc_mask"> Mask...</label>'
+			+ '<div class="ps_adj_row" id="calc_mask_row" style="display:none"><span>Channel:</span><select id="calc_mask_channel">' + this.channels(1).map(c => '<option>' + esc(c) + '</option>').join('') + '</select><label class="ps_adj_check"><input type="checkbox" id="calc_mask_invert"> Invert</label></div>'
 			+ '<div class="ps_adj_row"><span>Result:</span><select id="calc_result"><option>New Channel</option><option>New Document</option><option>Selection</option></select></div>'
 			+ '</div><canvas id="calc_preview" class="ps_cr_preview" width="200" height="150"></canvas></div></div>';
-		var s = { src1: { layer: 0, channel: 'Gray', invert: false }, src2: { layer: 0, channel: 'Gray', invert: false }, blend: 'Multiply', opacity: 100, result: 'New Channel' };
+		var s = { src1: { doc: D.active, layer: 0, channel: 'Gray', invert: false }, src2: { doc: D.active, layer: 0, channel: 'Gray', invert: false }, blend: 'Multiply', opacity: 100, result: 'New Channel' };
 		var POP = new Dialog_class();
 		POP.show({
 			title: 'Calculations',
@@ -147,12 +166,17 @@ class Ps_calculations_class {
 		};
 		['1', '2'].forEach((k) => {
 			var src = s['src' + k];
-			var lsel = root.querySelector('#calc_' + k + '_layer'), csel = root.querySelector('#calc_' + k + '_channel');
+			var lsel = root.querySelector('#calc_' + k + '_layer'), csel = root.querySelector('#calc_' + k + '_channel'), dsel = root.querySelector('#calc_' + k + '_doc');
 			var fill = () => {
-				var list = this.channels(src.layer);
+				var list = this.channels(src.layer, src.doc);
 				if (!list.includes(src.channel)) src.channel = 'Gray';
 				csel.innerHTML = list.map(c => '<option' + (c == src.channel ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+				//another document offers its merged image only
+				var own = src.doc == D.active;
+				lsel.disabled = !own;
+				if (!own) { lsel.value = '0'; src.layer = 0; }
 			};
+			dsel.addEventListener('change', () => { src.doc = parseInt(dsel.value); fill(); draw(); });
 			lsel.addEventListener('change', () => { src.layer = parseInt(lsel.value); fill(); draw(); });
 			csel.addEventListener('change', () => { src.channel = csel.value; draw(); });
 			root.querySelector('#calc_' + k + '_invert').addEventListener('change', (e) => { src.invert = e.target.checked; draw(); });
@@ -164,6 +188,13 @@ class Ps_calculations_class {
 		r.addEventListener('input', () => set(parseFloat(r.value)));
 		n.addEventListener('change', () => set(parseFloat(n.value)));
 		root.querySelector('#calc_result').addEventListener('change', (e) => { s.result = e.target.value; });
+		var mask_on = root.querySelector('#calc_mask'), mask_ch = root.querySelector('#calc_mask_channel'), mask_inv = root.querySelector('#calc_mask_invert');
+		var set_mask = () => {
+			root.querySelector('#calc_mask_row').style.display = mask_on.checked ? '' : 'none';
+			s.mask = mask_on.checked ? { doc: D.active, layer: 0, channel: mask_ch.value, invert: mask_inv.checked } : null;
+			draw();
+		};
+		[mask_on, mask_ch, mask_inv].forEach(el => el.addEventListener('change', set_mask));
 		draw();
 	}
 
