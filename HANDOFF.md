@@ -222,6 +222,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Layers panel: Ctrl+click a layer/mask thumbnail loads it as a selection (Shift add, Alt subtract, Shift+Alt intersect); Alt+click an eye shows only that layer (again to restore). Hidden shortcuts: Shift+Ctrl+Alt+E Stamp Visible, Shift+Ctrl+Alt+N new layer, Alt+[ / Alt+] select layer below/above, Alt/Ctrl+Backspace fill FG/BG.
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
   - Edit > Presets > Preset Manager (Brushes, Gradients, Patterns, Custom Shapes, Tools; rename/delete user presets) and Export/Import Presets (one JSON file).
+  - Layers panel right-click menus (ps/layer-context.js): layer row (Layer Properties / Layer From Background, Blending Options, Duplicate/Delete, Smart Object, Rasterize, mask enable/disable, Clipping Mask, Link, layer styles, Merge, Flatten, color labels), thumbnail (Select Pixels / transparency ops), layer mask and vector mask thumbnails. The clicked layer is selected first; popup menu items ignore the right-button release.
 
 ## Known gaps / next
 

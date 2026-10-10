@@ -32,7 +32,7 @@ function on_key(event) {
 /**
  * @param {HTMLElement} anchor element the menu is attached to
  * @param {Array} items
- * @param {object} opts { placement: 'below' | 'right' , className }
+ * @param {object} opts { placement: 'below' | 'right' , point: {x, y}, className }
  */
 function show_popup_menu(anchor, items, opts = {}) {
 	close_popup_menu();
@@ -67,6 +67,10 @@ function show_popup_menu(anchor, items, opts = {}) {
 		a.innerHTML = html;
 		a.addEventListener('mouseup', function (event) {
 			event.preventDefault();
+			//the release of the right-click that opened a context menu under the mouse
+			if (event.button == 2) {
+				return;
+			}
 			if (!item.action) {
 				return;
 			}
@@ -81,7 +85,12 @@ function show_popup_menu(anchor, items, opts = {}) {
 	var rect = anchor.getBoundingClientRect();
 	var mrect = menu.getBoundingClientRect();
 	var left, top;
-	if (opts.placement === 'right') {
+	if (opts.point) {
+		//context menus open at the mouse
+		left = opts.point.x;
+		top = opts.point.y;
+	}
+	else if (opts.placement === 'right') {
 		left = rect.right + 1;
 		top = rect.top;
 	}
@@ -93,7 +102,7 @@ function show_popup_menu(anchor, items, opts = {}) {
 		left = Math.max(0, window.innerWidth - mrect.width - 2);
 	}
 	if (top + mrect.height > window.innerHeight) {
-		top = Math.max(0, (opts.placement === 'right' ? window.innerHeight : rect.top) - mrect.height - 2);
+		top = Math.max(0, (opts.point ? opts.point.y : (opts.placement === 'right' ? window.innerHeight : rect.top)) - mrect.height - 2);
 	}
 	menu.style.left = left + 'px';
 	menu.style.top = top + 'px';

@@ -13,6 +13,7 @@ import Effects_browser_class from './../../modules/effects/browser.js';
 import Layer_duplicate_class from './../../modules/layer/duplicate.js';
 import { show_popup_menu } from './../../ps/popup-menu.js';
 import { adjustment_items, layer_style_items } from './../../ps/adjustments-def.js';
+import { layer_context_menu } from './../../ps/layer-context.js';
 
 /**
  * CS6 blend modes in menu order. op = canvas globalCompositeOperation; the 'ps-' ones are
@@ -247,6 +248,12 @@ class GUI_layers_class {
 			}
 			thumb_press = { id: thumb.dataset.id, time: now };
 		}, true);
+
+		//CS6: right-click a layer (row, thumbnail or mask) for its context menu
+		base.addEventListener('contextmenu', function (event) {
+			if (event.target.closest('.ps_layer_name input')) return;
+			layer_context_menu(event);
+		});
 
 		base.addEventListener('dblclick', function (event) {
 			if (_this.thumb_double_handled && Date.now() - _this.thumb_double_handled < 600 && event.target.closest('[data-action="layer_thumb"]')) {
