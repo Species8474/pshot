@@ -40,6 +40,8 @@ const DEFAULTS = {
 	place_smart: true,
 	smart_quotes: true,
 	recent_count: 10,
+	gamut_color: '#808080',
+	gamut_opacity: 100,
 	channels_in_color: false,
 	screen_color: 'Default',
 	screen_custom: '#646464',
@@ -244,7 +246,7 @@ class Ps_preferences_class {
 				{ type: 'row', items: [{ type: 'select', key: 'transparency_colors', label: 'Grid Colors:', values: Object.keys(CHECKER) }, { type: 'checker' }] },
 				{ type: 'check', label: 'Use video alpha (requires hardware support)', value: false, disabled: true },
 				{ type: 'group', label: 'Gamut Warning' },
-				{ type: 'row', items: [{ type: 'readout', label: 'Color:', text: '' }, { type: 'num', label: 'Opacity:', value: 100, unit: '%', disabled: true }] },
+				{ type: 'row', items: [{ type: 'color', key: 'gamut_color', label: 'Color:' }, { type: 'num', key: 'gamut_opacity', label: 'Opacity:', min: 0, max: 100, unit: '%' }] },
 			]],
 			['Units & Rulers', [
 				{ type: 'group', label: 'Units' },
@@ -342,7 +344,7 @@ class Ps_preferences_class {
 			}
 			if (c.type == 'readout') return '<span class="ps_prefs_field">' + label + '<span>' + esc(c.text || '') + '</span></span>';
 			//Custom...: the color well next to a color menu
-			if (c.type == 'color') return '<input type="color" class="ps_prefs_color" data-key="' + c.key + '" data-of="' + c.of + '" value="' + (d[c.key] || '#000000') + '"' + (d[c.of] == 'Custom' ? '' : ' style="visibility:hidden"') + '>';
+			if (c.type == 'color') return (c.label ? '<span class="ps_prefs_field">' + label : '') + '<input type="color" class="ps_prefs_color" data-key="' + c.key + '"' + (c.of ? ' data-of="' + c.of + '"' : '') + ' value="' + (d[c.key] || '#000000') + '"' + (!c.of || d[c.of] == 'Custom' ? '' : ' style="visibility:hidden"') + '>' + (c.label ? '</span>' : '');
 			if (c.type == 'checker') return '<span class="ps_prefs_checker"></span>';
 			return '';
 		};

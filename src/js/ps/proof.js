@@ -172,7 +172,13 @@ class Ps_proof_class {
 		if (this.gamut) {
 			var lg = lab(r, g, b), C = Math.hypot(lg[1], lg[2]);
 			var hg = (Math.atan2(lg[2], lg[1]) * 180 / Math.PI + 360) % 360;
-			if (C > max_chroma(lg[0], hg) + 1) return (128 << 16) | (128 << 8) | 128;
+			if (C > max_chroma(lg[0], hg) + 1) {
+				//Preferences > Transparency & Gamut > Gamut Warning color / opacity
+				var gp = app.GUI.Ps_workspace.Preferences ? app.GUI.Ps_workspace.Preferences.values : {};
+				var gc = gp.gamut_color || '#808080', go = (gp.gamut_opacity == null ? 100 : gp.gamut_opacity) / 100;
+				var mixc = (k, v) => Math.round(v + (parseInt(gc.substr(1 + k * 2, 2), 16) - v) * go);
+				return (mixc(0, r) << 16) | (mixc(1, g) << 8) | mixc(2, b);
+			}
 		}
 		if (this.colors) {
 			var s = this.setup;
@@ -227,7 +233,8 @@ class Ps_proof_class {
 	apply(ctx) {
 		if (!this.active()) return;
 		//the cache holds results for one set of settings
-		var key = config.ps_mode + '|' + config.ps_depth + '|' + this.hdr_exposure + '|' + this.hdr_gamma + '|' + config.ps_profile;
+		var gp = app.GUI.Ps_workspace.Preferences ? app.GUI.Ps_workspace.Preferences.values : {};
+		var key = config.ps_mode + '|' + config.ps_depth + '|' + this.hdr_exposure + '|' + this.hdr_gamma + '|' + config.ps_profile + '|' + gp.gamut_color + gp.gamut_opacity;
 		if (this.cache_key !== key) { this.cache.clear(); this.cache_key = key; }
 		var t = ctx.getTransform(), cv = ctx.canvas;
 		var x0 = Math.max(0, Math.floor(t.e)), y0 = Math.max(0, Math.floor(t.f));
