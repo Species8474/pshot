@@ -740,6 +740,12 @@ config.TOOLS = [
 			ratio_h: '',
 			view: 'Rule of Thirds',
 			delete_pixels: true,
+			show_cropped: true,
+			shield: true,
+			shield_color: 'Match Canvas',
+			shield_custom: '#000000',
+			shield_opacity: 75,
+			shield_auto: true,
 		},
 	},
 	{

@@ -16,6 +16,48 @@ import { picker_button } from './thumb-picker.js';
 import { font_button } from './font-menu.js';
 import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
+/**
+ * Crop tool gear: Show Cropped Area and the crop shield (CS6's classic mode
+ * is how pshot crops, so that choice is shown on and fixed)
+ */
+function crop_options(anchor) {
+	var old = document.querySelector('.ps_crop_opts');
+	if (old) { old.remove(); return; }
+	var a = config.TOOL.attributes;
+	var pop = document.createElement('div');
+	pop.className = 'ps_crop_opts';
+	var draw = () => {
+		var off = a.shield ? '' : ' disabled';
+		pop.innerHTML = '<label class="ps_adj_check disabled"><input type="checkbox" checked disabled> Use Classic Mode</label>'
+			+ '<div class="ps_crop_opts_group"><label class="ps_adj_check disabled"><input type="checkbox" disabled> Auto Center Preview</label>'
+			+ '<label class="ps_adj_check"><input type="checkbox" data-k="show_cropped"' + (a.show_cropped ? ' checked' : '') + '> Show Cropped Area</label></div>'
+			+ '<div class="ps_crop_opts_group"><label class="ps_adj_check"><input type="checkbox" data-k="shield"' + (a.shield ? ' checked' : '') + '> Enable Crop Shield</label>'
+			+ '<div class="ps_crop_opts_row"><span>Color:</span><select data-k="shield_color"' + off + '><option' + (a.shield_color == 'Match Canvas' ? ' selected' : '') + '>Match Canvas</option><option' + (a.shield_color == 'Custom' ? ' selected' : '') + '>Custom</option></select>'
+			+ '<input type="color" data-k="shield_custom" value="' + a.shield_custom + '"' + (a.shield && a.shield_color == 'Custom' ? '' : ' disabled') + '></div>'
+			+ '<div class="ps_crop_opts_row"><span>Opacity:</span><input type="number" min="0" max="100" data-k="shield_opacity" value="' + a.shield_opacity + '"' + off + '>%</div>'
+			+ '<label class="ps_adj_check' + off + '"><input type="checkbox" data-k="shield_auto"' + (a.shield_auto ? ' checked' : '') + off + '> Auto Adjust Opacity</label></div>';
+		pop.querySelectorAll('[data-k]').forEach((el) => el.addEventListener('change', () => {
+			var k = el.dataset.k;
+			if (el.type == 'checkbox') a[k] = el.checked;
+			else if (el.type == 'number') a[k] = Math.max(0, Math.min(100, parseFloat(el.value) || 0));
+			else a[k] = el.value;
+			draw();
+			app.GUI.Ps_workspace.Selection.draw_overlay();
+		}));
+	};
+	draw();
+	document.body.appendChild(pop);
+	var r = anchor.getBoundingClientRect();
+	pop.style.left = Math.max(0, Math.min(window.innerWidth - pop.offsetWidth - 4, r.left)) + 'px';
+	pop.style.top = (r.bottom + 2) + 'px';
+	var outside = (e) => {
+		if (pop.contains(e.target) || anchor.contains(e.target)) return;
+		pop.remove();
+		document.removeEventListener('mousedown', outside, true);
+	};
+	setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+}
+
 function pcrop() {
 	return app.GUI.GUI_tools.tools_modules.ps_pcrop.object;
 }
@@ -288,7 +330,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'button', text: 'Straighten', action: () => app.GUI.GUI_tools.tools_modules.crop.object.start_straighten() },
 		{ type: 'select', label: 'View:', values: CROP_VIEWS, bind: 'view', map: Object.fromEntries(CROP_VIEWS.map(v => [v, v])) },
-		{ type: 'icon', icon: IC.gear, title: 'Set additional Crop options' },
+		{ type: 'icon', icon: IC.gear, title: 'Set additional Crop options', action: (e) => crop_options(e.currentTarget) },
 		{ type: 'sep' },
 		{ type: 'check', label: 'Delete Cropped Pixels', bind: 'delete_pixels' },
 		{ type: 'sep' },

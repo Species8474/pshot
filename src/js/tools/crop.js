@@ -48,10 +48,23 @@ class Crop_class extends Base_tools_class {
 			Selection.overlays.push({
 				active: () => config.TOOL.name == this.name && this.selection.width,
 				draw: (ctx) => {
-					var s = this.selection;
+					var s = this.selection, a = config.TOOL.attributes;
 					var x = Math.min(s.x, s.x + s.width), y = Math.min(s.y, s.y + s.height);
+					//gear options: the shield's color and opacity; Show Cropped Area off hides what goes
+					var canvas_color = getComputedStyle(document.getElementById('ps_docarea')).backgroundColor || 'rgb(40,40,40)';
+					var color = a.shield_color == 'Custom' ? a.shield_custom : canvas_color;
+					var alpha = (a.shield_opacity == null ? 75 : a.shield_opacity) / 100;
+					if (a.shield_auto !== false && config.mouse && config.mouse.is_drag) alpha *= 0.6;
+					if (a.show_cropped === false) {
+						color = canvas_color;
+						alpha = 1;
+					}
+					else if (a.shield === false) {
+						return;
+					}
 					ctx.save();
-					ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+					ctx.globalAlpha = alpha;
+					ctx.fillStyle = color;
 					ctx.beginPath();
 					ctx.rect(0, 0, config.WIDTH, config.HEIGHT);
 					ctx.rect(x, y, Math.abs(s.width), Math.abs(s.height));

@@ -275,6 +275,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Options bar audit: every "Toggle the Brush panel" icon opens the Brush panel; Move tool Auto-Align icon runs Auto-Align Layers; Auto-Select Layer / Group (Group picks the outermost group holding the clicked layer). Zoom tool: Scrubby Zoom (drag right zooms in, left out) or, off, drag an area that then fills the window centered; Zoom All Windows, Resize Windows to Fit (floating window wraps the image). Hand Scroll All Windows and Rotate View Rotate All Windows (Float.match on release).
   - Ruler: protractor (Alt-drag from an end of the line draws a second arm; A is the angle between the arms, L2 its length, W/H blank; Straighten uses the first arm). Use Measurement Scale shows X/Y/W/H/L1/L2 in the Image > Analysis scale.
   - Perspective Crop options: W / H (px, swap), Resolution (pixels/inch or cm, sets the document ppi), Front Image (document size and resolution), Clear, Show Grid. Options bar number fields bound to string attributes can be emptied.
+  - Crop tool gear: Show Cropped Area (off hides what is cut), Enable Crop Shield, Color (Match Canvas / Custom), Opacity, Auto Adjust Opacity (lighter while dragging). Use Classic Mode shows checked and fixed (pshot's crop is the classic box-over-image mode); Auto Center Preview greyed.
 
 ## Known gaps / next
 
