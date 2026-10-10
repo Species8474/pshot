@@ -2417,6 +2417,12 @@ class Ps_commands_class {
 		this.Wide_angle.open();
 	}
 
+	variables_define() { app.GUI.Ps_workspace.Variables.define(); }
+	data_sets() { app.GUI.Ps_workspace.Variables.data_sets(); }
+	apply_data_set() { app.GUI.Ps_workspace.Variables.apply_dialog(); }
+	import_data_sets() { app.GUI.Ps_workspace.Variables.import_sets(); }
+	export_data_sets() { app.GUI.Ps_workspace.Variables.export_dialog(); }
+
 	zoomify() {
 		this.Zoomify = this.Zoomify || new Ps_zoomify_class();
 		this.Zoomify.dialog();

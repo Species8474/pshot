@@ -249,6 +249,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - File > Export > Zoomify (ps/zoomify.js): Zoomify tile pyramid (ImageProperties.xml, TileGroupN/z-x-y.jpg) + an HTML pan/zoom viewer, as a zip.
   - Edit > Menus (Alt+Shift+Ctrl+M): the Menus tab of Keyboard Shortcuts and Menus — per item / submenu Visibility and Color (saved in the browser as pshot_menu_custom_v1, flags ps_hidden / ps_color on the menu definitions); menus with hidden items end with Show All Menu Items.
   - View > Show > Mesh / Edit Pins (Puppet Warp mesh and pins), View > Show > Show Extra Options... (which extras show); Image > Trap (CMYK only: lighter inks spread under darker neighbours by the width).
+  - Data-driven graphics (ps/variables.js): Image > Variables > Define (visibility / text replacement / pixel replacement with Fit, Fill, As Is, Conform; layer.ps_vars), Data Sets dialog (config.ps_datasets, per document), Image > Apply Data Set, File > Import > Variable Data Sets (CSV or tab text, first row = names), File > Export > Data Sets as Files (PNG/JPEG per set, zip).
 
 ## Known gaps / next
 

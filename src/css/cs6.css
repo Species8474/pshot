@@ -1818,3 +1818,13 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_menu_row { grid-template-columns: 1fr 70px 100px !important; }
 .ps_kbd_head.ps_menus_head { grid-template-columns: 1fr 70px 100px; }
 .ps_menu_eye { width: 22px; height: 18px; padding: 0; border: 1px solid #555; background: transparent; color: var(--ps-text); font-size: 11px; }
+/* Image > Variables > Data Sets */
+.ps_vars { width: 560px; }
+.ps_vars .ps_ge_row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ps_vars .ps_ge_row input[type="text"] { width: 120px; }
+.ps_vars_table { border: 1px solid var(--ps-border); background: var(--ps-panel-dark); max-height: 280px; overflow-y: auto; }
+.ps_vars_head, .ps_vars_row { display: grid; grid-template-columns: 140px 1fr 80px; gap: 8px; align-items: center; padding: 3px 6px; }
+.ps_vars_head { border-bottom: 1px solid var(--ps-border); font-weight: 600; }
+.ps_vars_row input[type="text"], .ps_vars_row select { width: 100%; box-sizing: border-box; }
+.ps_vars_file { font-size: 11px; }
+.ps_vars_buttons { flex-direction: row; width: auto; justify-content: flex-end; }

@@ -63,6 +63,7 @@ import { install_panel_context_menus, delete_state } from './panel-context.js';
 import Ps_float_windows_class from './float-windows.js';
 import { cmyk_safe, channel_value } from './proof.js';
 import Ps_color_management_class from './color-management.js';
+import Ps_variables_class from './variables.js';
 import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
@@ -121,6 +122,7 @@ class Ps_workspace_class {
 		this.Brush_panel = new Ps_brush_panel_class();
 		this.Comps = new Ps_layer_comps_class();
 		this.Float = new Ps_float_windows_class();
+		this.Variables = new Ps_variables_class();
 		this.Actions = new Ps_actions_panel_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
