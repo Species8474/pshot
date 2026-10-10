@@ -21,6 +21,49 @@ function new_light(type, w, h) {
 }
 
 /**
+ * CS6 presets (light setups approximating the shipped ones): positions are
+ * fractions of the image, `to` is where a spot points, `r` / `len` fractions
+ * of the smaller side
+ */
+const PRESETS = {
+	'Default': [{ type: 'spot', at: [0.5, 0.5], to: [0.78, 0.78] }],
+	'Blue Omni': [{ type: 'point', at: [0.5, 0.5], r: 0.6, color: '#3c5aff', intensity: 60 }],
+	'Circle of Light': [[0.5, 0.15], [0.85, 0.5], [0.5, 0.85], [0.15, 0.5]].map(p => ({ type: 'spot', at: p, to: [0.5, 0.5], intensity: 30, len: 0.35 })),
+	'Crossing': [{ type: 'spot', at: [0.25, 0.5], to: [0.75, 0.5], intensity: 40 }, { type: 'spot', at: [0.75, 0.5], to: [0.25, 0.5], intensity: 40 }],
+	'Crossing Down': [{ type: 'spot', at: [0.25, 0.2], to: [0.65, 0.8], intensity: 40 }, { type: 'spot', at: [0.75, 0.2], to: [0.35, 0.8], intensity: 40 }],
+	'Five Lights Down': [0.1, 0.3, 0.5, 0.7, 0.9].map(x => ({ type: 'spot', at: [x, 0.15], to: [x, 0.6], intensity: 30, len: 0.3 })),
+	'Five Lights Up': [0.1, 0.3, 0.5, 0.7, 0.9].map(x => ({ type: 'spot', at: [x, 0.85], to: [x, 0.4], intensity: 30, len: 0.3 })),
+	'Flashlight': [{ type: 'point', at: [0.5, 0.5], r: 0.25, color: '#fff5d0', intensity: 60 }],
+	'Flood Light': [{ type: 'spot', at: [0.5, 0.35], to: [0.5, 0.9], intensity: 70, hotspot: 80, len: 0.6 }],
+	'Parallel Directional': [{ type: 'infinite', at: [0.5, 0.5], to: [0.7, 0.3], color: '#c8d2ff', intensity: 45 }],
+	'RGB Lights': [{ type: 'spot', at: [0.38, 0.4], to: [0.1, 0.15], color: '#ff0000', intensity: 45, len: 0.4 }, { type: 'spot', at: [0.62, 0.4], to: [0.9, 0.15], color: '#00ff00', intensity: 45, len: 0.4 }, { type: 'spot', at: [0.5, 0.62], to: [0.5, 0.95], color: '#0000ff', intensity: 45, len: 0.4 }],
+	'Soft Direct Lights': [{ type: 'infinite', at: [0.5, 0.5], to: [0.2, 0.2], intensity: 25 }, { type: 'infinite', at: [0.5, 0.5], to: [0.8, 0.8], intensity: 15 }],
+	'Soft Omni': [{ type: 'point', at: [0.5, 0.5], r: 0.8, intensity: 30 }],
+	'Soft Spot Light': [{ type: 'spot', at: [0.5, 0.5], to: [0.85, 0.85], intensity: 30, hotspot: 20, len: 0.7 }],
+	'Three Down': [0.25, 0.5, 0.75].map(x => ({ type: 'spot', at: [x, 0.15], to: [x, 0.7], intensity: 35, len: 0.4 })),
+	'Triple Spotlight': [{ type: 'spot', at: [0.2, 0.3], to: [0.45, 0.6], intensity: 35 }, { type: 'spot', at: [0.5, 0.2], to: [0.5, 0.6], intensity: 35 }, { type: 'spot', at: [0.8, 0.3], to: [0.55, 0.6], intensity: 35 }],
+};
+
+function preset_lights(name, w, h) {
+	var m = Math.min(w, h);
+	return (PRESETS[name] || PRESETS['Default']).map((p) => {
+		var l = new_light(p.type, w, h);
+		l.x = p.at[0] * w;
+		l.y = p.at[1] * h;
+		if (p.to) {
+			var dx = p.to[0] * w - l.x, dy = p.to[1] * h - l.y;
+			l.angle = Math.atan2(dy, dx);
+			l.length = p.len ? p.len * m : Math.max(4, Math.hypot(dx, dy));
+		}
+		if (p.r) l.radius = p.r * m;
+		if (p.color) l.color = p.color;
+		if (p.intensity) l.intensity = p.intensity;
+		if (p.hotspot) l.hotspot = p.hotspot;
+		return l;
+	});
+}
+
+/**
  * shade RGBA src -> dst; lights in image coordinates scaled by k
  */
 function shade(src, dst, w, h, s, k) {
@@ -124,7 +167,7 @@ class Ps_lighting_effects_class {
 		el.className = 'popup ps_lighting';
 		el.style.display = 'block';
 		el.innerHTML = '<h2>Lighting Effects</h2>'
-			+ '<div class="ps_bg_bar"><span>Presets:</span><select disabled><option>Default</option></select>'
+			+ '<div class="ps_bg_bar"><span>Presets:</span><select class="ps_le_preset">' + Object.keys(PRESETS).map(n => '<option>' + n + '</option>').join('') + '</select>'
 			+ '<span>Lights:</span><button type="button" class="button" data-add="spot">Spot</button><button type="button" class="button" data-add="point">Point</button><button type="button" class="button" data-add="infinite">Infinite</button>'
 			+ '<button type="button" class="button ps_le_reset">Reset</button><button type="button" class="button ps_le_cancel">Cancel</button><button type="button" class="button ps_le_ok">OK</button></div>'
 			+ '<div class="ps_bg_body"><div class="ps_bg_view"><canvas width="' + s.pw + '" height="' + s.ph + '"></canvas></div>'
@@ -136,7 +179,13 @@ class Ps_lighting_effects_class {
 		this.ctx = this.canvas.getContext('2d');
 		el.querySelector('.ps_le_ok').addEventListener('click', () => this.apply());
 		el.querySelector('.ps_le_cancel').addEventListener('click', () => this.close());
-		el.querySelector('.ps_le_reset').addEventListener('click', () => { s.lights = [new_light('spot', s.W, s.H)]; s.selected = 0; this.render_panel(); this.render(); });
+		el.querySelector('.ps_le_reset').addEventListener('click', () => { s.lights = [new_light('spot', s.W, s.H)]; s.selected = 0; el.querySelector('.ps_le_preset').value = 'Default'; this.render_panel(); this.render(); });
+		el.querySelector('.ps_le_preset').addEventListener('change', (e) => {
+			s.lights = preset_lights(e.target.value, s.W, s.H);
+			s.selected = 0;
+			this.render_panel();
+			this.render();
+		});
 		el.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => {
 			s.lights.push(new_light(b.dataset.add, s.W, s.H));
 			s.selected = s.lights.length - 1;
