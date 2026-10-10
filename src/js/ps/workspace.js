@@ -34,6 +34,7 @@ import Ps_automate_class from './automate.js';
 import Ps_import_export_class from './import-export.js';
 import Ps_fill_layers_class from './fill-layers.js';
 import Ps_slices_class from './slices.js';
+import Ps_type_styles_class from './type-styles.js';
 import Ps_calculations_class from './calculations.js';
 import Ps_preferences_class from './preferences.js';
 import Ps_shortcuts_class from './shortcuts.js';
@@ -63,10 +64,12 @@ const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
 	layers: 'Layers', channels: 'Channels', paths: 'Paths',
 	history: 'History', properties: 'Properties', navigator: 'Navigator', info: 'Info',
-	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes', clone_source: 'Clone Source', brush_presets: 'Brush Presets', tool_presets: 'Tool Presets',
+	character: 'Character', paragraph: 'Paragraph', brush: 'Brush', comps: 'Layer Comps', histogram: 'Histogram', actions: 'Actions', notes: 'Notes', clone_source: 'Clone Source', brush_presets: 'Brush Presets', tool_presets: 'Tool Presets', char_styles: 'Character Styles', para_styles: 'Paragraph Styles',
 };
 
 const STRIP_ICONS = {
+	char_styles: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M2 14L5.5 4h1L10 14M3.3 10.5h5.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M11 6h5M11 9h5M11 12h5" stroke="currentColor" stroke-width="1.2"/></svg>',
+	para_styles: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M8 3h6M10 3v12M8 3v12M8 3a3 3 0 0 0 0 6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2 12h4M2 15h4" stroke="currentColor" stroke-width="1.2"/></svg>',
 	tool_presets: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 3h7l5 5-7 7-5-5z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="6.5" r="1.4" fill="currentColor"/></svg>',
 	brush_presets: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M14 2.5c.5.5-4 6.3-5.6 7.6L7 8.7C8.2 7 13.5 2 14 2.5zM6.4 9.6c-1.4 0-2.5.9-2.7 2.3-.2 1.3-.7 1.9-1.7 2.3 2.2 1.1 5.4.5 5.9-1.8.2-.9-.3-2-1.5-2.8z" fill="currentColor"/><path d="M11 12.5h5M11 15h5" stroke="currentColor" stroke-width="1.2"/></svg>',
 	clone_source: '<svg viewBox="0 0 18 18" width="18" height="18"><path d="M5 2.5h4v3c0 1.2-1.2 1.6-1.2 2.8h3.7v2.5H2.5V8.3h3.7C6.2 7.1 5 6.7 5 5.5z" fill="currentColor"/><path d="M10.5 12h5v3.5h-5z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
@@ -127,6 +130,7 @@ class Ps_workspace_class {
 		this.Import_export = new Ps_import_export_class();
 		this.Fill_layers = new Ps_fill_layers_class();
 		this.Slices = new Ps_slices_class();
+		this.Type_styles = new Ps_type_styles_class();
 		this.Calculations = new Ps_calculations_class();
 		this.Preferences = new Ps_preferences_class();
 		this.Shortcuts = new Ps_shortcuts_class(this);
@@ -853,6 +857,12 @@ class Ps_workspace_class {
 		}
 		if (panel == 'tool_presets') {
 			this.Tool_presets.render();
+		}
+		if (panel == 'char_styles') {
+			this.Type_styles.render('char');
+		}
+		if (panel == 'para_styles') {
+			this.Type_styles.render('para');
 		}
 	}
 

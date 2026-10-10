@@ -1740,3 +1740,10 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_fx_row > label.ps_fx_check { width: auto; text-align: left; white-space: nowrap; }
 .ps_fx_gradient { width: 130px; cursor: pointer; }
 .ps_fx_gradient_caret { cursor: pointer; }
+
+/* Character / Paragraph Styles panels */
+.ps_tstyles { width: 230px; display: flex; flex-direction: column; font-size: 11px; color: var(--ps-text); }
+.ps_tstyle_list { height: 180px; overflow-y: auto; background: var(--ps-panel-dark); border-bottom: 1px solid var(--ps-border); }
+.ps_tstyle_row { padding: 3px 8px; cursor: default; }
+.ps_tstyle_row:hover { background: var(--ps-hover); }
+.ps_tstyle_row.active { background: var(--ps-select); color: var(--ps-text-strong); }

@@ -72,10 +72,12 @@ function render_character(host) {
 		+ '<button type="button" data-faux="underline" class="' + (get('underline') ? 'pressed' : '') + '" title="Underline"><u>T</u></button>'
 		+ '<button type="button" data-faux="strikethrough" class="' + (get('strikethrough') ? 'pressed' : '') + '" title="Strikethrough"><s>T</s></button>'
 		+ '</div>'
-		+ '<div class="ps_typ_row"><select disabled><option>English: USA</option></select><select disabled><option>Sharp</option></select></div>'
+		+ '<div class="ps_typ_row"><select disabled><option>English: USA</option></select><select id="ch_aa" title="Set the anti-aliasing method">'
+		+ ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth'].map(v => '<option' + (v.toLowerCase() == app.GUI.Ps_workspace.Text_aa.current() ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>'
 		+ '</div>';
 	var $ = (id) => host.querySelector('#' + id);
 	$('ch_font').addEventListener('change', (e) => set('font', e.target.value));
+	$('ch_aa').addEventListener('change', (e) => app.GUI.Ps_workspace.Text_aa.set(e.target.value.toLowerCase()));
 	$('ch_style').addEventListener('change', (e) => {
 		set('bold', e.target.value.indexOf('Bold') >= 0);
 		set('italic', e.target.value.indexOf('Italic') >= 0);
@@ -120,4 +122,4 @@ function render_paragraph(host) {
 	}));
 }
 
-export { render_character, render_paragraph };
+export { render_character, render_paragraph, get as type_get, set as type_set };

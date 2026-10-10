@@ -165,6 +165,8 @@ class Ps_documents_class {
 			ps_comps: config.ps_comps,
 			ps_notes: config.ps_notes,
 			ps_slices: config.ps_slices,
+			ps_char_styles: config.ps_char_styles,
+			ps_para_styles: config.ps_para_styles,
 			ps_slice_selected: config.ps_slice_selected,
 			ps_comp_active: config.ps_comp_active,
 		};
@@ -196,6 +198,8 @@ class Ps_documents_class {
 		config.ps_comps = state.ps_comps || [];
 		config.ps_notes = state.ps_notes || [];
 		config.ps_slices = state.ps_slices || [];
+		config.ps_char_styles = state.ps_char_styles || [];
+		config.ps_para_styles = state.ps_para_styles || [];
 		config.ps_slice_selected = state.ps_slice_selected == null ? null : state.ps_slice_selected;
 		config.ps_comp_active = state.ps_comp_active == null ? -1 : state.ps_comp_active;
 		config.ps_alpha = state.ps_alpha || [];
@@ -277,6 +281,8 @@ class Ps_documents_class {
 		config.ps_notes = [];
 		config.ps_slices = [];
 		config.ps_slice_selected = null;
+		config.ps_char_styles = [];
+		config.ps_para_styles = [];
 		config.ps_comp_active = -1;
 		app.GUI.Ps_workspace.Paths.selected = null;
 		app.GUI.Ps_workspace.set_view_rotation(0);
