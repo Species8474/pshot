@@ -342,8 +342,9 @@ class Ps_documents_class {
 
 	/**
 	 * closes the active document; the last one is replaced by a new Untitled document
+	 * (force: closed without asking, as Split Channels does)
 	 */
-	async close(index) {
+	async close(index, force) {
 		if (index === undefined) {
 			index = this.active;
 		}
@@ -352,7 +353,7 @@ class Ps_documents_class {
 		}
 		var doc = this.current();
 		var dirty = app.State.action_history.length > 0;
-		if (dirty && !window.confirm('Close "' + doc.name + '" without saving?')) {
+		if (dirty && !force && !window.confirm('Close "' + doc.name + '" without saving?')) {
 			return;
 		}
 		this.end_text_editing();

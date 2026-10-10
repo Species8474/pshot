@@ -216,7 +216,7 @@ class GUI_preview_class {
 			mini_rect_h
 			);
 		this.canvas_preview.fillStyle = "rgba(0, 0, 0, 0)"; //pshot: CS6 Navigator view box (red outline)
-		this.canvas_preview.strokeStyle = "#ff2020";
+		this.canvas_preview.strokeStyle = (app.GUI.Ps_workspace && app.GUI.Ps_workspace.navigator_color) || "#ff2020";
 		this.canvas_preview.fill();
 		this.canvas_preview.stroke();
 	}

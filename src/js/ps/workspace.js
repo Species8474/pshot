@@ -70,6 +70,7 @@ import Ps_channel_view_class from './channel-view.js';
 import Ps_recent_files_class from './recent-files.js';
 import Ps_hud_class from './hud.js';
 import Ps_styles_panel_class from './styles-panel.js';
+import { panel_menu } from './panel-menus.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -116,6 +117,7 @@ class Ps_workspace_class {
 		this.groups = groups.map(g => ({ separator: !!g.separator, members: g.members, current: 0 }));
 		this.extras = true;
 		this.grid_before_extras = false;
+		try { this.navigator_color = localStorage.getItem('pshot_navigator_color') || null; } catch (e) { this.navigator_color = null; }
 		this.screen_mode = 'standard';
 		this.Selection = new Ps_selection_class();
 		this.Mask = new Ps_mask_class();
@@ -814,7 +816,7 @@ class Ps_workspace_class {
 			];
 		}
 		else {
-			items = [{ name: 'Panel Options...' }];
+			items = panel_menu(this, panel) || [{ name: 'Panel Options...' }];
 		}
 		items.push({ divider: true });
 		items.push({ name: 'Close', action: () => this.toggle_panel(panel) });
@@ -1546,11 +1548,16 @@ class Ps_workspace_class {
 	}
 
 	/**
-	 * Histogram panel (CS6 expanded view): channel, graph, statistics
+	 * Histogram panel (CS6): Compact View (the graph), Expanded View (Channel,
+	 * Source, statistics with Level / Count / Percentile under the pointer),
+	 * All Channels View (the composite and a graph per channel); channels
+	 * RGB, Red, Green, Blue, Luminosity, Colors; Show Statistics, Show
+	 * Channels in Color (panel menu)
 	 */
 	render_histogram_panel() {
 		var el = document.getElementById('ps_histogram');
 		if (!el) return;
+		var o = this.histogram_options = Object.assign({ view: 'Expanded View', stats: true, color: false }, this.histogram_options || {});
 		var channel = this.histogram_channel || 'RGB';
 		var source = this.histogram_source || 'Entire Image';
 		var W = config.WIDTH, H = config.HEIGHT;
@@ -1561,40 +1568,87 @@ class Ps_workspace_class {
 		if (source == 'Selected Layer' && config.layer) app.Layers.render_object(ctx, config.layer);
 		else app.Layers.convert_layers_to_canvas(ctx, null, false);
 		var d = ctx.getImageData(0, 0, W, H).data;
-		var hist = new Float64Array(256), n = 0;
+		var hists = { RGB: new Float64Array(256), Red: new Float64Array(256), Green: new Float64Array(256), Blue: new Float64Array(256), Luminosity: new Float64Array(256) }, n = 0;
 		var step = Math.max(1, Math.floor(W * H / 400000));
 		for (var i = 0; i < W * H; i += step) {
 			var k = i * 4;
 			if (d[k + 3] == 0) continue;
-			var v = channel == 'Red' ? d[k] : channel == 'Green' ? d[k + 1] : channel == 'Blue' ? d[k + 2]
-				: (channel == 'Luminosity' ? Math.round(d[k] * 0.3 + d[k + 1] * 0.59 + d[k + 2] * 0.11) : Math.round((d[k] + d[k + 1] + d[k + 2]) / 3));
-			hist[v]++;
+			hists.Red[d[k]]++; hists.Green[d[k + 1]]++; hists.Blue[d[k + 2]]++;
+			hists.RGB[Math.round((d[k] + d[k + 1] + d[k + 2]) / 3)]++;
+			hists.Luminosity[Math.round(d[k] * 0.3 + d[k + 1] * 0.59 + d[k + 2] * 0.11)]++;
 			n++;
 		}
-		var mean = 0, sq = 0, median = 0, acc = 0;
-		for (var v2 = 0; v2 < 256; v2++) { mean += v2 * hist[v2]; sq += v2 * v2 * hist[v2]; }
-		mean = n ? mean / n : 0;
-		var sd = n ? Math.sqrt(Math.max(0, sq / n - mean * mean)) : 0;
-		for (median = 0; median < 256; median++) { acc += hist[median]; if (acc >= n / 2) break; }
-		var channels = ['RGB', 'Red', 'Green', 'Blue', 'Luminosity'];
-		el.innerHTML = '<div class="ps_hist">'
-			+ '<div class="ps_typ_row"><span>Channel:</span><select id="hist_ch">' + channels.map(ch => '<option' + (ch == channel ? ' selected' : '') + '>' + ch + '</option>').join('') + '</select></div>'
-			+ '<canvas id="hist_graph" width="256" height="100"></canvas>'
-			+ '<div class="ps_typ_row"><span>Source:</span><select id="hist_src">' + ['Entire Image', 'Selected Layer'].map(s => '<option' + (s == source ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></div>'
-			+ '<div class="ps_hist_stats"><span>Mean:</span><b>' + mean.toFixed(2) + '</b><span>Std Dev:</span><b>' + sd.toFixed(2) + '</b>'
-			+ '<span>Median:</span><b>' + median + '</b><span>Pixels:</span><b>' + Math.round(n * step) + '</b></div></div>';
-		var g = el.querySelector('#hist_graph').getContext('2d');
-		g.fillStyle = '#fff';
-		g.fillRect(0, 0, 256, 100);
-		var max = 0;
-		for (var v3 = 0; v3 < 256; v3++) max = Math.max(max, hist[v3]);
-		g.fillStyle = { Red: '#c00', Green: '#090', Blue: '#00c' }[channel] || '#000';
-		for (var x = 0; x < 256; x++) {
-			var hgt = max ? Math.round(hist[x] / max * 100) : 0;
-			g.fillRect(x, 100 - hgt, 1, hgt);
+		var stats = (hist) => {
+			var mean = 0, sq = 0, median = 0, acc = 0;
+			for (var v = 0; v < 256; v++) { mean += v * hist[v]; sq += v * v * hist[v]; }
+			mean = n ? mean / n : 0;
+			for (median = 0; median < 256; median++) { acc += hist[median]; if (acc >= n / 2) break; }
+			return { mean: mean, sd: n ? Math.sqrt(Math.max(0, sq / n - mean * mean)) : 0, median: median };
+		};
+		var COLORS = { Red: '#c00', Green: '#090', Blue: '#00c' };
+		//one graph; 'Colors' overlays the three channels in their colors
+		var graph = (canvas, ch) => {
+			var g = canvas.getContext('2d'), gh = canvas.height;
+			g.fillStyle = '#fff';
+			g.fillRect(0, 0, 256, gh);
+			var list = ch == 'Colors' ? ['Red', 'Green', 'Blue'] : [ch];
+			var max = 0;
+			for (var l of list) for (var v = 0; v < 256; v++) max = Math.max(max, hists[l][v]);
+			if (ch == 'Colors') g.globalCompositeOperation = 'multiply';
+			for (var l2 of list) {
+				g.fillStyle = ch == 'Colors' ? { Red: '#ff4040', Green: '#40ff40', Blue: '#4040ff' }[l2] : (o.color || ch == channel && o.view != 'All Channels View' ? COLORS[l2] || '#000' : '#000');
+				for (var x = 0; x < 256; x++) {
+					var hgt = max ? Math.round(hists[l2][x] / max * gh) : 0;
+					g.fillRect(x, gh - hgt, 1, hgt);
+				}
+			}
+			g.globalCompositeOperation = 'source-over';
+		};
+		var channels = ['RGB', 'Red', 'Green', 'Blue', 'Luminosity', 'Colors'];
+		var expanded = o.view != 'Compact View';
+		var st = stats(hists[channel == 'Colors' ? 'RGB' : channel]);
+		var html = '<div class="ps_hist">';
+		if (expanded) html += '<div class="ps_typ_row"><span>Channel:</span><select id="hist_ch">' + channels.map(ch => '<option' + (ch == channel ? ' selected' : '') + '>' + ch + '</option>').join('') + '</select></div>';
+		html += '<canvas id="hist_graph" width="256" height="100"></canvas>';
+		if (o.view == 'All Channels View') html += ['Red', 'Green', 'Blue'].map(ch => '<canvas class="hist_small" data-ch="' + ch + '" width="256" height="50"></canvas>').join('');
+		if (expanded) {
+			html += '<div class="ps_typ_row"><span>Source:</span><select id="hist_src">' + ['Entire Image', 'Selected Layer'].map(s => '<option' + (s == source ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></div>';
+			if (o.stats) html += '<div class="ps_hist_stats"><span>Mean:</span><b>' + st.mean.toFixed(2) + '</b><span>Level:</span><b id="hist_level"></b>'
+				+ '<span>Std Dev:</span><b>' + st.sd.toFixed(2) + '</b><span>Count:</span><b id="hist_count"></b>'
+				+ '<span>Median:</span><b>' + st.median + '</b><span>Percentile:</span><b id="hist_pct"></b>'
+				+ '<span>Pixels:</span><b>' + Math.round(n * step) + '</b><span>Cache Level:</span><b>1</b></div>';
 		}
-		el.querySelector('#hist_ch').addEventListener('change', (e) => { this.histogram_channel = e.target.value; this.render_histogram_panel(); });
-		el.querySelector('#hist_src').addEventListener('change', (e) => { this.histogram_source = e.target.value; this.render_histogram_panel(); });
+		el.innerHTML = html + '</div>';
+		graph(el.querySelector('#hist_graph'), channel);
+		el.querySelectorAll('.hist_small').forEach(cv => graph(cv, cv.dataset.ch));
+		if (expanded) {
+			el.querySelector('#hist_ch').addEventListener('change', (e) => { this.histogram_channel = e.target.value; this.render_histogram_panel(); });
+			el.querySelector('#hist_src').addEventListener('change', (e) => { this.histogram_source = e.target.value; this.render_histogram_panel(); });
+		}
+		//Level / Count / Percentile under the pointer
+		var hc = el.querySelector('#hist_graph'), lv = el.querySelector('#hist_level');
+		if (lv) {
+			var hist = hists[channel == 'Colors' ? 'RGB' : channel];
+			hc.addEventListener('mousemove', (e) => {
+				var r = hc.getBoundingClientRect(), level = Math.max(0, Math.min(255, Math.floor((e.clientX - r.left) / r.width * 256)));
+				var below = 0;
+				for (var v = 0; v <= level; v++) below += hist[v];
+				lv.textContent = level;
+				el.querySelector('#hist_count').textContent = Math.round(hist[level] * step);
+				el.querySelector('#hist_pct').textContent = n ? (below / n * 100).toFixed(2) : '0';
+			});
+			hc.addEventListener('mouseleave', () => { lv.textContent = ''; el.querySelector('#hist_count').textContent = ''; el.querySelector('#hist_pct').textContent = ''; });
+		}
+	}
+
+	histogram_menu_items() {
+		var o = this.histogram_options || { view: 'Expanded View', stats: true, color: false };
+		var set = (k, v) => { this.histogram_options = Object.assign({}, o, { [k]: v }); this.render_histogram_panel(); };
+		var view = (v) => ({ name: v, checked: o.view == v, action: () => set('view', v) });
+		return [view('Compact View'), view('Expanded View'), view('All Channels View'), { divider: true },
+			{ name: 'Show Statistics', checked: o.stats, action: () => set('stats', !o.stats) },
+			{ name: 'Show Channels in Color', checked: o.color, action: () => set('color', !o.color) }, { divider: true },
+			{ name: 'Uncached Refresh', action: () => this.render_histogram_panel() }];
 	}
 
 	/**

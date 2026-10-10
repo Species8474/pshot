@@ -1920,3 +1920,4 @@ body.ps_large_tabs .ps_doctab { height: 26px; font-size: 12px; }
 .ps_style_grid.list { flex-direction: column; flex-wrap: nowrap; gap: 0; padding: 0; }
 .ps_style_grid.list .ps_style { display: flex; align-items: center; gap: 6px; border: none; border-bottom: 1px solid var(--ps-border); background: transparent; line-height: normal; padding: 2px 4px; color: var(--ps-text); font-size: 11px; }
 .ps_style_grid.list .ps_style canvas { border: 1px solid #222; }
+.ps_hist .hist_small { display: block; margin-top: 3px; width: 100%; max-width: 256px; height: 34px; }
