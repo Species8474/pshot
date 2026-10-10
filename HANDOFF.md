@@ -309,6 +309,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Preferences > Transparency & Gamut > Gamut Warning color and opacity (View > Gamut Warning).
   - Painting HUDs (ps/hud.js): Alt+Shift+right-drag the HUD Color Picker (Preferences > General > HUD Color Picker: Hue Strip / Hue Wheel, Small / Medium / Large; square = saturation / brightness, strip or ring = hue; sets the foreground on release); Alt+right-drag brush size (left / right) and hardness (up / down) with a red tip preview. The canvas context menu stays closed for these.
   - Bristle brush tips (ps/bristle.js): the ten CS6 default bristle presets (Round / Flat x Point, Blunt, Curve, Angle, Fan); Brush panel Brush Tip Shape shows Shape, Bristles, Length, Thickness, Stiffness, Angle, Size, Spacing for them; each bristle draws its own line along the stroke (weights by shape, low stiffness wanders, length thins the paint). No bristle preview window or tilt.
+  - Styles panel (ps/styles-panel.js, was a placeholder): style presets as live thumbnails (Styles.compose on a rounded square), click applies to the active layer (Shift adds), Clear Style / New Style buttons, user styles saved in the browser with Rename / Delete, views (Text Only, thumbnails, lists), Reset Styles. 16 defaults approximating CS6's Default Styles.
   - Preferences > Type > Use Smart Quotes (typed ' and " become curly: opening after a space or bracket).
 
 ## Known gaps / next

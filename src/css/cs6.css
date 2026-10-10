@@ -1913,3 +1913,10 @@ body.ps_large_tabs .ps_doctab { height: 26px; font-size: 12px; }
 /* painting HUDs (color picker, brush size / hardness) */
 .ps_hud { position: fixed; z-index: 3000; pointer-events: none; }
 .ps_hud_color { box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+/* Styles panel */
+.ps_style_grid { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; align-content: flex-start; }
+.ps_style_grid .ps_style { width: auto; height: auto; border: 1px solid #222; line-height: 0; cursor: default; background: #fff; }
+.ps_style_grid .ps_style:hover { outline: 1px solid var(--ps-select); }
+.ps_style_grid.list { flex-direction: column; flex-wrap: nowrap; gap: 0; padding: 0; }
+.ps_style_grid.list .ps_style { display: flex; align-items: center; gap: 6px; border: none; border-bottom: 1px solid var(--ps-border); background: transparent; line-height: normal; padding: 2px 4px; color: var(--ps-text); font-size: 11px; }
+.ps_style_grid.list .ps_style canvas { border: 1px solid #222; }

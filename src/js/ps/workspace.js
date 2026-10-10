@@ -69,6 +69,7 @@ import { install_shape_modes } from './shape-modes.js';
 import Ps_channel_view_class from './channel-view.js';
 import Ps_recent_files_class from './recent-files.js';
 import Ps_hud_class from './hud.js';
+import Ps_styles_panel_class from './styles-panel.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -141,6 +142,7 @@ class Ps_workspace_class {
 		this.Channel_view = new Ps_channel_view_class();
 		this.Recent = new Ps_recent_files_class();
 		this.Hud = new Ps_hud_class();
+		this.Styles_panel = new Ps_styles_panel_class();
 		this.Color = new Ps_color_management_class();
 		this.Auto_align = new Ps_auto_align_class();
 		this.Automate = new Ps_automate_class();
@@ -2178,21 +2180,7 @@ class Ps_workspace_class {
 	}
 
 	render_styles_panel() {
-		var el = document.getElementById('ps_styles');
-		var styles = [
-			'linear-gradient(#fff,#fff)', 'linear-gradient(135deg,#3a7bd5,#00d2ff)', 'linear-gradient(135deg,#f7971e,#ffd200)',
-			'linear-gradient(135deg,#8e2de2,#4a00e0)', 'linear-gradient(#bbb,#555)', 'linear-gradient(135deg,#d31027,#ea384d)',
-			'repeating-linear-gradient(45deg,#777 0 3px,#999 3px 6px)', 'linear-gradient(135deg,#11998e,#38ef7d)',
-			'radial-gradient(#fff,#888)', 'linear-gradient(135deg,#c79081,#dfa579)', 'linear-gradient(#444,#111)',
-			'linear-gradient(135deg,#ece9e6,#ffffff)', 'linear-gradient(135deg,#614385,#516395)', 'linear-gradient(135deg,#e96443,#904e95)',
-			'linear-gradient(135deg,#00c6ff,#0072ff)', 'linear-gradient(135deg,#f12711,#f5af19)',
-		];
-		var html = '<div class="ps_style_grid disabled" title="Layer styles are not available in pshot yet">';
-		for (var s of styles) {
-			html += '<span class="ps_style" style="background:' + s + '"></span>';
-		}
-		html += '</div>';
-		el.innerHTML = html;
+		this.Styles_panel.render();
 	}
 }
 
