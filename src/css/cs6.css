@@ -1794,3 +1794,14 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_vp_opt input[type="number"] { width: 54px; }
 .ps_vp_color { width: 30px; height: 16px; border: 1px solid #111; padding: 0; }
 .ps_vp_side .ps_vp_hint { margin-top: 10px; }
+
+/* ========== Help > About (CS6 splash) ===================================== */
+.ps_about_wrap { position: fixed; inset: 0; z-index: 2100; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
+.ps_about { width: 520px; max-width: calc(100vw - 32px); min-height: 280px; display: flex; gap: 24px; padding: 28px 30px; background: linear-gradient(160deg, #0d1f33 0%, #08121e 70%); color: #d8e6f5; border: 1px solid #000; box-shadow: 0 10px 40px rgba(0,0,0,0.7); cursor: default; }
+.ps_about_logo { flex: none; width: 92px; height: 92px; display: flex; align-items: center; justify-content: center; font: 600 46px/1 "Segoe UI", Arial, sans-serif; color: #9fd3ff; background: #0a1a2b; border: 3px solid #5aa9e6; border-radius: 4px; }
+.ps_about_text { flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.ps_about_name { font: 300 34px/1.1 "Segoe UI", Arial, sans-serif; color: #fff; letter-spacing: 0.5px; }
+.ps_about_tag { color: #9fb7cf; }
+.ps_about_credits { margin-top: auto; font-size: 11px; line-height: 1.5; color: #8aa2ba; }
+.ps_about_credits p { margin: 0 0 4px; }
+.ps_about_credits a { color: #9fd3ff; }

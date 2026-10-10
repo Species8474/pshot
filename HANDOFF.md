@@ -237,12 +237,12 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Filter > Vanishing Point (ps/vanishing-point.js): Create/Edit Plane (homography, grid, invalid planes red), Marquee (Alt+drag copies in perspective, Ctrl+drag fills from the pointer, Ctrl+V pastes the clipboard onto the plane, Ctrl+D drops), Stamp (Alt+click source, Aligned), Brush (dabs scale with the plane), Eyedropper. Planes are kept per document (config.ps_vp_planes). Transform, Measure, Hand, Zoom, tear-off planes and Heal greyed.
   - Filter > Digimarc > Embed / Read Watermark (ps/digimarc.js): 48-bit spread-spectrum luminance watermark (ID, year, attributes, checksum); Browse Filters Online opens Adobe Exchange.
   - Fix: dialog rows with a title and no value (group labels in Stroke, Duplicate, Save Selection...) printed "undefined".
+  - Help > About pshot: CS6-style splash (click/Esc closes) with the miniPaint MIT credit and a not-affiliated-with-Adobe note.
 
 ## Known gaps / next
 
 - PRIORITY (Josh, 2026-10-10): 1) Rasterize Layer Style DONE, 2) Combine Slices DONE, 3) Move to New Window DONE, 4) every Filter menu item working DONE. Then continue the rest of this list.
 
-- FOLLOW-UP (Josh, 2026-10-10): Help > About still shows miniPaint branding — rebrand as pshot (CS6-style About box), keep a 'based on miniPaint (MIT)' credit line.
 - Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Refine Mask, Mask Options, Copy CSS, Rasterize Layer Style, Combine Slices, Check Spelling, Edit Smart Filter Blending Options, Move to New Window. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.

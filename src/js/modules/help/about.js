@@ -1,30 +1,39 @@
-import config from './../../config.js';
-import Dialog_class from './../../libs/popup.js';
+/*
+ * pshot - Help > About pshot: a CS6-style splash panel (click or Esc closes).
+ * pshot is built on miniPaint (MIT); its credit stays here as the license asks.
+ */
 
 class Help_about_class {
 
-	constructor() {
-		this.POP = new Dialog_class();
-	}
-
-	//about
 	about() {
-		var email = 'www.viliusl@gmail.com';	
-		
-		var settings = {
-			title: 'About',
-			params: [
-				{title: "", html: '<img style="width:64px;" class="about-logo" alt="" src="images/logo-colors.png" />'},
-				{title: "Name:", html: '<span class="about-name">miniPaint</span>'},
-				{title: "Version:", value: VERSION},
-				{title: "Description:", value: "Online image editor."},
-				{title: "Author:", value: 'ViliusL'},
-				{title: "Email:", html: '<a href="mailto:' + email + '">' + email + '</a>'},
-				{title: "GitHub:", html: '<a href="https://github.com/viliusle/miniPaint">https://github.com/viliusle/miniPaint</a>'},
-				{title: "Website:", html: '<a href="https://viliusle.github.io/miniPaint/">https://viliusle.github.io/miniPaint/</a>'},
-			],
+		if (document.querySelector('.ps_about')) return;
+		var wrap = document.createElement('div');
+		wrap.className = 'ps_about_wrap';
+		wrap.innerHTML = '<div class="ps_about" role="dialog" aria-label="About pshot">'
+			+ '<div class="ps_about_logo">Ps</div>'
+			+ '<div class="ps_about_text">'
+			+ '<div class="ps_about_name">pshot</div>'
+			+ '<div class="ps_about_tag">An image editor in the browser, modeled on the Photoshop CS6 workspace.</div>'
+			+ '<div class="ps_about_credits">'
+			+ '<p>Based on <a href="https://github.com/viliusle/miniPaint" target="_blank" rel="noopener">miniPaint</a> by ViliusL, engine version ' + VERSION + ', MIT License.</p>'
+			+ '<p>Source: <a href="https://github.com/Species8474/pshot" target="_blank" rel="noopener">github.com/Species8474/pshot</a></p>'
+			+ '<p>pshot is not affiliated with or endorsed by Adobe. Photoshop is a trademark of Adobe Inc.</p>'
+			+ '</div></div></div>';
+		var close = (e) => {
+			if (e && e.target && e.target.closest('a')) return;
+			wrap.remove();
+			document.removeEventListener('keydown', key, true);
 		};
-		this.POP.show(settings);
+		var key = (e) => {
+			if (e.key == 'Escape' || e.key == 'Enter') {
+				e.preventDefault();
+				e.stopPropagation();
+				close();
+			}
+		};
+		wrap.addEventListener('click', close);
+		document.addEventListener('keydown', key, true);
+		document.body.appendChild(wrap);
 	}
 
 }
