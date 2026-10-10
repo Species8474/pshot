@@ -939,6 +939,7 @@ class Ps_commands_class {
 	export_layers() { app.GUI.Ps_workspace.Batch.export_layers(); }
 	comps_to_files() { app.GUI.Ps_workspace.Batch.comps_to_files(); }
 	comps_to_wpg() { app.GUI.Ps_workspace.Batch.comps_to_wpg(); }
+	lens_correction_batch() { app.GUI.Ps_workspace.Batch.lens_correction_batch(); }
 	image_processor() { app.GUI.Ps_workspace.Batch.image_processor(); }
 	smart_filters_label() { return app.GUI.Ps_workspace.Smart_filters.label(); }
 	filter_mask_exists() { app.GUI.Ps_workspace.Smart_filters.toggle_mask_exists(); }

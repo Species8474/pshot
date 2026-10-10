@@ -219,6 +219,54 @@ class Ps_batch_class {
 	}
 
 	/**
+	 * File > Automate > Lens Correction: the same correction for many files
+	 * (no lens profiles: the Custom settings of Filter > Lens Correction)
+	 */
+	lens_correction_batch() {
+		var files = [];
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Batch Lens Correction',
+			params: [
+				{ title: 'Source Files', html: '<button type="button" class="button" id="blc_pick">Browse...</button> <span id="blc_count">No files</span>' },
+				{ name: 'format', title: 'File Type:', values: ['JPEG', 'PNG', 'PSD'], value: 'JPEG', type: 'select' },
+				{ title: 'Corrections' },
+				{ name: 'distortion', title: 'Geometric Distortion:', value: 0, range: [-100, 100], step: 1 },
+				{ name: 'chromatic', title: 'Chromatic Aberration:', value: 0, range: [-100, 100], step: 1 },
+				{ name: 'vignette', title: 'Vignette:', value: 0, range: [-100, 100], step: 1 },
+				{ name: 'auto_scale', title: 'Auto Scale Image', value: true },
+				{ name: 'edge', title: 'Edge:', values: ['Transparency', 'Edge Extension', 'Black Color', 'White Color'], value: 'Transparency', type: 'select' },
+			],
+			on_load: (params, pop) => {
+				var btn = pop.el.querySelector('#blc_pick');
+				btn.addEventListener('click', async () => {
+					files = await pick(true);
+					pop.el.querySelector('#blc_count').textContent = files.length + ' file' + (files.length == 1 ? '' : 's');
+				});
+			},
+			on_finish: (p) => {
+				if (!files.length) {
+					alertify.error('Choose the source files first.');
+					return;
+				}
+				var F = app.GUI.modules['ps/filters'];
+				var settings = {
+					distortion: parseFloat(p.distortion) || 0, red: parseFloat(p.chromatic) || 0, blue: -(parseFloat(p.chromatic) || 0),
+					vignette: parseFloat(p.vignette) || 0, midpoint: 50, vertical: 0, horizontal: 0, angle: 0,
+					scale: p.auto_scale && p.distortion < 0 ? 100 - Math.abs(p.distortion) * 0.25 : 100, edge: p.edge,
+				};
+				this.each(files, async (file) => {
+					F.apply_settings('lens_correction', settings);
+					await wait(200);
+					await this.save(file.name.replace(/\.[^.]+$/, '') + '_corrected', p.format, 0.92);
+					await wait(200);
+					await this.close_current();
+				});
+			},
+		});
+	}
+
+	/**
 	 * File > Scripts > Layer Comps to WPG: a Web Photo Gallery of the comps (zip)
 	 */
 	comps_to_wpg() {

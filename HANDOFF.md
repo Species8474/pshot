@@ -252,6 +252,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Data-driven graphics (ps/variables.js): Image > Variables > Define (visibility / text replacement / pixel replacement with Fit, Fill, As Is, Conform; layer.ps_vars), Data Sets dialog (config.ps_datasets, per document), Image > Apply Data Set, File > Import > Variable Data Sets (CSV or tab text, first row = names), File > Export > Data Sets as Files (PNG/JPEG per set, zip).
   - File > Scripts > Script Events Manager (ps/script-events.js): run an Action on Start Application, New/Open/Save/Close/Print/Export Document or Everything (wraps the commands; bindings saved in the browser). Scripts (JS) are not supported, only Actions.
   - File > Scripts > Layer Comps to WPG: Web Photo Gallery zip (index.html in three styles, images/, thumbnails/), document state restored afterwards.
+  - File > Automate > Lens Correction: the same distortion / chromatic aberration / vignette correction (Filter > Lens Correction settings, no lens profiles) on chosen files, each saved as JPEG/PNG/PSD.
 
 ## Known gaps / next
 
