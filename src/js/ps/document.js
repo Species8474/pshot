@@ -482,6 +482,7 @@ async function open_document(files) {
 	config.ps_notes = app.GUI.Ps_workspace.Notes.from_psd(doc.annotations);
 	//user and layer slices (layer slices come back as user slices at their bounds)
 	config.ps_slices = [];
+	config.ps_vp_planes = [];
 	var slice_id = 1;
 	for (const group of doc.slices || []) {
 		for (const sl of group.slices || []) {

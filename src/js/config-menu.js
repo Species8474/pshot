@@ -260,7 +260,7 @@ const M = [
 		'Lens Correction...|Shift+Ctrl+R|ps/filters.lens_correction',
 		'Liquify...|Shift+Ctrl+X|ps/commands.liquify',
 		'Oil Paint...|ps/filters.oil_paint',
-		'Vanishing Point...|Alt+Ctrl+V',
+		'Vanishing Point...|Alt+Ctrl+V|ps/commands.vanishing_point',
 		'-',
 		['Blur', [{ name: 'Field Blur...', target: 'ps/commands.blur_gallery', parameter: 'field' }, { name: 'Iris Blur...', target: 'ps/commands.blur_gallery', parameter: 'iris' }, { name: 'Tilt-Shift...', target: 'ps/commands.blur_gallery', parameter: 'tilt' }, '-', 'Average|ps/filters.average', 'Blur|ps/filters.blur', 'Blur More|ps/filters.blur_more', 'Box Blur...|ps/filters.box_blur', 'Gaussian Blur...|ps/filters.gaussian_blur', 'Lens Blur...|ps/filters.lens_blur', 'Motion Blur...|ps/filters.motion_blur', 'Radial Blur...|ps/filters.radial_blur', 'Shape Blur...|ps/filters.shape_blur', 'Smart Blur...|ps/filters.smart_blur', 'Surface Blur...|ps/filters.surface_blur']],
 		['Distort', ['Displace...|ps/filters.displace', 'Pinch...|ps/filters.pinch', 'Polar Coordinates...|ps/filters.polar_coordinates', 'Ripple...|ps/filters.ripple', 'Shear...|ps/filters.shear', 'Spherize...|ps/filters.spherize', 'Twirl...|ps/filters.twirl', 'Wave...|ps/filters.wave', 'ZigZag...|ps/filters.zigzag']],

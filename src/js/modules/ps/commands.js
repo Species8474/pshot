@@ -18,6 +18,7 @@ import Ps_save_for_web_class from './../../ps/save-for-web.js';
 import { inpaint } from './../../ps/inpaint.js';
 import Ps_wide_angle_class from './../../ps/wide-angle.js';
 import Ps_digimarc_class from './../../ps/digimarc.js';
+import Ps_vanishing_point_class from './../../ps/vanishing-point.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2081,6 +2082,11 @@ class Ps_commands_class {
 	adaptive_wide_angle() {
 		this.Wide_angle = this.Wide_angle || new Ps_wide_angle_class();
 		this.Wide_angle.open();
+	}
+
+	vanishing_point() {
+		this.Vanishing_point = this.Vanishing_point || new Ps_vanishing_point_class();
+		this.Vanishing_point.open();
 	}
 
 	embed_watermark() {

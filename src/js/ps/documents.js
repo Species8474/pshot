@@ -169,6 +169,7 @@ class Ps_documents_class {
 			ps_para_styles: config.ps_para_styles,
 			ps_slice_selected: config.ps_slice_selected,
 			ps_comp_active: config.ps_comp_active,
+			ps_vp_planes: config.ps_vp_planes,
 		};
 	}
 
@@ -203,6 +204,7 @@ class Ps_documents_class {
 		config.ps_slice_selected = state.ps_slice_selected == null ? null : state.ps_slice_selected;
 		if (app.GUI.Ps_workspace && app.GUI.Ps_workspace.Slices) app.GUI.Ps_workspace.Slices.extra = [];
 		config.ps_comp_active = state.ps_comp_active == null ? -1 : state.ps_comp_active;
+		config.ps_vp_planes = state.ps_vp_planes || [];
 		config.ps_alpha = state.ps_alpha || [];
 		config.ps_alpha_active = state.ps_alpha_active == null ? -1 : state.ps_alpha_active;
 		config.ps_paths = state.ps_paths || [];
@@ -272,6 +274,7 @@ class Ps_documents_class {
 		app.GUI.modules['ps/commands'].undo_toggle_index = null;
 		app.GUI.modules['ps/commands'].last_selection = null;
 		config.ps_paths = [];
+		config.ps_vp_planes = [];
 		config.ps_path_active = -1;
 		config.ps_alpha = [];
 		config.ps_alpha_active = -1;

@@ -1789,3 +1789,8 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_awa_unit { margin-left: 4px; color: var(--ps-text-dim, #aaa); font-size: 11px; }
 .ps_awa_hint { margin-top: 8px; font-size: 11px; line-height: 1.4; color: var(--ps-text-dim, #aaa); max-width: 200px; }
 .ps_lq_tools button:disabled { opacity: 0.35; }
+.ps_vp_options { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; min-height: 26px; padding: 0 0 8px 46px; font-size: 12px; }
+.ps_vp_opt { display: inline-flex; align-items: center; gap: 4px; }
+.ps_vp_opt input[type="number"] { width: 54px; }
+.ps_vp_color { width: 30px; height: 16px; border: 1px solid #111; padding: 0; }
+.ps_vp_side .ps_vp_hint { margin-top: 10px; }
