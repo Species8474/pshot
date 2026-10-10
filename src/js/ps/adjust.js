@@ -228,6 +228,69 @@ function hs_draw_bars(canvas, state) {
 	['a', 'b', 'c', 'd'].forEach(k => g.fillRect(px(r[k]) - 1, 11, 3, 10));
 }
 
+//CS6 adjustment presets (Default is the dialog's defaults); values approximate the shipped ones
+const LV = (ib, g, iw, ob, ow) => ({ ib: ib, g: g, iw: iw, ob: ob == null ? 0 : ob, ow: ow == null ? 255 : ow });
+const LEVELS_PRESETS = {
+	'Darker': LV(0, 0.75, 255), 'Increase Contrast 1': LV(10, 1, 245), 'Increase Contrast 2': LV(20, 1, 235), 'Increase Contrast 3': LV(30, 1, 225),
+	'Lighten Shadows': LV(0, 1.6, 255), 'Lighter': LV(0, 1.35, 255), 'Midtones Brighter': LV(0, 1.25, 255), 'Midtones Darker': LV(0, 0.8, 255),
+};
+const P = (pts) => pts.map(([x, y]) => ({ x: x, y: y }));
+const CURVES_PRESETS = {
+	'Color Negative (RGB)': { Red: P([[0, 255], [255, 30]]), Green: P([[0, 255], [255, 60]]), Blue: P([[0, 255], [255, 90]]) },
+	'Cross Process (RGB)': { Red: P([[0, 0], [64, 40], [192, 215], [255, 255]]), Green: P([[0, 0], [64, 50], [192, 210], [255, 255]]), Blue: P([[0, 30], [255, 225]]) },
+	'Darker (RGB)': { RGB: P([[0, 0], [128, 100], [255, 255]]) },
+	'Increase Contrast (RGB)': { RGB: P([[0, 0], [64, 54], [192, 202], [255, 255]]) },
+	'Lighter (RGB)': { RGB: P([[0, 0], [128, 155], [255, 255]]) },
+	'Linear Contrast (RGB)': { RGB: P([[0, 0], [56, 42], [200, 214], [255, 255]]) },
+	'Medium Contrast (RGB)': { RGB: P([[0, 0], [64, 47], [192, 208], [255, 255]]) },
+	'Negative (RGB)': { RGB: P([[0, 255], [255, 0]]) },
+	'Strong Contrast (RGB)': { RGB: P([[0, 0], [64, 37], [192, 218], [255, 255]]) },
+};
+const EXPOSURE_PRESETS = { 'Minus 1.0': { exposure: -1 }, 'Minus 2.0': { exposure: -2 }, 'Plus 1.0': { exposure: 1 }, 'Plus 2.0': { exposure: 2 } };
+const BW = (r, y, g, c, b, m) => ({ reds: r, yellows: y, greens: g, cyans: c, blues: b, magentas: m });
+const BW_PRESETS = {
+	'Blue Filter': BW(0, 0, 0, 110, 110, 110), 'Darker': BW(30, 40, 30, 40, 10, 70), 'Green Filter': BW(40, 100, 100, 60, 20, 40),
+	'High Contrast Blue Filter': BW(-50, -50, -50, 150, 150, 150), 'High Contrast Red Filter': BW(120, 120, -10, -50, -50, 120),
+	'Infrared': BW(-40, 235, 144, -68, -3, -107), 'Lighter': BW(55, 75, 55, 75, 35, 95), 'Maximum Black': BW(0, 0, 0, 0, 0, 0),
+	'Maximum White': BW(100, 100, 100, 100, 100, 100), 'Neutral Density': BW(128, 128, 100, 100, 128, 100),
+	'Red Filter': BW(120, 110, -10, -50, -50, 120), 'Yellow Filter': BW(120, 110, 40, -30, -90, 80),
+	'Default': { tint: false, hue: 42, sat: 20 },
+};
+const MONO = (r, g, b) => ({ mono: true, out: 'Red', matrix: { Red: [r, g, b, 0], Green: [r, g, b, 0], Blue: [r, g, b, 0] } });
+const MIXER_PRESETS = {
+	'Black & White Infrared (RGB)': MONO(-70, 200, -30), 'Black & White with Blue Filter (RGB)': MONO(0, 0, 100), 'Black & White with Green Filter (RGB)': MONO(0, 100, 0),
+	'Black & White with Orange Filter (RGB)': MONO(50, 50, 0), 'Black & White with Red Filter (RGB)': MONO(100, 0, 0), 'Black & White with Yellow Filter (RGB)': MONO(34, 66, 0),
+	'Grayscale (RGB)': MONO(40, 40, 20),
+	'Default': { mono: false, out: 'Red', matrix: { Red: [100, 0, 0, 0], Green: [0, 100, 0, 0], Blue: [0, 0, 100, 0] } },
+};
+
+function preset_row(presets) {
+	return '<div class="ps_adj_row"><span>Preset:</span><select id="adj_preset"><option>Custom</option><option>Default</option>'
+		+ Object.keys(presets).filter(n => n != 'Default').map(n => '<option>' + n + '</option>').join('') + '</select></div>';
+}
+
+/**
+ * the Preset menu: a choice replaces the settings (Default = `defaults`);
+ * any later edit shows Custom
+ */
+function wire_preset(root, state, presets, defaults, refresh, update) {
+	var sel = root.querySelector('#adj_preset');
+	if (!sel) return;
+	sel.value = 'Default';
+	sel.addEventListener('change', () => {
+		if (sel.value == 'Custom') return;
+		var name = sel.value;
+		Object.assign(state, JSON.parse(JSON.stringify(defaults())), JSON.parse(JSON.stringify(presets[name] || {})));
+		refresh();
+		update();
+		sel.value = name;
+	});
+	var custom = (e) => { if (e.target !== sel) sel.value = 'Custom'; };
+	root.addEventListener('input', custom);
+	root.addEventListener('change', custom);
+	root.addEventListener('mouseup', (e) => { if (e.target.tagName == 'CANVAS') sel.value = 'Custom'; });
+}
+
 class Ps_adjust_class {
 
 	/**
@@ -453,7 +516,7 @@ class Ps_adjust_class {
 	// ---------- Levels ----------
 
 	levels() {
-		var html = '<div class="ps_adj_row"><span>Channel:</span><select id="lv_channel"><option>RGB</option><option>Red</option><option>Green</option><option>Blue</option></select></div>'
+		var html = preset_row(LEVELS_PRESETS) + '<div class="ps_adj_row"><span>Channel:</span><select id="lv_channel"><option>RGB</option><option>Red</option><option>Green</option><option>Blue</option></select></div>'
 			+ '<div class="ps_adj_label">Input Levels:</div>'
 			+ '<canvas id="lv_hist" width="256" height="110" class="ps_adj_hist"></canvas>'
 			+ '<div class="ps_adj_triple"><input id="lv_in_black" type="number" min="0" max="253" value="0"><input id="lv_gamma" type="number" min="0.1" max="9.99" step="0.01" value="1.00"><input id="lv_in_white" type="number" min="2" max="255" value="255"></div>'
@@ -483,13 +546,17 @@ class Ps_adjust_class {
 				});
 			}
 			load();
+			//a preset sets the composite (RGB) channel
+			var level_defaults = () => ({ values: Object.fromEntries(Object.keys(channels).map(c => [c, LV(0, 1, 255)])) });
+			var level_presets = Object.fromEntries(Object.entries(LEVELS_PRESETS).map(([n, v]) => [n, { values: Object.assign(level_defaults().values, { RGB: v }) }]));
+			wire_preset(root, state, level_presets, level_defaults, () => { state.channel = 'RGB'; root.querySelector('#lv_channel').value = 'RGB'; load(); }, update);
 		}, (state) => this.build_levels(state), 'levels');
 	}
 
 	// ---------- Curves ----------
 
 	curves() {
-		var html = '<div class="ps_adj_row"><span>Channel:</span><select id="cv_channel"><option>RGB</option><option>Red</option><option>Green</option><option>Blue</option></select></div>'
+		var html = preset_row(CURVES_PRESETS) + '<div class="ps_adj_row"><span>Channel:</span><select id="cv_channel"><option>RGB</option><option>Red</option><option>Green</option><option>Blue</option></select></div>'
 			+ '<canvas id="cv_graph" width="256" height="256" class="ps_adj_curve"></canvas>'
 			+ '<div class="ps_adj_pair"><span>Output: <b id="cv_out">-</b></span><span>Input: <b id="cv_in">-</b></span></div>'
 			+ '<div class="ps_adj_hint">Click to add a point, drag to move it, drag it off the graph to remove it.</div>';
@@ -573,6 +640,13 @@ class Ps_adjust_class {
 			document.addEventListener('mouseup', () => { dragging = null; });
 			root.querySelector('#cv_channel').addEventListener('change', (e) => { state.channel = e.target.value; draw(); });
 			draw();
+			var curve_defaults = () => ({ points: Object.fromEntries(['RGB', 'Red', 'Green', 'Blue'].map(c => [c, P([[0, 0], [255, 255]])])) });
+			var curve_presets = Object.fromEntries(Object.entries(CURVES_PRESETS).map(([n, v]) => [n, { points: Object.assign(curve_defaults().points, v) }]));
+			wire_preset(root, state, curve_presets, curve_defaults, () => {
+				state.channel = CURVES_PRESETS[root.querySelector('#adj_preset').value] && !CURVES_PRESETS[root.querySelector('#adj_preset').value].RGB ? 'Red' : 'RGB';
+				root.querySelector('#cv_channel').value = state.channel;
+				draw();
+			}, update);
 		}, (state) => this.build_curves(state), 'curves');
 	}
 
@@ -797,10 +871,10 @@ class Ps_adjust_class {
 	/**
 	 * fields: [{ key, label, min, max, step, value }] ; extra_html / extra_setup optional
 	 */
-	sliders(title, kind, fields, extra_html, extra_setup) {
+	sliders(title, kind, fields, extra_html, extra_setup, presets) {
 		var row = (f) => '<div class="ps_adj_slider"><span>' + f.label + '</span><input type="number" id="adj_' + f.key + '_n" value="' + f.value + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '">'
 			+ '<input type="range" id="adj_' + f.key + '" min="' + f.min + '" max="' + f.max + '" step="' + (f.step || 1) + '" value="' + f.value + '"></div>';
-		var html = (extra_html || '') + fields.map(row).join('');
+		var html = (presets ? preset_row(presets) : '') + (extra_html || '') + fields.map(row).join('');
 		this.show(title, html, (root, state, update) => {
 			for (let f of fields) {
 				if (state[f.key] === undefined) state[f.key] = f.value;
@@ -810,7 +884,14 @@ class Ps_adjust_class {
 				range.addEventListener('input', () => set(parseFloat(range.value)));
 				num.addEventListener('input', () => { var v = parseFloat(num.value); if (!isNaN(v)) set(v); });
 			}
-			if (extra_setup) extra_setup(root, state, update);
+			var extra_refresh = extra_setup ? extra_setup(root, state, update) : null;
+			if (presets) {
+				var defaults = () => Object.fromEntries(fields.map(f => [f.key, f.value]));
+				wire_preset(root, state, presets, defaults, () => {
+					if (extra_refresh) extra_refresh();
+					for (let f of fields) root.querySelector('#adj_' + f.key).value = root.querySelector('#adj_' + f.key + '_n').value = state[f.key];
+				}, update);
+			}
 		}, (state) => this['build_' + kind](state), kind);
 	}
 
@@ -819,7 +900,7 @@ class Ps_adjust_class {
 			{ key: 'exposure', label: 'Exposure:', min: -20, max: 20, step: 0.01, value: 0 },
 			{ key: 'offset', label: 'Offset:', min: -0.5, max: 0.5, step: 0.0001, value: 0 },
 			{ key: 'gamma', label: 'Gamma Correction:', min: 0.01, max: 9.99, step: 0.01, value: 1 },
-		]);
+		], '', null, EXPOSURE_PRESETS);
 	}
 
 	vibrance() {
@@ -916,7 +997,15 @@ class Ps_adjust_class {
 				update();
 			});
 			load();
-		});
+			return () => {
+				state.matrix = state.matrix || { Red: [100, 0, 0, 0], Green: [0, 100, 0, 0], Blue: [0, 0, 100, 0] };
+				state.out = state.out || 'Red';
+				state.mono = !!state.mono;
+				root.querySelector('#cm_out').value = state.out;
+				root.querySelector('#cm_mono').checked = state.mono;
+				load();
+			};
+		}, MIXER_PRESETS);
 	}
 
 	gradient_map() {
@@ -1657,7 +1746,6 @@ class Ps_adjust_class {
 	 * CS6 Black & White: six color sliders and an optional Tint
 	 */
 	black_white() {
-		var extra = '<div class="ps_adj_row"><span>Preset:</span><select disabled><option>Default</option></select></div>';
 		this.sliders('Black & White', 'black_white', [
 			{ key: 'reds', label: 'Reds:', min: -200, max: 300, value: 40 },
 			{ key: 'yellows', label: 'Yellows:', min: -200, max: 300, value: 60 },
@@ -1665,7 +1753,7 @@ class Ps_adjust_class {
 			{ key: 'cyans', label: 'Cyans:', min: -200, max: 300, value: 60 },
 			{ key: 'blues', label: 'Blues:', min: -200, max: 300, value: 20 },
 			{ key: 'magentas', label: 'Magentas:', min: -200, max: 300, value: 80 },
-		], extra, (root, state, update) => {
+		], '', (root, state, update) => {
 			root.insertAdjacentHTML('beforeend', '<label class="ps_adj_check"><input type="checkbox" id="bw_tint"> Tint</label>'
 				+ '<div class="ps_adj_slider"><span>Hue:</span><input type="number" id="bw_hue_n" min="0" max="360"><span class="ps_adj_unit">°</span><input type="range" id="bw_hue" min="0" max="360"></div>'
 				+ '<div class="ps_adj_slider"><span>Saturation:</span><input type="number" id="bw_sat_n" min="0" max="100"><span class="ps_adj_unit">%</span><input type="range" id="bw_sat" min="0" max="100"></div>');
@@ -1683,7 +1771,11 @@ class Ps_adjust_class {
 				r.addEventListener('input', () => set(parseFloat(r.value)));
 				n.addEventListener('change', () => set(parseFloat(n.value)));
 			});
-		});
+			return () => {
+				t.checked = !!state.tint;
+				[['hue', 'bw_hue'], ['sat', 'bw_sat']].forEach(([k, id]) => { root.querySelector('#' + id).value = root.querySelector('#' + id + '_n').value = state[k]; });
+			};
+		}, BW_PRESETS);
 	}
 
 	build_black_white(state) {
