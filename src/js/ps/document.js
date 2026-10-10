@@ -678,6 +678,7 @@ function text_to_psd(layer) {
 				fillColor: hex(m.fill_color || '#000000'),
 				//Character panel caps / position, OpenType Standard Ligatures
 				fontCaps: m.caps == 'small' ? 1 : (m.caps == 'all' ? 2 : 0), fontBaseline: m.position == 'super' ? 1 : (m.position == 'sub' ? 2 : 0), ligatures: m.liga !== false,
+				autoKerning: !(layer.params && layer.params.kerning == 'none'),
 			} });
 		});
 		if (li < lines.length - 1) text += '\r';
@@ -774,7 +775,7 @@ function text_from_psd(child) {
 		name: child.name || lines.map(l => l.map(s => s.text).join('')).join(' '),
 		type: 'text',
 		x: x, y: y, width: w, height: h,
-		params: { boundary: 'dynamic', kerning: 'metrics', text_direction: vertical ? 'ttb' : 'ltr', wrap_direction: vertical ? 'rtl' : 'ttb', halign: halign, valign: 'top', wrap: 'letter' },
+		params: { boundary: 'dynamic', kerning: (t.style && t.style.autoKerning === false) || (runs[0] && runs[0].style && runs[0].style.autoKerning === false) ? 'none' : 'metrics', text_direction: vertical ? 'ttb' : 'ltr', wrap_direction: vertical ? 'rtl' : 'ttb', halign: halign, valign: 'top', wrap: 'letter' },
 		render_function: ['text', 'render'],
 		rotate: 0,
 		is_vector: true,
