@@ -1660,6 +1660,33 @@ class Ps_commands_class {
 
 	workspace(name) { app.GUI.Ps_workspace.apply_workspace(name || 'Essentials'); }
 
+	toggle_show_count() {
+		var ws = app.GUI.Ps_workspace;
+		ws.show_count = ws.show_count === false;
+		ws.Selection.draw_overlay();
+	}
+
+	/**
+	 * Type > Save / Load Default Type Styles: the document's character and paragraph styles
+	 */
+	save_default_type_styles() {
+		try { localStorage.setItem('pshot_default_type_styles_v1', JSON.stringify({ char: config.ps_char_styles || [], para: config.ps_para_styles || [] })); } catch (e) { /* storage blocked */ }
+		app.GUI.Ps_workspace.status_message('Default type styles saved.');
+	}
+
+	load_default_type_styles() {
+		var d = null;
+		try { d = JSON.parse(localStorage.getItem('pshot_default_type_styles_v1') || 'null'); } catch (e) { d = null; }
+		if (!d) {
+			app.GUI.Ps_workspace.status_message('No default type styles have been saved (Type > Save Default Type Styles).');
+			return;
+		}
+		var merge = (have, add) => have.concat(add.filter(s => !have.some(h => h.name == s.name)));
+		return app.State.do_action(new app.Actions.Bundle_action('type_styles', 'Load Default Type Styles', [
+			new app.Actions.Update_config_action({ ps_char_styles: merge(config.ps_char_styles || [], d.char || []), ps_para_styles: merge(config.ps_para_styles || [], d.para || []) }),
+		])).then(() => app.GUI.Ps_workspace.Type_styles.render_all());
+	}
+
 	toggle_show_notes() {
 		var ws = app.GUI.Ps_workspace;
 		ws.show_notes = ws.show_notes === false;

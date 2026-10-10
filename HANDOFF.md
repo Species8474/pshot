@@ -238,6 +238,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Filter > Digimarc > Embed / Read Watermark (ps/digimarc.js): 48-bit spread-spectrum luminance watermark (ID, year, attributes, checksum); Browse Filters Online opens Adobe Exchange.
   - Fix: dialog rows with a title and no value (group labels in Stroke, Duplicate, Save Selection...) printed "undefined".
   - Help > About pshot: CS6-style splash (click/Esc closes) with the miniPaint MIT credit and a not-affiliated-with-Adobe note.
+  - View > Show > Count (count markers); Type > Save / Load Default Type Styles (saved in the browser, merged into the document's styles).
 
 ## Known gaps / next
 

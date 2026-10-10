@@ -1199,6 +1199,7 @@ class Ps_workspace_class {
 			case 'measure_log': return this.Measure_log.open;
 			case 'target_path': return this.target_path !== false;
 			case 'show_notes': return this.show_notes !== false;
+			case 'show_count': return this.show_count !== false;
 			case 'guides': return config.guides_enabled == true;
 			case 'rulers': return config.ruler_active == true;
 			case 'snap': return config.SNAP == true;

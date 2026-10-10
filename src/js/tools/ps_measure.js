@@ -202,7 +202,8 @@ class Ps_measure_class extends Base_tools_class {
 			ctx.fillStyle = '#000';
 			ctx.fillText(String(i + 1), s.x + rr * 1.4, s.y + rr * 2.6);
 		});
-		this.counts.forEach((c, i) => {
+		//View > Show > Count
+		if (app.GUI.Ps_workspace.show_count !== false) this.counts.forEach((c, i) => {
 			ctx.fillStyle = '#ff5050';
 			ctx.beginPath();
 			ctx.arc(c.x, c.y, 3 / scale, 0, Math.PI * 2);
