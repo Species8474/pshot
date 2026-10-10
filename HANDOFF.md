@@ -293,6 +293,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Blur Gallery: Blur Effects Light Bokeh / Bokeh Color / Light Range (highlights in the range bloom in blurred areas, float box-blur so they stay bright without banding), Focus per Iris / Tilt-Shift pin, High Quality (more blur steps), Save Mask to Channels (alpha 'Blur Mask', white = sharp). Selection Bleed and Tilt-Shift Distortion stay greyed.
   - Indexed Color: Exact (only with 256 colors or fewer), System (Mac OS) / System (Windows), Uniform, Master palettes (= Local for one document), Previous; Forced (None, Black and White, Primaries, Web); Matte (None, Foreground, Background, White, Black, 50% Gray, Netscape Gray); Dither Pattern (ordered) and Noise; Preserve Exact Colors. Save for Web: Pattern / Noise dither. Custom palette / forced colors stay greyed.
   - Image > Mode > Color Table: Table presets (Custom, Black Body, Grayscale, Spectrum, System Mac OS / Windows), click a swatch to change it; OK remaps every pixel by its table index (CS6) and stores the new table.
+  - Gradient Editor: Gradient Type Noise (Roughness, Color Model RGB / HSB / LAB with channel ranges, Restrict Colors, Add Transparency, Randomize; gradients.js noise_lut, seeded). Noise gradients also keep 17 sampled stops for the places that only take solid gradients (PSD, Copy CSS). Smoothness stays greyed.
 
 ## Known gaps / next
 

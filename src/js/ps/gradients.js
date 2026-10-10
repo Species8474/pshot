@@ -72,9 +72,88 @@ function presets() {
 }
 
 /**
+ * CS6 Noise gradients: random color bands; Roughness sets how many and how
+ * different, the Color Model ranges limit each channel, Restrict Colors keeps
+ * them from oversaturating, Add Transparency varies the opacity too
+ */
+function noise_rng(seed) {
+	return function () {
+		seed = (seed + 0x6D2B79F5) | 0;
+		var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+		return ((t ^ t >>> 14) >>> 0) / 4294967296;
+	};
+}
+
+function lab_rgb(L, a, b) {
+	var fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200;
+	var f = (t) => t > 0.206893 ? t * t * t : (t - 16 / 116) / 7.787;
+	var X = 0.95047 * f(fx), Y = f(fy), Z = 1.08883 * f(fz);
+	var lin = [3.2406 * X - 1.5372 * Y - 0.4986 * Z, -0.9689 * X + 1.8758 * Y + 0.0415 * Z, 0.0557 * X - 0.2040 * Y + 1.0570 * Z];
+	return lin.map(v => 255 * Math.max(0, Math.min(1, v > 0.0031308 ? 1.055 * Math.pow(v, 1 / 2.4) - 0.055 : 12.92 * v)));
+}
+
+function hsb_rgb(h, s, v) {
+	var f = (n) => { var k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+	return [f(5) * 255, f(3) * 255, f(1) * 255];
+}
+
+function noise_lut(g, reverse) {
+	var out = new Uint8ClampedArray(256 * 4);
+	var rand = noise_rng(g.seed || 1);
+	var rough = (g.roughness == null ? 50 : g.roughness) / 100;
+	var n = 4 + Math.round(rough * 90);
+	var min = g.min || [0, 0, 0], max = g.max || [100, 100, 100];
+	var pts = [], prev = null;
+	for (var i = 0; i <= n; i++) {
+		var v = [0, 1, 2].map(c => (min[c] + (max[c] - min[c]) * rand()) / 100);
+		if (prev) v = v.map((x, c) => prev[c] + (x - prev[c]) * (0.25 + 0.75 * rough));
+		var a = g.transparency ? 0.2 + 0.8 * rand() : 1;
+		pts.push({ pos: i / n, v: v, a: a });
+		prev = v;
+	}
+	var color = (v) => {
+		var rgb;
+		if (g.model == 'HSB') rgb = hsb_rgb(v[0] * 360, v[1], v[2]);
+		else if (g.model == 'LAB') rgb = lab_rgb(v[0] * 100, v[1] * 255 - 128, v[2] * 255 - 128);
+		else rgb = v.map(x => x * 255);
+		if (g.restrict) {
+			var m = (rgb[0] + rgb[1] + rgb[2]) / 3;
+			rgb = rgb.map(c => m + (c - m) * 0.75);
+		}
+		return rgb;
+	};
+	for (var k = 0; k < 256; k++) {
+		var t = reverse ? 1 - k / 255 : k / 255, j = Math.min(n - 1, Math.floor(t * n)), f = t * n - j;
+		var a0 = pts[j], a1 = pts[j + 1];
+		var c = color(a0.v.map((x, ci) => x + (a1.v[ci] - x) * f));
+		out[k * 4] = c[0]; out[k * 4 + 1] = c[1]; out[k * 4 + 2] = c[2];
+		out[k * 4 + 3] = (a0.a + (a1.a - a0.a) * f) * 255;
+	}
+	return out;
+}
+
+/**
+ * a noise gradient also keeps sampled color / opacity stops, for the places
+ * that only know solid gradients (PSD, CSS export)
+ */
+function sample_noise(g) {
+	var L = noise_lut(g, false), hex = (k) => '#' + [L[k], L[k + 1], L[k + 2]].map(v => v.toString(16).padStart(2, '0')).join('');
+	g.stops = [];
+	g.alphas = [];
+	for (var i = 0; i <= 16; i++) {
+		var k = Math.round(i / 16 * 255) * 4;
+		g.stops.push(S(i / 16, hex(k)));
+		g.alphas.push(A(i / 16, L[k + 3] / 255));
+	}
+	return g;
+}
+
+/**
  * 256 RGBA entries along the gradient
  */
 function lut(g, reverse) {
+	if (g.type == 'noise') return noise_lut(g, reverse);
 	var out = new Uint8ClampedArray(256 * 4);
 	var stops = g.stops.slice().sort((a, b) => a.pos - b.pos).map(s => ({ pos: s.pos, rgb: hex_rgb(color_of(s.color)) }));
 	var alphas = (g.alphas && g.alphas.length ? g.alphas : OPAQUE).slice().sort((a, b) => a.pos - b.pos);
@@ -233,18 +312,40 @@ function editor(initial, on_ok, on_preview) {
 		+ '<div class="ps_ge_title">Gradient Editor</div>'
 		+ '<div class="ps_ge_top"><div class="ps_ge_presets"></div><div class="ps_ge_buttons"><button type="button" data-a="ok">OK</button><button type="button" data-a="cancel">Cancel</button><button type="button" data-a="new">New</button></div></div>'
 		+ '<div class="ps_ge_row"><label>Name:</label><input type="text" class="ps_ge_name"></div>'
-		+ '<div class="ps_ge_row"><label>Gradient Type:</label><select disabled><option>Solid</option></select><label>Smoothness:</label><input type="number" value="100" disabled> %</div>'
+		+ '<div class="ps_ge_row"><label>Gradient Type:</label><select class="ps_ge_type"><option>Solid</option><option>Noise</option></select><span class="ps_ge_solid_opts"><label>Smoothness:</label><input type="number" value="100" disabled> %</span><span class="ps_ge_noise_opts"><label>Roughness:</label><input type="number" class="ps_ge_rough" min="0" max="100"> %</span></div>'
 		+ '<div class="ps_ge_barwrap"><div class="ps_ge_alpha_track"></div><div class="ps_ge_bar"></div><div class="ps_ge_color_track"></div></div>'
 		+ '<fieldset class="ps_ge_stops"><legend>Stops</legend>'
 		+ '<div class="ps_ge_row"><label>Opacity:</label><input type="number" class="ps_ge_opacity" min="0" max="100"> %<label>Location:</label><input type="number" class="ps_ge_aloc" min="0" max="100"> %<button type="button" data-a="adel">Delete</button></div>'
 		+ '<div class="ps_ge_row"><label>Color:</label><span class="ps_ge_swatch"></span><label>Location:</label><input type="number" class="ps_ge_cloc" min="0" max="100"> %<button type="button" data-a="cdel">Delete</button></div>'
+		+ '</fieldset>'
+		+ '<fieldset class="ps_ge_noise"><legend>Noise</legend>'
+		+ '<div class="ps_ge_row"><label>Color Model:</label><select class="ps_ge_model"><option>RGB</option><option>HSB</option><option>LAB</option></select></div>'
+		+ [0, 1, 2].map(c => '<div class="ps_ge_row"><label class="ps_ge_chan"></label><input type="number" class="ps_ge_min" data-c="' + c + '" min="0" max="100"> - <input type="number" class="ps_ge_max" data-c="' + c + '" min="0" max="100"> %</div>').join('')
+		+ '<div class="ps_ge_row"><label class="ps_adj_check"><input type="checkbox" class="ps_ge_restrict"> Restrict Colors</label><label class="ps_adj_check"><input type="checkbox" class="ps_ge_transp"> Add Transparency</label><button type="button" data-a="randomize">Randomize</button></div>'
 		+ '</fieldset></div>';
 	document.body.appendChild(root);
 	var $ = (s) => root.querySelector(s);
 	var bar = $('.ps_ge_bar'), atrack = $('.ps_ge_alpha_track'), ctrack = $('.ps_ge_color_track');
-	var changed = () => { if (on_preview) on_preview(clone(g)); render(); };
+	var changed = () => { if (g.type == 'noise') sample_noise(g); if (on_preview) on_preview(clone(g)); render(); };
 	var render = () => {
 		$('.ps_ge_name').value = g.name || 'Custom';
+		var noise = g.type == 'noise';
+		$('.ps_ge_type').value = noise ? 'Noise' : 'Solid';
+		$('.ps_ge_stops').style.display = noise ? 'none' : '';
+		$('.ps_ge_noise').style.display = noise ? '' : 'none';
+		$('.ps_ge_solid_opts').style.display = noise ? 'none' : '';
+		$('.ps_ge_noise_opts').style.display = noise ? '' : 'none';
+		atrack.style.visibility = ctrack.style.visibility = noise ? 'hidden' : '';
+		if (noise) {
+			$('.ps_ge_rough').value = g.roughness;
+			$('.ps_ge_model').value = g.model || 'RGB';
+			var names = { RGB: ['R', 'G', 'B'], HSB: ['H', 'S', 'B'], LAB: ['L', 'a', 'b'] }[g.model || 'RGB'];
+			root.querySelectorAll('.ps_ge_chan').forEach((l, c) => { l.textContent = names[c] + ':'; });
+			root.querySelectorAll('.ps_ge_min').forEach((inp) => { inp.value = g.min[inp.dataset.c]; });
+			root.querySelectorAll('.ps_ge_max').forEach((inp) => { inp.value = g.max[inp.dataset.c]; });
+			$('.ps_ge_restrict').checked = !!g.restrict;
+			$('.ps_ge_transp').checked = !!g.transparency;
+		}
 		bar.style.background = css(g);
 		atrack.innerHTML = g.alphas.map((a, i) => '<span class="ps_ge_stop alpha' + (sel.kind == 'alpha' && sel.index == i ? ' active' : '') + '" data-i="' + i + '" style="left:' + (a.pos * 100) + '%;--c:' + 'rgb(' + Math.round(255 * (1 - a.a)) + ',' + Math.round(255 * (1 - a.a)) + ',' + Math.round(255 * (1 - a.a)) + ')"></span>').join('');
 		ctrack.innerHTML = g.stops.map((s, i) => '<span class="ps_ge_stop color' + (sel.kind == 'color' && sel.index == i ? ' active' : '') + '" data-i="' + i + '" style="left:' + (s.pos * 100) + '%;--c:' + color_of(s.color) + '"></span>').join('');
@@ -292,6 +393,21 @@ function editor(initial, on_ok, on_preview) {
 	$('.ps_ge_aloc').addEventListener('change', (e) => { if (sel.kind == 'alpha') { g.alphas[sel.index].pos = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100; changed(); } });
 	$('.ps_ge_opacity').addEventListener('change', (e) => { if (sel.kind == 'alpha') { g.alphas[sel.index].a = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100; changed(); } });
 	$('.ps_ge_name').addEventListener('change', (e) => { g.name = e.target.value; });
+	$('.ps_ge_type').addEventListener('change', (e) => {
+		if (e.target.value == 'Noise') Object.assign(g, { type: 'noise', roughness: 50, model: 'RGB', min: [0, 0, 0], max: [100, 100, 100], restrict: false, transparency: false, seed: Math.floor(Math.random() * 1e9) });
+		else { delete g.type; g.stops = [S(0, 'fg'), S(1, 'bg')]; g.alphas = OPAQUE.slice(); }
+		sel = { kind: 'color', index: 0 };
+		changed();
+	});
+	$('.ps_ge_rough').addEventListener('change', (e) => { g.roughness = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)); changed(); });
+	$('.ps_ge_model').addEventListener('change', (e) => { g.model = e.target.value; changed(); });
+	root.querySelectorAll('.ps_ge_min, .ps_ge_max').forEach((inp) => inp.addEventListener('change', () => {
+		var list = inp.classList.contains('ps_ge_min') ? g.min : g.max;
+		list[inp.dataset.c] = Math.max(0, Math.min(100, parseFloat(inp.value) || 0));
+		changed();
+	}));
+	$('.ps_ge_restrict').addEventListener('change', (e) => { g.restrict = e.target.checked; changed(); });
+	$('.ps_ge_transp').addEventListener('change', (e) => { g.transparency = e.target.checked; changed(); });
 	var presets_host = $('.ps_ge_presets');
 	presets().forEach((p) => {
 		var cell = document.createElement('div');
@@ -318,6 +434,7 @@ function editor(initial, on_ok, on_preview) {
 			cell.addEventListener('click', () => { g = clone(p); changed(); });
 			presets_host.appendChild(cell);
 		}
+		if (a == 'randomize' && g.type == 'noise') { g.seed = Math.floor(Math.random() * 1e9); changed(); }
 		if (a == 'cdel' && sel.kind == 'color' && g.stops.length > 2) { g.stops.splice(sel.index, 1); sel.index = 0; changed(); }
 		if (a == 'adel' && sel.kind == 'alpha' && g.alphas.length > 2) { g.alphas.splice(sel.index, 1); sel.index = 0; changed(); }
 	}));

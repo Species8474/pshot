@@ -1894,3 +1894,6 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_hs_range canvas { display: block; width: 100%; height: 34px; cursor: ew-resize; }
 .ps_bg_lrange input[type=number] { width: 48px; }
 .ps_bg_focus input { width: 46px; }
+.ps_ge_noise .ps_ge_row input[type=number] { width: 52px; }
+.ps_ge_chan { min-width: 24px; }
+.ps_ge_rough { width: 52px; }
