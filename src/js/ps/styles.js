@@ -899,4 +899,18 @@ class Ps_styles_class {
 }
 
 export default Ps_styles_class;
-export { DEFAULTS as STYLE_DEFAULTS, CONTOURS };
+/**
+ * layer style sizes scaled by k (Scale Effects, Image Size > Scale Styles)
+ */
+function scale_styles(styles, k) {
+	styles = JSON.parse(JSON.stringify(styles));
+	for (var key in styles) {
+		var e = styles[key];
+		for (var f of ['size', 'distance', 'soften']) if (typeof e[f] == 'number') e[f] = Math.round(e[f] * k * 10) / 10;
+		if (typeof e.scale == 'number') e.scale = Math.round(e.scale * k);
+		if (typeof e.texture_scale == 'number') e.texture_scale = Math.round(e.texture_scale * k);
+	}
+	return styles;
+}
+
+export { DEFAULTS as STYLE_DEFAULTS, CONTOURS, scale_styles };

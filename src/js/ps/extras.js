@@ -10,6 +10,7 @@ import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import { define as define_shape } from './custom-shapes.js';
 import { open_document, file_to_layers } from './document.js';
+import { scale_styles } from './styles.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 function pick(multiple) {
@@ -236,13 +237,7 @@ class Ps_extras_class {
 			params: [{ name: 'scale', title: 'Scale:', value: 100, range: [1, 1000] }],
 			on_finish: (p) => {
 				var k = Math.max(1, parseFloat(p.scale) || 100) / 100;
-				var styles = JSON.parse(JSON.stringify(l.ps_styles));
-				for (var key in styles) {
-					var e = styles[key];
-					for (var f of ['size', 'distance', 'soften']) if (typeof e[f] == 'number') e[f] = Math.round(e[f] * k * 10) / 10;
-					if (typeof e.scale == 'number') e.scale = Math.round(e.scale * k);
-					if (typeof e.texture_scale == 'number') e.texture_scale = Math.round(e.texture_scale * k);
-				}
+				var styles = scale_styles(l.ps_styles, k);
 				app.State.do_action(new app.Actions.Bundle_action('layer_style', 'Scale Effects', [new app.Actions.Update_layer_action(l.id, { ps_styles: styles })]));
 			},
 		});

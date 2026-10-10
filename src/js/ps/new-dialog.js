@@ -58,7 +58,7 @@ function show_new_dialog() {
 		+ '<div class="ps_new_row"><label>Preset:</label><select id="nd_preset">' + options(PRESETS.map(p => p[0]), 'Default Photoshop Size') + '</select></div>'
 		+ '<div class="ps_new_row"><label>Width:</label><input type="number" id="nd_width" min="1" step="any"><select id="nd_wunit">' + unit_options + '</select></div>'
 		+ '<div class="ps_new_row"><label>Height:</label><input type="number" id="nd_height" min="1" step="any"><select id="nd_hunit">' + unit_options + '</select></div>'
-		+ '<div class="ps_new_row"><label>Resolution:</label><input type="number" id="nd_res" min="1" value="72"><select disabled><option>Pixels/Inch</option></select></div>'
+		+ '<div class="ps_new_row"><label>Resolution:</label><input type="number" id="nd_res" min="1" value="72"><select id="nd_runit"><option>Pixels/Inch</option><option>Pixels/Centimeter</option></select></div>'
 		+ '<div class="ps_new_row"><label>Color Mode:</label><select id="nd_mode">' + options(MODES.map(m => m[0]), 'RGB Color') + '</select><select id="nd_depth">' + options(['8 bit', '16 bit', '32 bit'], '8 bit') + '</select></div>'
 		+ '<div class="ps_new_row"><label>Background Contents:</label><select id="nd_bg"><option>White</option><option>Background Color</option><option>Transparent</option></select></div>'
 		+ '<div class="ps_new_size"><span>Image Size:</span><b id="nd_size"></b></div>'
@@ -92,7 +92,7 @@ function show_new_dialog() {
 	var render = () => {
 		$('nd_width').value = +from_px(state.w, $('nd_wunit').value, state.ppi).toFixed(3);
 		$('nd_height').value = +from_px(state.h, $('nd_hunit').value, state.ppi).toFixed(3);
-		$('nd_res').value = state.ppi;
+		$('nd_res').value = $('nd_runit').value == 'Pixels/Centimeter' ? +(state.ppi / 2.54).toFixed(3) : state.ppi;
 		$('nd_size').textContent = size_text();
 	};
 	$('nd_preset').addEventListener('change', () => {
@@ -109,7 +109,8 @@ function show_new_dialog() {
 	$('nd_height').addEventListener('input', () => { var v = parseFloat($('nd_height').value); if (v > 0) { state.h = to_px(v, $('nd_hunit').value, state.ppi); custom(); $('nd_size').textContent = size_text(); } });
 	$('nd_wunit').addEventListener('change', render);
 	$('nd_hunit').addEventListener('change', render);
-	$('nd_res').addEventListener('input', () => { var v = parseFloat($('nd_res').value); if (v > 0) { state.ppi = v; } });
+	$('nd_res').addEventListener('input', () => { var v = parseFloat($('nd_res').value); if (v > 0) { state.ppi = $('nd_runit').value == 'Pixels/Centimeter' ? v * 2.54 : v; } });
+	$('nd_runit').addEventListener('change', render);
 	$('nd_bg').addEventListener('change', () => { state.bg = $('nd_bg').value; });
 	$('nd_mode').addEventListener('change', () => {
 		state.mode = $('nd_mode').value;

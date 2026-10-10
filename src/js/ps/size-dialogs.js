@@ -6,6 +6,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
+import { scale_styles } from './styles.js';
 
 const UNIT_PER_INCH = { inches: 1, cm: 2.54, mm: 25.4, points: 72, picas: 6 };
 
@@ -59,18 +60,18 @@ class Ps_size_dialogs_class {
 
 	image_size() {
 		var W = config.WIDTH, H = config.HEIGHT;
-		var state = { w: W, h: H, ppi: this.ppi(), constrain: true, resample: true, method: 'Bicubic Automatic', punit: 'pixels', dunit: 'inches' };
+		var state = { w: W, h: H, ppi: this.ppi(), constrain: true, resample: true, scale_styles: true, method: 'Bicubic Automatic', punit: 'pixels', dunit: 'inches' };
 		var units = (list, sel) => list.map(u => '<option' + (u == sel ? ' selected' : '') + '>' + u + '</option>').join('');
 		var methods = ['Bicubic Automatic', 'Nearest Neighbor (preserve hard edges)', 'Bilinear', 'Bicubic (smooth gradients)', 'Bicubic Smoother (enlargement)', 'Bicubic Sharper (reduction)'];
 		var html = '<div class="ps_sz">'
 			+ '<div class="ps_sz_head">Pixel Dimensions: <b id="is_px_size"></b></div>'
 			+ '<div class="ps_sz_row"><label>Width:</label><input type="number" id="is_pw" step="any"><select id="is_punit">' + units(['pixels', 'percent'], 'pixels') + '</select><span class="ps_sz_link">&#8968;</span></div>'
-			+ '<div class="ps_sz_row"><label>Height:</label><input type="number" id="is_ph" step="any"><select id="is_punit2" disabled>' + units(['pixels', 'percent'], 'pixels') + '</select><span class="ps_sz_link">&#8970;</span></div>'
+			+ '<div class="ps_sz_row"><label>Height:</label><input type="number" id="is_ph" step="any"><select id="is_punit2">' + units(['pixels', 'percent'], 'pixels') + '</select><span class="ps_sz_link">&#8970;</span></div>'
 			+ '<div class="ps_sz_head">Document Size:</div>'
 			+ '<div class="ps_sz_row"><label>Width:</label><input type="number" id="is_dw" step="any"><select id="is_dunit">' + units(['percent', 'inches', 'cm', 'mm', 'points', 'picas'], 'inches') + '</select></div>'
-			+ '<div class="ps_sz_row"><label>Height:</label><input type="number" id="is_dh" step="any"><select id="is_dunit2" disabled>' + units(['percent', 'inches', 'cm', 'mm', 'points', 'picas'], 'inches') + '</select></div>'
-			+ '<div class="ps_sz_row"><label>Resolution:</label><input type="number" id="is_res" step="any"><select disabled><option>pixels/inch</option></select></div>'
-			+ '<label class="ps_sz_check"><input type="checkbox" disabled> Scale Styles</label>'
+			+ '<div class="ps_sz_row"><label>Height:</label><input type="number" id="is_dh" step="any"><select id="is_dunit2">' + units(['percent', 'inches', 'cm', 'mm', 'points', 'picas'], 'inches') + '</select></div>'
+			+ '<div class="ps_sz_row"><label>Resolution:</label><input type="number" id="is_res" step="any"><select id="is_runit"><option>pixels/inch</option><option>pixels/cm</option></select></div>'
+			+ '<label class="ps_sz_check"><input type="checkbox" id="is_styles" checked> Scale Styles</label>'
 			+ '<label class="ps_sz_check"><input type="checkbox" id="is_constrain" checked> Constrain Proportions</label>'
 			+ '<label class="ps_sz_check"><input type="checkbox" id="is_resample" checked> Resample Image:</label>'
 			+ '<select id="is_method" class="ps_sz_method">' + units(methods, 'Bicubic Automatic') + '</select>'
@@ -81,7 +82,7 @@ class Ps_size_dialogs_class {
 			params: [{ function() { return html; } }],
 			on_finish: () => {
 				if (state.resample) {
-					this.apply_image_size(Math.round(state.w), Math.round(state.h), state.method, state.ppi);
+					this.apply_image_size(Math.round(state.w), Math.round(state.h), state.method, state.ppi, state.constrain && state.scale_styles);
 				}
 				else {
 					//resolution only
@@ -98,10 +99,12 @@ class Ps_size_dialogs_class {
 			if (skip != 'ph') $('is_ph').value = pu == 'percent' ? round3(state.h / H * 100) : Math.round(state.h);
 			if (skip != 'dw') $('is_dw').value = du == 'percent' ? round3(state.w / W * 100) : round3(state.w / state.ppi * UNIT_PER_INCH[du]);
 			if (skip != 'dh') $('is_dh').value = du == 'percent' ? round3(state.h / H * 100) : round3(state.h / state.ppi * UNIT_PER_INCH[du]);
-			if (skip != 'res') $('is_res').value = round3(state.ppi);
+			if (skip != 'res') $('is_res').value = round3($('is_runit').value == 'pixels/cm' ? state.ppi / 2.54 : state.ppi);
 			$('is_px_size').textContent = fmt_size(Math.round(state.w), Math.round(state.h)) + (state.w != W || state.h != H ? ' (was ' + fmt_size(W, H) + ')' : '');
 			$('is_punit2').value = pu;
 			$('is_dunit2').value = du;
+			//Scale Styles needs Constrain Proportions (CS6)
+			$('is_styles').disabled = !state.constrain || !state.resample;
 		};
 		var set_w = (w, skip) => {
 			if (!(w > 0)) return;
@@ -122,6 +125,7 @@ class Ps_size_dialogs_class {
 		$('is_res').addEventListener('input', () => {
 			var v = parseFloat($('is_res').value);
 			if (!(v > 0)) return;
+			if ($('is_runit').value == 'pixels/cm') v *= 2.54;
 			if (state.resample) {
 				//pixel count follows the resolution, document size stays
 				var inches_w = state.w / state.ppi, inches_h = state.h / state.ppi;
@@ -134,9 +138,14 @@ class Ps_size_dialogs_class {
 			}
 			render('res');
 		});
+		//the Width and Height unit menus are linked
 		$('is_punit').addEventListener('change', () => render());
 		$('is_dunit').addEventListener('change', () => render());
-		$('is_constrain').addEventListener('change', (e) => { state.constrain = e.target.checked; });
+		$('is_punit2').addEventListener('change', () => { $('is_punit').value = $('is_punit2').value; render(); });
+		$('is_dunit2').addEventListener('change', () => { $('is_dunit').value = $('is_dunit2').value; render(); });
+		$('is_runit').addEventListener('change', () => render());
+		$('is_styles').addEventListener('change', (e) => { state.scale_styles = e.target.checked; });
+		$('is_constrain').addEventListener('change', (e) => { state.constrain = e.target.checked; render(); });
 		$('is_resample').addEventListener('change', (e) => {
 			state.resample = e.target.checked;
 			$('is_method').disabled = !state.resample;
@@ -157,7 +166,7 @@ class Ps_size_dialogs_class {
 	/**
 	 * resample the whole document to w x h
 	 */
-	async apply_image_size(w, h, method, ppi) {
+	async apply_image_size(w, h, method, ppi, with_styles) {
 		var W = config.WIDTH, H = config.HEIGHT;
 		if (w == W && h == H) {
 			app.GUI.Ps_workspace.Documents.current().ppi = ppi;
@@ -171,6 +180,7 @@ class Ps_size_dialogs_class {
 			if (layer.y != null) settings.y = Math.round(layer.y * sy);
 			if (layer.width != null) settings.width = Math.max(1, layer.width * sx);
 			if (layer.height != null) settings.height = Math.max(1, layer.height * sy);
+			if (with_styles && layer.ps_styles) settings.ps_styles = scale_styles(layer.ps_styles, sx);
 			if (layer.ps_mask) {
 				settings.ps_mask = resample(layer.ps_mask, layer.ps_mask.width * sx, layer.ps_mask.height * sy, method);
 				settings.ps_mask_x = Math.round(layer.ps_mask_x * sx);
