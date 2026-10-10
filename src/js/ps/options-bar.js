@@ -8,12 +8,11 @@
  */
 
 import app from './../app.js';
-import { names as custom_shape_names } from './custom-shapes.js';
 import config from './../config.js';
 import { tool_icons } from './tools-def.js';
-import Patterns from './patterns.js';
 import { show_popup_menu } from './popup-menu.js';
 import Dialog_class from './../libs/popup.js';
+import { picker_button } from './thumb-picker.js';
 import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
 function measure_tool() {
@@ -635,7 +634,7 @@ const LAYOUTS = {
 	rectangle: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	rounded_rectangle: SHAPE_COMMON([{ type: 'num', label: 'Radius:', bind: 'radius', unit: 'px', width: 46 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	ellipse: SHAPE_COMMON([{ type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
-	custom_shape: SHAPE_COMMON([{ type: 'select', label: 'Shape:', get values() { return custom_shape_names(); }, bind: 'custom', get map() { return Object.fromEntries(custom_shape_names().map(n => [n, n])); } }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
+	custom_shape: SHAPE_COMMON([{ type: 'shape_pick', label: 'Shape:', bind: 'custom' }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', bind: 'sides', width: 36 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	type: [
@@ -1141,19 +1140,10 @@ class Ps_options_bar_class {
 			}
 			return wrap;
 		}
-		if (c.type == 'pattern') {
-			var psel = document.createElement('select');
-			psel.className = 'ps_opt_select';
-			psel.title = 'Pattern';
-			for (var pname of Patterns.names()) {
-				var popt = document.createElement('option');
-				popt.textContent = pname;
-				popt.selected = bound && this.get(c.bind) == pname;
-				psel.appendChild(popt);
-			}
-			if (bound) psel.addEventListener('change', () => this.set(c.bind, psel.value));
-			psel.disabled = !bound || !!c.disabled;
-			wrap.appendChild(psel);
+		if (c.type == 'pattern' || c.type == 'shape_pick') {
+			//CS6 picker: the current pattern / shape as a swatch, a grid of all of them below
+			if (c.label) wrap.insertAdjacentHTML('afterbegin', '<span class="ps_opt_label">' + c.label + '</span>');
+			wrap.appendChild(picker_button(c.type == 'pattern' ? 'pattern' : 'shape', bound ? this.get(c.bind) : '', bound && !c.disabled, (v) => { this.set(c.bind, v); this.render(); }));
 			return wrap;
 		}
 		if (c.type == 'brush') {

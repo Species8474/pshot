@@ -1835,3 +1835,13 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_sem_empty { padding: 6px; color: var(--ps-text-dim, #999); }
 .ps_sem .ps_ge_row { display: flex; align-items: center; gap: 6px; }
 .ps_hdr_curve { display: block; width: 200px; height: 200px; border: 1px solid #555; margin: 4px 0; cursor: crosshair; }
+/* options bar Pattern / Custom Shape pickers */
+.ps_opt_thumbpick { display: inline-flex; align-items: center; gap: 2px; height: 24px; padding: 0 3px; background: var(--ps-control); border: 1px solid var(--ps-border); }
+.ps_opt_thumbpick:disabled { opacity: 0.4; }
+.ps_thumbpick_swatch { width: 18px; height: 18px; border: 1px solid #222; background: #fff; }
+.ps_thumbpicker { position: fixed; z-index: 2050; width: 260px; max-height: 300px; display: flex; flex-direction: column; background: var(--ps-panel); border: 1px solid #1a1a1a; box-shadow: 0 4px 14px rgba(0,0,0,0.5); }
+.ps_thumbpick_grid { display: grid; grid-template-columns: repeat(auto-fill, 36px); gap: 2px; padding: 4px; overflow-y: auto; background: var(--ps-panel-dark); }
+.ps_thumbpick_grid.large { grid-template-columns: repeat(auto-fill, 60px); }
+.ps_thumbpick_cell { border: 1px solid #333; background: #fff; line-height: 0; cursor: default; }
+.ps_thumbpick_cell canvas { display: block; }
+.ps_thumbpick_cell.active { outline: 2px solid #9cc2f0; }

@@ -264,12 +264,13 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - HDR Toning: Toning Curve and Histogram (Local Adaptation): curve points over the luminance histogram (click adds, drag moves, drag off deletes, Reset Curve), applied to the toned luminance.
   - Actions panel menu (New Action/Set, Duplicate, Delete, Play, Start Recording, Allow Tool Recording, Clear All, Reset, Load/Replace/Save Actions as JSON). Allow Tool Recording: brush and pencil strokes are recorded (commit_stroke -> Actions.record_stroke) as ps/commands.replay_stroke steps (tool, options, color, document points) and replayed by dispatching pointer events. Layers/History panel menus: Lock Layers, Edit Contents, New Snapshot, Delete, New Document wired.
   - PSD smart objects: saved as placed layers (placedLayer with the four corners, the source embedded as a PNG linked file) and opened back as smart objects (PNG/JPEG sources, or the composite of an embedded PSD/PSB); rotated boxes round-trip exactly, distorted ones keep their corners as a quad.
+  - Options bar Pattern and Custom Shape pickers (ps/thumb-picker.js): a swatch button opening a thumbnail grid (small/large via the gear), right-click Rename/Delete (user items).
 
 ## Known gaps / next
 
 - PRIORITY (Josh, 2026-10-10): 1) Rasterize Layer Style DONE, 2) Combine Slices DONE, 3) Move to New Window DONE, 4) every Filter menu item working DONE. Then continue the rest of this list.
 
-- Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
+- Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling.
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
 - Actions: droplets, Insert Stop / Menu Item / Conditional / Path, Action and Playback Options; eraser and retouch strokes are not recorded. 3D.
