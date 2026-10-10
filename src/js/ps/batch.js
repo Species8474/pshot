@@ -10,6 +10,7 @@ import Dialog_class from './../libs/popup.js';
 import { open_document, save_psd } from './document.js';
 import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
+import { make_zip } from './zip.js';
 
 function pick(multiple) {
 	return new Promise((resolve) => {
@@ -215,6 +216,81 @@ class Ps_batch_class {
 				app.GUI.Ps_workspace.status_message('Layer Comps To Files: ' + comps.length + ' files.');
 			},
 		});
+	}
+
+	/**
+	 * File > Scripts > Layer Comps to WPG: a Web Photo Gallery of the comps (zip)
+	 */
+	comps_to_wpg() {
+		var comps = config.ps_comps || [];
+		if (!comps.length) {
+			alertify.error('There are no layer comps in the document.');
+			return;
+		}
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Layer Comps to Web Photo Gallery',
+			params: [
+				{ name: 'style', title: 'Style:', values: ['Centered Frame 1 - Basic', 'Horizontal Gray', 'Simple - Vertical Thumbnails'], value: 'Centered Frame 1 - Basic', type: 'select' },
+				{ name: 'title', title: 'Site Name:', value: app.GUI.Ps_workspace.document_name().replace(/\.[^.]+$/, '') },
+				{ name: 'size', title: 'Image Size (px):', value: 800 },
+				{ name: 'thumb', title: 'Thumbnail Size (px):', value: 120 },
+				{ name: 'captions', title: 'Show Comp Names', value: true },
+			],
+			on_finish: (p) => this.make_wpg(comps, p),
+		});
+	}
+
+	async make_wpg(comps, p) {
+		var Comps = app.GUI.Ps_workspace.Comps, start = app.State.action_history_index;
+		var esc = app.GUI.Ps_workspace.Helper.escapeHtml;
+		var size = Math.max(64, parseInt(p.size) || 800), tsize = Math.max(32, parseInt(p.thumb) || 120);
+		var jpg = async (c, max) => {
+			var k = Math.min(1, max / Math.max(c.width, c.height));
+			var o = document.createElement('canvas');
+			o.width = Math.max(1, Math.round(c.width * k));
+			o.height = Math.max(1, Math.round(c.height * k));
+			var ctx = o.getContext('2d');
+			ctx.fillStyle = '#fff';
+			ctx.fillRect(0, 0, o.width, o.height);
+			ctx.imageSmoothingQuality = 'high';
+			ctx.drawImage(c, 0, 0, o.width, o.height);
+			var blob = await new Promise(res => o.toBlob(res, 'image/jpeg', 0.88));
+			return new Uint8Array(await blob.arrayBuffer());
+		};
+		var files = [], items = [];
+		for (var i = 0; i < comps.length; i++) {
+			await Comps.apply(i);
+			await wait(150);
+			var c = document.createElement('canvas');
+			c.width = config.WIDTH;
+			c.height = config.HEIGHT;
+			app.Layers.convert_layers_to_canvas(c.getContext('2d'), null, false);
+			var n = String(i + 1).padStart(3, '0');
+			files.push({ name: 'images/' + n + '.jpg', data: await jpg(c, size) });
+			files.push({ name: 'thumbnails/' + n + '.jpg', data: await jpg(c, tsize) });
+			items.push({ n: n, name: comps[i].name });
+		}
+		await app.GUI.Ps_workspace.goto_history(start);
+		app.State.action_history.length = start;
+		app.GUI.Ps_workspace.render_history();
+		var styles = {
+			'Centered Frame 1 - Basic': 'body{background:#fff;color:#222}.thumbs{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}.main{text-align:center}',
+			'Horizontal Gray': 'body{background:#555;color:#eee}.thumbs{display:flex;gap:10px;overflow-x:auto;padding:8px;background:#444}.main{text-align:center}',
+			'Simple - Vertical Thumbnails': 'body{background:#fff;color:#222;display:flex;gap:16px}.thumbs{display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow-y:auto}.main{flex:1}',
+		};
+		var html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + esc(p.title || 'Gallery') + '</title><style>'
+			+ 'body{margin:0;padding:16px;font:14px/1.4 Arial,sans-serif}h1{font-weight:normal;margin:0 0 12px}.thumbs a{display:block;text-align:center;color:inherit;text-decoration:none}.thumbs img{border:1px solid #888;max-width:' + tsize + 'px}.main img{max-width:100%;height:auto;border:1px solid #888}'
+			+ (styles[p.style] || '') + '</style></head><body>'
+			+ '<div class="thumbs">' + items.map(it => '<a href="#" data-n="' + it.n + '"><img src="thumbnails/' + it.n + '.jpg" alt="' + esc(it.name) + '">' + (p.captions ? '<div>' + esc(it.name) + '</div>' : '') + '</a>').join('') + '</div>'
+			+ '<div class="main"><h1>' + esc(p.title || 'Gallery') + '</h1><img id="big" src="images/' + items[0].n + '.jpg" alt=""><div id="cap">' + (p.captions ? esc(items[0].name) : '') + '</div></div>'
+			+ '<script>document.querySelectorAll(".thumbs a").forEach(function(a){a.addEventListener("click",function(e){e.preventDefault();document.getElementById("big").src="images/"+a.dataset.n+".jpg";var c=a.querySelector("div");document.getElementById("cap").textContent=c?c.textContent:"";});});</script>'
+			+ '</body></html>';
+		files.unshift({ name: 'index.html', data: new TextEncoder().encode(html) });
+		var name = (p.title || 'gallery').replace(/[^\w.-]+/g, '_') + '_WPG.zip';
+		filesaver.saveAs(make_zip(files), name);
+		app.GUI.Ps_workspace.status_message('Web Photo Gallery: ' + comps.length + ' comps.');
+		return comps.length;
 	}
 
 	/**
