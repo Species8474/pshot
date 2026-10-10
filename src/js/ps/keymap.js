@@ -260,7 +260,8 @@ class Ps_keymap_class {
 					case 'F': ws.cycle_screen_mode(event.shiftKey); return true;
 					case 'Q': ws.Selection.toggle_quick_mask(); return true;
 				}
-				return ws.select_by_key(key, event.shiftKey);
+				//Preferences > Use Shift Key for Tool Switch off: the letter itself cycles the group
+				return ws.select_by_key(key, event.shiftKey || (ws.Preferences && ws.Preferences.values.shift_tool_switch === false));
 			}
 			if (key == 'Tab') {
 				ws.toggle_panels(event.shiftKey);

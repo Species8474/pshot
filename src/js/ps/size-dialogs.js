@@ -60,7 +60,10 @@ class Ps_size_dialogs_class {
 
 	image_size() {
 		var W = config.WIDTH, H = config.HEIGHT;
-		var state = { w: W, h: H, ppi: this.ppi(), constrain: true, resample: true, scale_styles: true, method: 'Bicubic Automatic', punit: 'pixels', dunit: 'inches' };
+		//the method starts at Preferences > General > Image Interpolation
+		var pref = app.GUI.Ps_workspace.Preferences ? app.GUI.Ps_workspace.Preferences.values.interpolation : null;
+		var pref_method = { 'Nearest Neighbor (preserve hard edges)': 'Nearest Neighbor (preserve hard edges)', 'Bilinear': 'Bilinear', 'Bicubic (best for smooth gradients)': 'Bicubic (smooth gradients)', 'Bicubic Smoother (best for enlargement)': 'Bicubic Smoother (enlargement)', 'Bicubic Sharper (best for reduction)': 'Bicubic Sharper (reduction)' }[pref] || 'Bicubic Automatic';
+		var state = { w: W, h: H, ppi: this.ppi(), constrain: true, resample: true, scale_styles: true, method: pref_method, punit: 'pixels', dunit: 'inches' };
 		var units = (list, sel) => list.map(u => '<option' + (u == sel ? ' selected' : '') + '>' + u + '</option>').join('');
 		var methods = ['Bicubic Automatic', 'Nearest Neighbor (preserve hard edges)', 'Bilinear', 'Bicubic (smooth gradients)', 'Bicubic Smoother (enlargement)', 'Bicubic Sharper (reduction)'];
 		var html = '<div class="ps_sz">'
@@ -74,7 +77,7 @@ class Ps_size_dialogs_class {
 			+ '<label class="ps_sz_check"><input type="checkbox" id="is_styles" checked> Scale Styles</label>'
 			+ '<label class="ps_sz_check"><input type="checkbox" id="is_constrain" checked> Constrain Proportions</label>'
 			+ '<label class="ps_sz_check"><input type="checkbox" id="is_resample" checked> Resample Image:</label>'
-			+ '<select id="is_method" class="ps_sz_method">' + units(methods, 'Bicubic Automatic') + '</select>'
+			+ '<select id="is_method" class="ps_sz_method">' + units(methods, state.method) + '</select>'
 			+ '</div>';
 		var POP = new Dialog_class();
 		POP.show({

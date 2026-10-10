@@ -630,15 +630,45 @@ async function place(files) {
 	const actions = [];
 	//placing flattens the file's groups
 	doc.layers = doc.layers.filter(l => l.type != 'ps_group');
-	const dx = Math.round((config.WIDTH - doc.width) / 2);
-	const dy = Math.round((config.HEIGHT - doc.height) / 2);
-	for (const settings of doc.layers) {
-		settings.name = doc.layers.length == 1 ? base_name(file) : settings.name;
-		settings.x += dx;
-		settings.y += dy;
-		actions.push(new app.Actions.Insert_layer_action(settings, false));
+	//Preferences > General: Resize Image During Place, Place ... Raster Images as Smart Objects
+	const prefs = app.GUI.Ps_workspace.Preferences ? app.GUI.Ps_workspace.Preferences.values : {};
+	const k = prefs.place_resize !== false && (doc.width > config.WIDTH || doc.height > config.HEIGHT) ? Math.min(config.WIDTH / doc.width, config.HEIGHT / doc.height) : 1;
+	const single = doc.layers.length == 1 && doc.layers[0].type == 'image' && (doc.layers[0].link || doc.layers[0].data);
+	if (single && prefs.place_smart !== false) {
+		//the placed image as a smart object (its full resolution kept as the source)
+		const s0 = doc.layers[0];
+		const source = document.createElement('canvas');
+		source.width = s0.width;
+		source.height = s0.height;
+		source.getContext('2d').drawImage(s0.link || await load_image(s0.data), 0, 0, s0.width, s0.height);
+		const box = { cx: config.WIDTH / 2, cy: config.HEIGHT / 2, w: s0.width * k, h: s0.height * k, angle: 0 };
+		const full = document.createElement('canvas');
+		full.width = config.WIDTH;
+		full.height = config.HEIGHT;
+		const fctx = full.getContext('2d');
+		fctx.imageSmoothingQuality = 'high';
+		fctx.drawImage(source, box.cx - box.w / 2, box.cy - box.h / 2, box.w, box.h);
+		const img = await load_image(full.toDataURL());
+		actions.push(new app.Actions.Insert_layer_action({ type: 'image', name: base_name(file), link: img, x: 0, y: 0, width: config.WIDTH, height: config.HEIGHT,
+			width_original: config.WIDTH, height_original: config.HEIGHT, ps_smart: { source: source, box: box, quad: null, lx: 0, ly: 0 } }, false));
 	}
-	app.State.do_action(new app.Actions.Bundle_action('place', 'Place', actions));
+	else {
+		const dx = Math.round((config.WIDTH - doc.width * k) / 2);
+		const dy = Math.round((config.HEIGHT - doc.height * k) / 2);
+		for (const settings of doc.layers) {
+			settings.name = doc.layers.length == 1 ? base_name(file) : settings.name;
+			settings.x = Math.round(settings.x * k) + dx;
+			settings.y = Math.round(settings.y * k) + dy;
+			if (k != 1 && settings.width) {
+				settings.width = settings.width * k;
+				settings.height = settings.height * k;
+			}
+			actions.push(new app.Actions.Insert_layer_action(settings, false));
+		}
+	}
+	await app.State.do_action(new app.Actions.Bundle_action('place', 'Place', actions));
+	//CS6: the placed item comes in with the transform box (Enter commits)
+	if (single) app.GUI.Ps_workspace.Transform.start();
 }
 
 /**

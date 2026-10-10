@@ -30,6 +30,13 @@ const DEFAULTS = {
 	slice_color: 'Light Blue',
 	slice_custom: '#2196f3',
 	slice_numbers: true,
+	interpolation: 'Bicubic Automatic',
+	shift_tool_switch: true,
+	zoom_wheel: false,
+	zoom_center: false,
+	zoom_resizes: false,
+	place_resize: true,
+	place_smart: true,
 	painting_cursor: 'Normal Brush Tip',
 	crosshair_in_tip: false,
 	crosshair_only: false,
@@ -152,10 +159,11 @@ class Ps_preferences_class {
 			['General', [
 				{ type: 'row', items: [{ type: 'select', label: 'Color Picker:', values: ['Adobe'], disabled: true }] },
 				{ type: 'row', items: [{ type: 'select', label: 'HUD Color Picker:', values: ['Hue Strip (Small)'], disabled: true }] },
-				{ type: 'row', items: [{ type: 'select', label: 'Image Interpolation:', values: ['Bicubic Automatic'], disabled: true }] },
+				{ type: 'row', items: [{ type: 'select', key: 'interpolation', label: 'Image Interpolation:', values: ['Nearest Neighbor (preserve hard edges)', 'Bilinear', 'Bicubic (best for smooth gradients)', 'Bicubic Smoother (best for enlargement)', 'Bicubic Sharper (best for reduction)', 'Bicubic Automatic'] }] },
 				{ type: 'group', label: 'Options' },
-				...['Auto-Update Open Documents', 'Beep When Done', 'Dynamic Color Sliders', 'Export Clipboard', 'Use Shift Key for Tool Switch', 'Resize Image During Place', 'Animated Zoom', 'Zoom Resizes Windows', 'Zoom with Scroll Wheel', 'Zoom Clicked Point to Center', 'Enable Flick Panning', 'Place or Drag Raster Images as Smart Objects']
-					.map((l, i) => ({ type: 'check', label: l, value: [1, 2, 3, 4, 5, 6, 10].includes(i), disabled: true })),
+				//the options pshot honours have keys; the others are shown as CS6 sets them
+				...[['Auto-Update Open Documents'], ['Beep When Done'], ['Dynamic Color Sliders'], ['Export Clipboard'], ['Use Shift Key for Tool Switch', 'shift_tool_switch'], ['Resize Image During Place', 'place_resize'], ['Animated Zoom'], ['Zoom Resizes Windows', 'zoom_resizes'], ['Zoom with Scroll Wheel', 'zoom_wheel'], ['Zoom Clicked Point to Center', 'zoom_center'], ['Enable Flick Panning'], ['Place or Drag Raster Images as Smart Objects', 'place_smart']]
+					.map(([l, key], i) => key ? { type: 'check', key: key, label: l } : { type: 'check', label: l, value: [1, 2, 3, 6, 10].includes(i), disabled: true }),
 				{ type: 'group', label: 'History Log' },
 				{ type: 'check', label: 'History Log', value: false, disabled: true },
 			]],

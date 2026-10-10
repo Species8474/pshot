@@ -52,7 +52,18 @@ class Zoom_class extends Base_tools_class {
 			var box = document.getElementById('ps_zoom_marquee');
 			if (box) box.remove();
 			if (!d.moved) {
-				this.GUI_preview.zoom(d.out ? -1 : 1).then(() => this.after_zoom());
+				var at = this.world(d.x, d.y);
+				this.GUI_preview.zoom(d.out ? -1 : 1).then(async () => {
+					//Preferences > Zoom Clicked Point to Center
+					var prefs = app.GUI.Ps_workspace.Preferences;
+					if (prefs && prefs.values.zoom_center) {
+						await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+						var vr = document.getElementById('main_wrapper').getBoundingClientRect();
+						var mid = this.world(vr.left + vr.width / 2, vr.top + vr.height / 2);
+						this.GUI_preview.pan((mid.x - at.x) * config.ZOOM, (mid.y - at.y) * config.ZOOM);
+					}
+					this.after_zoom();
+				});
 			}
 			else if (!this.getParams().scrubby) {
 				this.zoom_to_area(d, event);
@@ -116,8 +127,8 @@ class Zoom_class extends Base_tools_class {
 	 * the options bar's window options
 	 */
 	after_zoom() {
-		var params = this.getParams(), F = app.GUI.Ps_workspace.Float;
-		if (params.resize_windows) F.fit_current();
+		var params = this.getParams(), F = app.GUI.Ps_workspace.Float, prefs = app.GUI.Ps_workspace.Preferences;
+		if (params.resize_windows || (prefs && prefs.values.zoom_resizes)) F.fit_current();
 		if (params.zoom_all) F.match('zoom', true);
 	}
 

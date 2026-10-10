@@ -178,7 +178,7 @@ function draw_quad(ctx, img, q) {
  * exact rendering for the final result: every destination pixel is sampled
  * (bilinear) through the inverse homography
  */
-function draw_quad_exact(ctx, img, q) {
+function draw_quad_exact(ctx, img, q, nearest) {
 	var W = img.width, H = img.height;
 	var x0 = q[0].x, y0 = q[0].y, x1 = q[1].x, y1 = q[1].y, x2 = q[2].x, y2 = q[2].y, x3 = q[3].x, y3 = q[3].y;
 	var dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
@@ -211,6 +211,12 @@ function draw_quad_exact(ctx, img, q) {
 			var fx = u * W - 0.5, fy = v * H - 0.5;
 			var ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
 			var k = (py * w + px) * 4;
+			if (nearest) {
+				//Interpolation: Nearest Neighbor
+				var nk = (Math.min(H - 1, Math.max(0, Math.round(fy))) * W + Math.min(W - 1, Math.max(0, Math.round(fx)))) * 4;
+				o[k] = src[nk]; o[k + 1] = src[nk + 1]; o[k + 2] = src[nk + 2]; o[k + 3] = src[nk + 3];
+				continue;
+			}
 			for (var ch = 0; ch < 4; ch++) {
 				var s00 = src[((Math.max(0, iy) * W) + Math.max(0, ix)) * 4 + ch];
 				var s10 = src[((Math.max(0, iy) * W) + Math.min(W - 1, ix + 1)) * 4 + ch];
@@ -563,10 +569,25 @@ class Ps_transform_class {
 
 	// ---------- rendering ----------
 
+	/**
+	 * options bar Interpolation (default: Preferences > General > Image Interpolation)
+	 */
+	interpolation() {
+		if (this.job && this.job.interpolation) return this.job.interpolation;
+		var pref = app.GUI.Ps_workspace.Preferences ? app.GUI.Ps_workspace.Preferences.values.interpolation : null;
+		return pref && pref.indexOf('Bicubic Automatic') !== 0 ? pref.replace(/ \(.*\)$/, '') : 'Bicubic';
+	}
+
+	smoothing(ctx) {
+		var i = this.interpolation();
+		ctx.imageSmoothingEnabled = i != 'Nearest Neighbor';
+		ctx.imageSmoothingQuality = i == 'Bilinear' ? 'low' : 'high';
+	}
+
 	draw_piece(ctx, piece, exact) {
 		if (this.job.warp) {
 			ctx.save();
-			ctx.imageSmoothingQuality = 'high';
+			this.smoothing(ctx);
 			if (exact) draw_patch_exact(ctx, piece, this.job.warp);
 			else draw_patch(ctx, piece, this.job.warp);
 			ctx.restore();
@@ -574,8 +595,8 @@ class Ps_transform_class {
 		}
 		if (this.job.quad) {
 			ctx.save();
-			ctx.imageSmoothingQuality = 'high';
-			if (exact) draw_quad_exact(ctx, piece, this.job.quad);
+			this.smoothing(ctx);
+			if (exact) draw_quad_exact(ctx, piece, this.job.quad, this.interpolation() == 'Nearest Neighbor');
 			else draw_quad(ctx, piece, this.job.quad);
 			ctx.restore();
 			return;
@@ -585,7 +606,7 @@ class Ps_transform_class {
 		ctx.translate(b.cx, b.cy);
 		ctx.rotate(b.angle);
 		ctx.scale(b.w / this.job.w0, b.h / this.job.h0);
-		ctx.imageSmoothingQuality = 'high';
+		this.smoothing(ctx);
 		ctx.drawImage(piece, -this.job.w0 / 2, -this.job.h0 / 2);
 		ctx.restore();
 	}

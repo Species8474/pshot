@@ -922,9 +922,10 @@ class Ps_options_bar_class {
 			+ '<button type="button" class="ps_opt_icon' + (this.tf_linked ? ' pressed' : '') + '" data-tf-link title="Maintain aspect ratio">&#128279;</button>'
 			+ '<span class="ps_opt"><span class="ps_opt_label">H:</span><input class="ps_opt_field" data-tf="h" style="width:58px"></span></div>'
 			+ '<div class="ps_opt_group"><span class="ps_opt"><span class="ps_opt_label">&#8736;</span><input class="ps_opt_field" data-tf="a" style="width:52px"></span>'
-			+ '<span class="ps_opt"><span class="ps_opt_label">H:</span><input class="ps_opt_field" disabled value="0.0 °" style="width:46px"></span>'
-			+ '<span class="ps_opt"><span class="ps_opt_label">V:</span><input class="ps_opt_field" disabled value="0.0 °" style="width:46px"></span></div>'
-			+ '<div class="ps_opt_group"><span class="ps_opt"><span class="ps_opt_label">Interpolation:</span><select class="ps_opt_select" disabled><option>Bicubic</option></select></span>'
+			+ '<span class="ps_opt"><span class="ps_opt_label">H:</span><input class="ps_opt_field" data-tf="sh" title="Set horizontal skew" style="width:46px"></span>'
+			+ '<span class="ps_opt"><span class="ps_opt_label">V:</span><input class="ps_opt_field" data-tf="sv" title="Set vertical skew" style="width:46px"></span></div>'
+			+ '<div class="ps_opt_group"><span class="ps_opt"><span class="ps_opt_label">Interpolation:</span><select class="ps_opt_select" data-tf-interp>'
+			+ ['Nearest Neighbor', 'Bilinear', 'Bicubic', 'Bicubic Smoother', 'Bicubic Sharper'].map(n => '<option' + (n == T.interpolation() ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></span>'
 			+ '<button type="button" class="ps_opt_icon' + (job.warp ? ' pressed' : '') + '" data-tf-warp title="Switch between free transform and warp modes">&#8767;</button></div>'
 			+ '<div class="ps_opt_group"><button type="button" class="ps_opt_icon" data-tf-cancel title="Cancel transform (Esc)">&#8856;</button>'
 			+ '<button type="button" class="ps_opt_icon" data-tf-commit title="Commit transform (Return)">&#10004;</button></div>';
@@ -936,9 +937,21 @@ class Ps_options_bar_class {
 			else if (key == 'w') { var ow = b.w; b.w = job.w0 * v / 100; if (this.tf_linked) b.h = b.h * b.w / ow; }
 			else if (key == 'h') { var oh = b.h; b.h = job.h0 * v / 100; if (this.tf_linked) b.w = b.w * b.h / oh; }
 			else if (key == 'a') b.angle = v * Math.PI / 180;
+			else if (key == 'sh') b.skew_h = Math.max(-89, Math.min(89, v));
+			else if (key == 'sv') b.skew_v = Math.max(-89, Math.min(89, v));
+			//H / V skew: the box's corners slanted (in its own axes), as a quad
 			job.quad = null;
+			if (b.skew_h || b.skew_v) {
+				var th = Math.tan((b.skew_h || 0) * Math.PI / 180), tv = Math.tan((b.skew_v || 0) * Math.PI / 180), cos = Math.cos(b.angle), sin = Math.sin(b.angle);
+				job.quad = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([hx, hy]) => {
+					var lx = hx * b.w / 2, ly = hy * b.h / 2;
+					var sx = lx + ly * th, sy = ly + lx * tv;
+					return { x: b.cx + sx * cos - sy * sin, y: b.cy + sx * sin + sy * cos };
+				});
+			}
 			T.preview();
 		};
+		bar.querySelector('[data-tf-interp]').addEventListener('change', (e) => { job.interpolation = e.target.value; T.preview(); });
 		bar.querySelectorAll('[data-tf]').forEach((input) => {
 			input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key == 'Enter') input.blur(); });
 			input.addEventListener('change', () => { var v = parseFloat(input.value); if (!isNaN(v)) set(input.dataset.tf, v); this.update_transform_fields(); });
@@ -1032,7 +1045,8 @@ class Ps_options_bar_class {
 		var job = this.workspace.Transform.job;
 		if (!job) return;
 		var b = job.box;
-		var vals = { x: b.cx.toFixed(1) + ' px', y: b.cy.toFixed(1) + ' px', w: (b.w / job.w0 * 100).toFixed(2) + '%', h: (b.h / job.h0 * 100).toFixed(2) + '%', a: (b.angle * 180 / Math.PI).toFixed(1) + ' °' };
+		var vals = { x: b.cx.toFixed(1) + ' px', y: b.cy.toFixed(1) + ' px', w: (b.w / job.w0 * 100).toFixed(2) + '%', h: (b.h / job.h0 * 100).toFixed(2) + '%', a: (b.angle * 180 / Math.PI).toFixed(1) + ' °',
+			sh: (b.skew_h || 0).toFixed(1) + ' °', sv: (b.skew_v || 0).toFixed(1) + ' °' };
 		document.querySelectorAll('#action_attributes [data-tf]').forEach((input) => {
 			if (document.activeElement !== input) input.value = vals[input.dataset.tf];
 		});

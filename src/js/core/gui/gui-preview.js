@@ -3,6 +3,7 @@
  * author: Vilius L.
  */
 
+import app from './../../app.js';
 import config from './../../config.js';
 import zoomView from './../../libs/zoomView.js';
 import Base_layers_class from './../base-layers.js';
@@ -110,7 +111,10 @@ class GUI_preview_class {
 		document.getElementById('main_wrapper').addEventListener('wheel', function (e) {
 			//CS6: wheel scrolls (Shift = horizontal), Alt+wheel or Ctrl+wheel zooms
 			e.preventDefault();
-			if (e.altKey || e.ctrlKey) {
+			//Preferences > Zoom with Scroll Wheel
+			var prefs = app.GUI && app.GUI.Ps_workspace && app.GUI.Ps_workspace.Preferences;
+			var wheel_zooms = prefs && prefs.values.zoom_wheel && !e.shiftKey;
+			if (e.altKey || e.ctrlKey || wheel_zooms) {
 				var rect = document.getElementById('canvas_minipaint').getBoundingClientRect();
 				_this.zoom_data.x = e.clientX - rect.left;
 				_this.zoom_data.y = e.clientY - rect.top;
