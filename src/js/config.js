@@ -313,6 +313,7 @@ config.TOOLS = [
 			noise: false,
 			wet_edges: false,
 			pressure: false,
+			pressure_op: false,
 			opacity: 100,
 			blend: 'Normal',
 			tip: '',

@@ -250,7 +250,7 @@ const BRUSH_COMMON = [
 	{ type: 'sep' },
 	{ type: 'select', label: 'Mode:', values: MODES, bind: 'blend', map: MODE_MAP },
 	{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
-	{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
+	{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity', bind: 'pressure_op' },
 	{ type: 'pct', label: 'Flow:', value: 100, bind: 'flow' },
 	{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects', bind: 'airbrush' },
 	{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size', bind: 'pressure' },

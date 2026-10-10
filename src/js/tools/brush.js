@@ -309,7 +309,10 @@ class Brush_class extends Base_tools_class {
 		var mouse_x = mouse_coords.x;
 		var mouse_y = mouse_coords.y;
 
-		current_group.push([mouse_x - config.layer.x, mouse_y - config.layer.y, new_size]);
+		//pshot: Always use Pressure for Opacity (pen pressure; a mouse paints at full opacity)
+		var point = [mouse_x - config.layer.x, mouse_y - config.layer.y, new_size];
+		if (params.pressure_op && this.pressure_supported) point[4] = this.pointer_pressure;
+		current_group.push(point);
 		this.Base_layers.render();
 		//Build-up (airbrush): paint keeps flowing while the pointer rests
 		clearInterval(this.buildup_timer);
@@ -318,7 +321,7 @@ class Brush_class extends Base_tools_class {
 			this.buildup_timer = setInterval(() => {
 				if (config.layer !== stroke_layer || !group.length) { clearInterval(this.buildup_timer); return; }
 				var last = group[group.length - 1];
-				group.push([last[0], last[1], last[2], 1]);
+				group.push([last[0], last[1], last[2], 1, last[4]]);
 				config.layer.status = 'draft';
 				this.Base_layers.render();
 			}, 80);
@@ -363,7 +366,10 @@ class Brush_class extends Base_tools_class {
 		var mouse_x = mouse_coords.x;
 		var mouse_y = mouse_coords.y;
 
-		current_group.push([mouse_x - config.layer.x, mouse_y - config.layer.y, new_size]);
+		//pshot: Always use Pressure for Opacity (pen pressure; a mouse paints at full opacity)
+		var point = [mouse_x - config.layer.x, mouse_y - config.layer.y, new_size];
+		if (params.pressure_op && this.pressure_supported) point[4] = this.pointer_pressure;
+		current_group.push(point);
 		config.layer.status = 'draft';
 		this.Base_layers.render();
 	}
@@ -389,7 +395,7 @@ class Brush_class extends Base_tools_class {
 		return (params.spacing != null && params.spacing != 25) || (params.roundness != null && params.roundness != 100) || params.angle
 			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100)
 			|| params.angle_jitter > 0 || params.roundness_jitter > 0 || params.count > 1 || params.color_dynamics || params.noise || params.wet_edges
-			|| !!params.tip || params.texture || params.dual || params.pose || params.airbrush;
+			|| !!params.tip || params.texture || params.dual || params.pose || params.airbrush || params.pressure_op;
 	}
 
 	/**
@@ -558,7 +564,7 @@ class Brush_class extends Base_tools_class {
 			}
 			var col = colored ? dab_color(hex, bg, params, (n) => rnd(dab, n)) : hex;
 			var st = this.stamp(sz, p, col, k);
-			ctx.globalAlpha = alpha;
+			ctx.globalAlpha = alpha * dab_pressure(pressure);
 			ctx.drawImage(st, x - st.width / k / 2, y - st.height / k / 2, st.width / k, st.height / k);
 			dab++;
 		};
@@ -567,11 +573,15 @@ class Brush_class extends Base_tools_class {
 			var n = Math.max(1, Math.round((params.count || 1) * (1 - (params.count_jitter || 0) / 100 * rnd(dab, 7))));
 			for (var c = 0; c < n; c++) one(x, y, base, dir || [1, 0]);
 		};
+		//pressure is the stroke's opacity: about 100 / spacing dabs overlap, each adds its share
+		var dab_pressure = (pr) => pr >= 1 ? 1 : 1 - Math.pow(1 - pr, spacing / 100);
+		var pressure = group[0][4] == null ? 1 : group[0][4];
 		place(group[0][0], group[0][1], group[0][2] || params.size);
 		var carry = 0;
 		for (var i = 1; i < group.length; i++) {
 			var a = group[i - 1], b = group[i];
 			if (!a || !b) continue;
+			pressure = b[4] == null ? 1 : b[4];
 			if (b[3] === 1) {
 				//Build-up: the pointer rests, the paint keeps coming
 				place(b[0], b[1], b[2] || params.size);
