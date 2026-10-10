@@ -616,6 +616,8 @@ class Ps_workspace_class {
 	}
 
 	render_fg_bg() {
+		var ramp = document.querySelector('canvas.ps_spectrum');
+		if (ramp && this.ramp && this.ramp.mode == 'current' && this.ramp_colors != config.COLOR + config.BG_COLOR) this.draw_spectrum(ramp);
 		var fg = document.getElementById('ps_fg_color');
 		var bg = document.getElementById('ps_bg_color');
 		if (fg.style.backgroundColor != config.COLOR) {
@@ -1811,15 +1813,55 @@ class Ps_workspace_class {
 			this.set_fg(this.Helper.rgbToHex(d[0], d[1], d[2]));
 		};
 		var down = false;
-		ramp.addEventListener('mousedown', (e) => { down = true; pick(e); });
+		ramp.addEventListener('mousedown', (e) => { if (e.button == 0) { down = true; pick(e); } });
+		//CS6: right-click the ramp for its type
+		ramp.addEventListener('contextmenu', (e) => {
+			e.preventDefault();
+			var o = this.ramp_options();
+			var mode = (v, name) => ({ name: name, checked: o.mode == v, action: () => this.set_ramp({ mode: v }) });
+			show_popup_menu(ramp, [
+				mode('rgb', 'RGB Spectrum'), mode('cmyk', 'CMYK Spectrum'), mode('gray', 'Grayscale Ramp'), mode('current', 'Current Colors'),
+				{ divider: true },
+				{ name: 'Make Ramp Web Safe', checked: o.web_safe, action: () => this.set_ramp({ web_safe: !o.web_safe }) },
+			], { point: { x: e.clientX, y: e.clientY } });
+		});
 		document.addEventListener('mousemove', (e) => { if (down) pick(e); });
 		document.addEventListener('mouseup', () => { down = false; });
 	}
 
+	ramp_options() {
+		if (!this.ramp) {
+			try { this.ramp = JSON.parse(localStorage.getItem('pshot_color_ramp_v1') || 'null'); } catch (e) { this.ramp = null; }
+			this.ramp = Object.assign({ mode: 'rgb', web_safe: false }, this.ramp || {});
+		}
+		return this.ramp;
+	}
+
+	set_ramp(changes) {
+		Object.assign(this.ramp_options(), changes);
+		try { localStorage.setItem('pshot_color_ramp_v1', JSON.stringify(this.ramp)); } catch (e) { /* storage blocked */ }
+		var c = document.querySelector('canvas.ps_spectrum');
+		if (c) this.draw_spectrum(c);
+	}
+
+	/**
+	 * the Color panel ramp: RGB / CMYK spectrum, grayscale, or foreground to background
+	 */
 	draw_spectrum(canvas) {
-		var ctx = canvas.getContext('2d');
+		var ctx = canvas.getContext('2d', { willReadFrequently: true });
 		var w = canvas.width;
 		var h = canvas.height;
+		var o = this.ramp_options();
+		this.ramp_colors = config.COLOR + config.BG_COLOR;
+		if (o.mode == 'gray' || o.mode == 'current') {
+			var g = ctx.createLinearGradient(0, 0, w, 0);
+			g.addColorStop(0, o.mode == 'gray' ? '#000000' : config.COLOR);
+			g.addColorStop(1, o.mode == 'gray' ? '#ffffff' : config.BG_COLOR);
+			ctx.fillStyle = g;
+			ctx.fillRect(0, 0, w, h);
+			this.ramp_finish(ctx, w, h, o);
+			return;
+		}
 		var hue = ctx.createLinearGradient(0, 0, w, 0);
 		['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ff0000'].forEach((c, i) => hue.addColorStop(i / 6, c));
 		ctx.fillStyle = hue;
@@ -1831,6 +1873,21 @@ class Ps_workspace_class {
 		shade.addColorStop(1, 'rgba(0,0,0,1)');
 		ctx.fillStyle = shade;
 		ctx.fillRect(0, 0, w, h);
+		this.ramp_finish(ctx, w, h, o);
+	}
+
+	ramp_finish(ctx, w, h, o) {
+		if (o.mode != 'cmyk' && !o.web_safe) return;
+		var img = ctx.getImageData(0, 0, w, h), d = img.data;
+		for (var i = 0; i < d.length; i += 4) {
+			if (o.mode == 'cmyk') {
+				//inside a typical CMYK gamut: less saturated, slightly darker brights
+				var l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+				for (var k = 0; k < 3; k++) d[i + k] = Math.min(235, l + (d[i + k] - l) * 0.78);
+			}
+			if (o.web_safe) for (var j = 0; j < 3; j++) d[i + j] = Math.round(d[i + j] / 51) * 51;
+		}
+		ctx.putImageData(img, 0, 0);
 	}
 
 	/**
