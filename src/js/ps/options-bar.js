@@ -17,16 +17,82 @@ import { font_button } from './font-menu.js';
 import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
 /**
+ * a small options panel under an options bar button; `draw(pop)` fills it
+ * and is called again after every change
+ */
+function options_popup(anchor, class_name, draw) {
+	var old = document.querySelector('.ps_opts_popup');
+	if (old) {
+		old.remove();
+		if (old.dataset.kind == class_name) return;
+	}
+	var pop = document.createElement('div');
+	pop.className = 'ps_opts_popup ' + class_name;
+	pop.dataset.kind = class_name;
+	var redraw = () => {
+		draw(pop);
+		pop.querySelectorAll('[data-k]').forEach((el) => el.addEventListener('change', () => {
+			var a = config.TOOL.attributes, k = el.dataset.k;
+			if (el.type == 'checkbox') a[k] = el.checked;
+			else if (el.type == 'radio') a[k] = el.value;
+			else if (el.type == 'number') a[k] = el.value === '' ? '' : parseFloat(el.value);
+			else a[k] = el.value;
+			redraw();
+			app.GUI.Ps_workspace.Selection.draw_overlay();
+		}));
+	};
+	redraw();
+	document.body.appendChild(pop);
+	var r = anchor.getBoundingClientRect();
+	pop.style.left = Math.max(0, Math.min(window.innerWidth - pop.offsetWidth - 4, r.left)) + 'px';
+	pop.style.top = (r.bottom + 2) + 'px';
+	var outside = (e) => {
+		if (!document.body.contains(pop)) { document.removeEventListener('mousedown', outside, true); return; }
+		if (pop.contains(e.target) || anchor.contains(e.target)) return;
+		pop.remove();
+		document.removeEventListener('mousedown', outside, true);
+	};
+	setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+}
+
+/**
+ * Shape tools gear (CS6 geometry options): per tool
+ */
+function geometry_options(anchor) {
+	var a = config.TOOL.attributes, t = config.TOOL.name;
+	var chk = (k, label, off) => '<label class="ps_adj_check' + (off ? ' disabled' : '') + '"><input type="checkbox" data-k="' + k + '"' + (a[k] ? ' checked' : '') + (off ? ' disabled' : '') + '> ' + label + '</label>';
+	var num = (k, label, unit, off) => '<div class="ps_crop_opts_row"><span>' + label + '</span><input type="number" data-k="' + k + '" value="' + (a[k] == null ? '' : a[k]) + '"' + (off ? ' disabled' : '') + '>' + (unit || '') + '</div>';
+	var radio = (v, label) => '<label class="ps_adj_check"><input type="radio" name="ps_geo" data-k="geo" value="' + v + '"' + ((a.geo || 'unconstrained') == v ? ' checked' : '') + '> ' + label + '</label>';
+	options_popup(anchor, 'ps_geo_opts', (pop) => {
+		var html = '';
+		if (t == 'line') {
+			html = '<div class="ps_opts_title">Arrowheads</div>' + chk('arrow_start', 'Start') + chk('arrow_end', 'End')
+				+ num('arrow_width', 'Width:', '%') + num('arrow_length', 'Length:', '%') + num('arrow_concavity', 'Concavity:', '%');
+		}
+		else if (t == 'pentagon') {
+			html = num('poly_radius', 'Radius:', 'px') + chk('poly_smooth', 'Smooth Corners') + chk('poly_star', 'Star')
+				+ num('poly_indent', 'Indent Sides By:', '%', !a.poly_star) + chk('poly_smooth_indents', 'Smooth Indents', !a.poly_star);
+		}
+		else {
+			var custom = t == 'rectangle' && a.custom;
+			var fixed_on = a.geo == 'fixed' || a.geo == 'proportional';
+			html = radio('unconstrained', 'Unconstrained') + radio('square', t == 'ellipse' ? 'Circle (draw diameter or radius)' : 'Square')
+				+ (custom ? radio('defined_prop', 'Defined Proportions') + radio('defined_size', 'Defined Size') : '')
+				+ radio('fixed', 'Fixed Size') + radio('proportional', 'Proportional')
+				+ num('geo_w', 'W:', a.geo == 'proportional' ? '' : 'px', !fixed_on) + num('geo_h', 'H:', a.geo == 'proportional' ? '' : 'px', !fixed_on)
+				+ chk('geo_center', 'From Center');
+		}
+		pop.innerHTML = html;
+	});
+}
+
+/**
  * Crop tool gear: Show Cropped Area and the crop shield (CS6's classic mode
  * is how pshot crops, so that choice is shown on and fixed)
  */
 function crop_options(anchor) {
-	var old = document.querySelector('.ps_crop_opts');
-	if (old) { old.remove(); return; }
-	var a = config.TOOL.attributes;
-	var pop = document.createElement('div');
-	pop.className = 'ps_crop_opts';
-	var draw = () => {
+	options_popup(anchor, 'ps_crop_opts', (pop) => {
+		var a = config.TOOL.attributes;
 		var off = a.shield ? '' : ' disabled';
 		pop.innerHTML = '<label class="ps_adj_check disabled"><input type="checkbox" checked disabled> Use Classic Mode</label>'
 			+ '<div class="ps_crop_opts_group"><label class="ps_adj_check disabled"><input type="checkbox" disabled> Auto Center Preview</label>'
@@ -36,26 +102,7 @@ function crop_options(anchor) {
 			+ '<input type="color" data-k="shield_custom" value="' + a.shield_custom + '"' + (a.shield && a.shield_color == 'Custom' ? '' : ' disabled') + '></div>'
 			+ '<div class="ps_crop_opts_row"><span>Opacity:</span><input type="number" min="0" max="100" data-k="shield_opacity" value="' + a.shield_opacity + '"' + off + '>%</div>'
 			+ '<label class="ps_adj_check' + off + '"><input type="checkbox" data-k="shield_auto"' + (a.shield_auto ? ' checked' : '') + off + '> Auto Adjust Opacity</label></div>';
-		pop.querySelectorAll('[data-k]').forEach((el) => el.addEventListener('change', () => {
-			var k = el.dataset.k;
-			if (el.type == 'checkbox') a[k] = el.checked;
-			else if (el.type == 'number') a[k] = Math.max(0, Math.min(100, parseFloat(el.value) || 0));
-			else a[k] = el.value;
-			draw();
-			app.GUI.Ps_workspace.Selection.draw_overlay();
-		}));
-	};
-	draw();
-	document.body.appendChild(pop);
-	var r = anchor.getBoundingClientRect();
-	pop.style.left = Math.max(0, Math.min(window.innerWidth - pop.offsetWidth - 4, r.left)) + 'px';
-	pop.style.top = (r.bottom + 2) + 'px';
-	var outside = (e) => {
-		if (pop.contains(e.target) || anchor.contains(e.target)) return;
-		pop.remove();
-		document.removeEventListener('mousedown', outside, true);
-	};
-	setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+	});
 }
 
 function pcrop() {
@@ -209,7 +256,7 @@ const SHAPE_COMMON = (extra) => [
 	{ type: 'num', label: 'W:', unit: 'px', width: 50, get bind() { return config.layer && config.layer.type == 'ps_shape' ? 'shape_w' : null; } },
 	{ type: 'num', label: 'H:', unit: 'px', width: 50, get bind() { return config.layer && config.layer.type == 'ps_shape' ? 'shape_h' : null; } },
 	{ type: 'icon', icon: IC.path_ops, title: 'Path operations', action: (e) => shape_ops_menu(e.currentTarget) },
-	{ type: 'icon', icon: IC.gear, title: 'Set additional shape and path options' },
+	{ type: 'icon', icon: IC.gear, title: 'Set additional shape and path options', action: (e) => geometry_options(e.currentTarget) },
 	...extra,
 ];
 

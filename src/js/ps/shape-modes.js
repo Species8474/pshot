@@ -48,15 +48,84 @@ function rect_subpath(x, y, w, h, r) {
 	}) };
 }
 
-//CS6 Polygon: a regular polygon (Sides) in the dragged box, a vertex at the top
+//CS6 Polygon: a regular polygon (Sides) in the dragged box, a vertex at the top;
+//gear options: Star (Indent Sides By), Smooth Corners, Smooth Indents
 function polygon_subpath(x, y, w, h) {
-	var n = Math.max(3, Math.min(100, Math.round(config.TOOL.attributes.sides || 5)));
+	var a = config.TOOL.attributes;
+	var n = Math.max(3, Math.min(100, Math.round(a.sides || 5)));
 	var cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2, pts = [];
-	for (var i = 0; i < n; i++) {
-		var a = -Math.PI / 2 + i * Math.PI * 2 / n;
-		pts.push(point(cx + Math.cos(a) * r, cy + Math.sin(a) * r));
+	var star = !!a.poly_star, inner = r * (1 - Math.max(1, Math.min(99, a.poly_indent || 50)) / 100);
+	var count = star ? n * 2 : n, step = Math.PI * 2 / count;
+	for (var i = 0; i < count; i++) {
+		var ang = -Math.PI / 2 + i * step, rr = star && i % 2 ? inner : r;
+		var p = point(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr);
+		if (star ? (i % 2 ? a.poly_smooth_indents : a.poly_smooth) : a.poly_smooth) {
+			//a smooth point: handles along the circle's tangent
+			var k = rr * 4 / 3 * Math.tan(step / 4) * (star ? 2 : 1);
+			var tx = -Math.sin(ang) * k, ty = Math.cos(ang) * k;
+			Object.assign(p, { ix: p.x - tx, iy: p.y - ty, ox: p.x + tx, oy: p.y + ty });
+		}
+		pts.push(p);
 	}
 	return { closed: true, pts: pts };
+}
+
+/**
+ * Line tool arrowheads (gear): Start / End, Width and Length in % of the
+ * weight, Concavity in % of the length; each a separate combined component
+ */
+function arrowheads(x0, y0, x1, y1, weight) {
+	var a = config.TOOL.attributes, out = [];
+	var len = Math.hypot(x1 - x0, y1 - y0) || 1, dx = (x1 - x0) / len, dy = (y1 - y0) / len;
+	var W = weight * (a.arrow_width || 500) / 100 / 2, L = weight * (a.arrow_length || 1000) / 100, C = L * (a.arrow_concavity || 0) / 100;
+	var head = (px, py, ux, uy) => {
+		var bx = px - ux * L, by = py - uy * L;
+		return { op: 'combine', closed: true, pts: [point(px, py), point(bx - uy * W, by + ux * W), point(bx + ux * C, by + uy * C), point(bx + uy * W, by - ux * W)] };
+	};
+	if (a.arrow_start) out.push(head(x0, y0, -dx, -dy));
+	if (a.arrow_end) out.push(head(x1, y1, dx, dy));
+	return out;
+}
+
+/**
+ * shape tools gear: Square / Circle, Fixed Size, Proportional, Defined
+ * Proportions / Size (custom shapes: their 100 px box), From Center, the
+ * polygon's fixed Radius; changes the temporary layer's box
+ */
+function apply_geometry(layer) {
+	var a = config.TOOL.attributes, t = layer.type;
+	if (t == 'line') return;
+	var sx = layer.x, sy = layer.y, w = layer.width, h = layer.height;
+	var sgx = w < 0 ? -1 : 1, sgy = h < 0 ? -1 : 1;
+	var aw = Math.abs(w), ah = Math.abs(h), fixed = false;
+	var geo = a.geo || 'unconstrained', gw = parseFloat(a.geo_w), gh = parseFloat(a.geo_h);
+	if (t == 'pentagon') {
+		var r = parseFloat(a.poly_radius);
+		if (r > 0) {
+			Object.assign(layer, { x: sx - r, y: sy - r, width: r * 2, height: r * 2 });
+			return;
+		}
+	}
+	if (geo == 'square' || geo == 'defined_prop') {
+		aw = ah = Math.max(aw, ah);
+	}
+	else if (geo == 'fixed' && gw > 0 && gh > 0) {
+		aw = gw; ah = gh; fixed = true;
+	}
+	else if (geo == 'defined_size') {
+		aw = ah = 100; fixed = true;
+	}
+	else if (geo == 'proportional' && gw > 0 && gh > 0) {
+		var ratio = gw / gh;
+		if (aw / Math.max(1e-6, ah) > ratio) aw = ah * ratio;
+		else ah = aw / ratio;
+	}
+	if (a.geo_center) {
+		var hw = fixed ? aw / 2 : aw, hh = fixed ? ah / 2 : ah;
+		Object.assign(layer, { x: sx - hw, y: sy - hh, width: hw * 2, height: hh * 2 });
+		return;
+	}
+	Object.assign(layer, { width: sgx * aw, height: sgy * ah });
 }
 
 /**
@@ -120,6 +189,7 @@ function install_shape_modes() {
 async function convert(job) {
 	var layer = config.layer;
 	if (!layer || layer === job.before || !SHAPE_TOOLS.includes(layer.type) || app.State.action_history_index <= job.history) return;
+	apply_geometry(layer);
 	var w = layer.width, h = layer.height;
 	if (!w || !h) return;
 	var Paths = app.GUI.Ps_workspace.Paths;
@@ -142,7 +212,12 @@ async function convert(job) {
 			//CS6 lines are thin filled rectangles (Weight)
 			var len = Math.hypot(w, h) || 1, wt = Math.max(1, (layer.params && layer.params.size) || 1) / 2;
 			var nx = -h / len * wt, ny = w / len * wt;
-			shape_path = { closed: true, pts: [point(layer.x + nx, layer.y + ny), point(layer.x + w + nx, layer.y + h + ny), point(layer.x + w - nx, layer.y + h - ny), point(layer.x - nx, layer.y - ny)] };
+			//arrowheads: the line stops where a head's back starts
+			var heads = arrowheads(layer.x, layer.y, layer.x + w, layer.y + h, wt * 2), ux = w / len, uy = h / len;
+			var a = config.TOOL.attributes, back = wt * 2 * (a.arrow_length || 1000) / 100 * (1 - (a.arrow_concavity || 0) / 100);
+			var lx0 = layer.x + (a.arrow_start ? ux * back : 0), ly0 = layer.y + (a.arrow_start ? uy * back : 0);
+			var lx1 = layer.x + w - (a.arrow_end ? ux * back : 0), ly1 = layer.y + h - (a.arrow_end ? uy * back : 0);
+			shape_path = [{ closed: true, pts: [point(lx0 + nx, ly0 + ny), point(lx1 + nx, ly1 + ny), point(lx1 - nx, ly1 - ny), point(lx0 - nx, ly0 - ny)] }].concat(heads);
 		}
 		if (!shape_path) return;
 		var p = layer.params || {};
