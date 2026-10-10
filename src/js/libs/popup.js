@@ -629,6 +629,10 @@ class Dialog_class {
 				//gap
 				html += '<td colspan="2"></td>';
 			}
+			else if (parameter.value === undefined) {
+				//pshot: a title alone is a group label (CS6 "Location", "Blending", ...)
+				html += '<td colspan="2"></td>';
+			}
 			else {
 				//locked fields without name
 				var str = "" + parameter.value;

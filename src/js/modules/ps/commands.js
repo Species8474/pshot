@@ -16,6 +16,8 @@ import Patterns from './../../ps/patterns.js';
 import Ps_liquify_class from './../../ps/liquify.js';
 import Ps_save_for_web_class from './../../ps/save-for-web.js';
 import { inpaint } from './../../ps/inpaint.js';
+import Ps_wide_angle_class from './../../ps/wide-angle.js';
+import Ps_digimarc_class from './../../ps/digimarc.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2074,6 +2076,25 @@ class Ps_commands_class {
 	save_for_web() {
 		this.Save_for_web = this.Save_for_web || new Ps_save_for_web_class();
 		this.Save_for_web.open();
+	}
+
+	adaptive_wide_angle() {
+		this.Wide_angle = this.Wide_angle || new Ps_wide_angle_class();
+		this.Wide_angle.open();
+	}
+
+	embed_watermark() {
+		this.Digimarc = this.Digimarc || new Ps_digimarc_class();
+		this.Digimarc.embed_dialog();
+	}
+
+	read_watermark() {
+		this.Digimarc = this.Digimarc || new Ps_digimarc_class();
+		this.Digimarc.read_dialog(false);
+	}
+
+	browse_filters_online() {
+		window.open('https://exchange.adobe.com/apps/browse/?product=PHSP', '_blank', 'noopener');
 	}
 
 	liquify() {
