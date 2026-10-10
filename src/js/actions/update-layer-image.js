@@ -37,6 +37,11 @@ export class Update_layer_image_action extends Base_action {
 			throw new Error('Aborted - layer is not an image');
 		}
 
+		//pshot: with some channels targeted (Channels panel) only those change
+		if (this.canvas && !this.new_image_id && app.GUI.Ps_workspace && app.GUI.Ps_workspace.Channel_view) {
+			this.canvas = app.GUI.Ps_workspace.Channel_view.restrict(this.reference_layer, this.canvas);
+		}
+
 		// Get data url representation of image
 		let canvas_data_url;
 		if (this.new_image_id) {

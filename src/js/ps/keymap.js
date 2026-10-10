@@ -143,6 +143,21 @@ class Ps_keymap_class {
 			return;
 		}
 
+		//Ctrl+2 composite, Ctrl+3.. the color channels, then the alpha channels (CS6)
+		if (ctrl && !event.altKey && !event.shiftKey && /^[2-9]$/.test(key)) {
+			var n = parseInt(key), CV = this.workspace.Channel_view;
+			var done = CV.by_number(n);
+			if (!done) {
+				var ai = n - 3 - CV.keys().length;
+				if (ai >= 0 && config.ps_alpha && config.ps_alpha[ai]) { config.ps_alpha_active = ai; this.workspace.render_channels(true); done = true; }
+			}
+			if (done !== false) {
+				event.preventDefault();
+				event.stopPropagation();
+				return;
+			}
+		}
+
 		//arrow keys with a selection: the Move tool nudges the selected pixels, the
 		//selection tools nudge the outline (1 px, Shift 10 px)
 		var arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };

@@ -38,6 +38,7 @@ const DEFAULTS = {
 	place_resize: true,
 	place_smart: true,
 	smart_quotes: true,
+	channels_in_color: false,
 	painting_cursor: 'Normal Brush Tip',
 	crosshair_in_tip: false,
 	crosshair_only: false,
@@ -173,8 +174,8 @@ class Ps_preferences_class {
 				{ type: 'theme', key: 'theme', label: 'Color Theme:' },
 				{ type: 'row', items: [{ type: 'select', label: 'Standard Screen Mode:', values: ['Default'], disabled: true }, { type: 'select', label: 'Border:', values: ['Drop Shadow'], disabled: true }] },
 				{ type: 'group', label: 'Options' },
-				...['Auto-Collapse Iconic Panels', 'Auto-Show Hidden Panels', 'Open Documents as Tabs', 'Enable Floating Document Window Docking', 'Large Tabs', 'Show Transformation Values', 'Show Tool Tips', 'Show Channels in Color', 'Show Menu Colors']
-					.map((l, i) => ({ type: 'check', label: l, value: [1, 2, 3, 5, 6, 8].includes(i), disabled: true })),
+				...[['Auto-Collapse Iconic Panels'], ['Auto-Show Hidden Panels'], ['Open Documents as Tabs'], ['Enable Floating Document Window Docking'], ['Large Tabs'], ['Show Transformation Values'], ['Show Tool Tips'], ['Show Channels in Color', 'channels_in_color'], ['Show Menu Colors']]
+					.map(([l, key], i) => key ? { type: 'check', key: key, label: l } : { type: 'check', label: l, value: [1, 2, 3, 5, 6, 8].includes(i), disabled: true }),
 				{ type: 'group', label: 'Text' },
 				{ type: 'row', items: [{ type: 'select', label: 'UI Language:', values: ['English'], disabled: true }, { type: 'select', label: 'UI Font Size:', values: ['Small'], disabled: true }] },
 			]],

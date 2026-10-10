@@ -66,6 +66,7 @@ import Ps_color_management_class from './color-management.js';
 import Ps_variables_class from './variables.js';
 import Ps_script_events_class from './script-events.js';
 import { install_shape_modes } from './shape-modes.js';
+import Ps_channel_view_class from './channel-view.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -135,6 +136,7 @@ class Ps_workspace_class {
 		this.Brush_presets = new Ps_brush_presets_class();
 		this.Tool_presets = new Ps_tool_presets_class();
 		this.Proof = new Ps_proof_class();
+		this.Channel_view = new Ps_channel_view_class();
 		this.Color = new Ps_color_management_class();
 		this.Auto_align = new Ps_auto_align_class();
 		this.Automate = new Ps_automate_class();
@@ -1846,9 +1848,14 @@ class Ps_workspace_class {
 				Multichannel: [['Cyan', 'Ctrl+1', 'c'], ['Magenta', 'Ctrl+2', 'm'], ['Yellow', 'Ctrl+3', 'y']],
 			}[config.ps_mode] || [['RGB', 'Ctrl+2', null], ['Red', 'Ctrl+3', 0], ['Green', 'Ctrl+4', 1], ['Blue', 'Ctrl+5', 2]];
 			var html = '';
+			//targeted channels are highlighted, the eyes show the visible ones
+			var cv = this.Channel_view.state(), composite = cv.target.length == cv.all.length;
 			for (var row of rows) {
-				html += '<div class="ps_channel_row' + (row[0] == 'RGB' ? '' : '') + ' active">'
-					+ '<span class="ps_eye on"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/></svg></span>'
+				var ck = row[2] === null ? null : row[2];
+				var on = ck === null ? cv.shown.length == cv.all.length : cv.shown.includes(ck);
+				var hit = ck === null ? composite : (composite || cv.target.includes(ck));
+				html += '<div class="ps_channel_row' + (hit ? ' active' : '') + (!composite && hit && ck !== null ? ' selected' : '') + '" data-ckey="' + (ck === null ? '' : ck) + '">'
+					+ '<span class="ps_eye' + (on ? ' on' : '') + '" data-ch-eye="1">' + (on ? '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/></svg>' : '') + '</span>'
 					+ '<canvas class="ps_thumb" width="32" height="32" data-channel="' + (row[2] === null ? 'rgb' : row[2]) + '"></canvas>'
 					+ '<span class="ps_layer_name">' + row[0] + '</span><span class="ps_channel_key">' + row[1] + '</span></div>';
 			}
@@ -1880,6 +1887,11 @@ class Ps_workspace_class {
 				}
 				config.ps_alpha_active = i == config.ps_alpha_active ? -1 : i;
 				this.render_channels(true);
+			}));
+			el.querySelectorAll('.ps_channel_row[data-ckey]').forEach((row) => row.addEventListener('click', (e) => {
+				var raw = row.dataset.ckey, key = raw === '' ? null : (/^\d$/.test(raw) ? parseInt(raw) : raw);
+				if (e.target.closest('[data-ch-eye]')) this.Channel_view.toggle_eye(key);
+				else this.Channel_view.select(key, e.shiftKey);
 			}));
 			el.querySelectorAll('[data-ch]').forEach((b) => b.addEventListener('click', () => {
 				if (b.classList.contains('disabled')) return;
@@ -1920,10 +1932,13 @@ class Ps_workspace_class {
 			}
 			var c = canvas.dataset.channel;
 			var out = ctx.createImageData(source.width, source.height);
+			//Preferences > Interface > Show Channels in Color
+			var tint = this.Preferences && this.Preferences.values.channels_in_color && /^[012]$/.test(c) ? parseInt(c) : -1;
 			for (var i = 0; i < data.data.length; i += 4) {
 				var a = data.data[i + 3] / 255;
 				var v = Math.round(channel_value(data.data[i], data.data[i + 1], data.data[i + 2], c) * a + 255 * (1 - a));
 				out.data[i] = out.data[i + 1] = out.data[i + 2] = v;
+				if (tint >= 0) for (var tc = 0; tc < 3; tc++) if (tc != tint) out.data[i + tc] = 0;
 				out.data[i + 3] = 255;
 			}
 			ctx.putImageData(out, ox, oy);

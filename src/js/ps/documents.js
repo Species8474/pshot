@@ -175,6 +175,7 @@ class Ps_documents_class {
 			ps_vp_planes: config.ps_vp_planes,
 			ps_datasets: config.ps_datasets,
 			ps_clip_path: config.ps_clip_path,
+			ps_channels: config.ps_channels || null,
 		};
 	}
 
@@ -215,6 +216,7 @@ class Ps_documents_class {
 		config.ps_vp_planes = state.ps_vp_planes || [];
 		config.ps_datasets = state.ps_datasets || [];
 		config.ps_clip_path = state.ps_clip_path || null;
+		config.ps_channels = state.ps_channels || null;
 		config.ps_alpha = state.ps_alpha || [];
 		config.ps_alpha_active = state.ps_alpha_active == null ? -1 : state.ps_alpha_active;
 		config.ps_paths = state.ps_paths || [];
@@ -287,6 +289,7 @@ class Ps_documents_class {
 		config.ps_vp_planes = [];
 		config.ps_datasets = [];
 		config.ps_clip_path = null;
+		config.ps_channels = null;
 		config.ps_path_active = -1;
 		config.ps_alpha = [];
 		config.ps_alpha_active = -1;

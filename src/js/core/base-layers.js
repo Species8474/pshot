@@ -226,6 +226,8 @@ class Base_layers_class {
 			//pshot: View > Proof Colors / Gamut Warning (display only)
 			if (this.Base_gui.Ps_workspace) {
 				this.Base_gui.Ps_workspace.Proof.apply(this.ctx);
+				//Channels panel: the visible channels only
+				this.Base_gui.Ps_workspace.Channel_view.apply(this.ctx);
 			}
 
 			//grid
