@@ -1910,3 +1910,6 @@ body.ps_border_line.theme-cs6 .canvas_wrapper canvas { box-shadow: 0 0 0 1px #00
 body.ps_border_none.theme-cs6 .canvas_wrapper canvas { box-shadow: none; }
 body.ps_large_tabs .ps_doctab { height: 26px; font-size: 12px; }
 #ps_tf_hud { position: fixed; z-index: 3000; padding: 3px 6px; background: rgba(40, 40, 40, 0.9); color: #eee; border: 1px solid #111; font-size: 11px; line-height: 14px; pointer-events: none; }
+/* painting HUDs (color picker, brush size / hardness) */
+.ps_hud { position: fixed; z-index: 3000; pointer-events: none; }
+.ps_hud_color { box-shadow: 0 2px 10px rgba(0,0,0,0.5); }

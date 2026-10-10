@@ -40,6 +40,7 @@ const DEFAULTS = {
 	place_smart: true,
 	smart_quotes: true,
 	recent_count: 10,
+	hud_picker: 'Hue Strip (Small)',
 	gamut_color: '#808080',
 	gamut_opacity: 100,
 	channels_in_color: false,
@@ -192,7 +193,7 @@ class Ps_preferences_class {
 		return [
 			['General', [
 				{ type: 'row', items: [{ type: 'select', label: 'Color Picker:', values: ['Adobe'], disabled: true }] },
-				{ type: 'row', items: [{ type: 'select', label: 'HUD Color Picker:', values: ['Hue Strip (Small)'], disabled: true }] },
+				{ type: 'row', items: [{ type: 'select', key: 'hud_picker', label: 'HUD Color Picker:', values: ['Hue Strip (Small)', 'Hue Strip (Medium)', 'Hue Strip (Large)', 'Hue Wheel (Small)', 'Hue Wheel (Medium)', 'Hue Wheel (Large)'] }] },
 				{ type: 'row', items: [{ type: 'select', key: 'interpolation', label: 'Image Interpolation:', values: ['Nearest Neighbor (preserve hard edges)', 'Bilinear', 'Bicubic (best for smooth gradients)', 'Bicubic Smoother (best for enlargement)', 'Bicubic Sharper (best for reduction)', 'Bicubic Automatic'] }] },
 				{ type: 'group', label: 'Options' },
 				//the options pshot honours have keys; the others are shown as CS6 sets them

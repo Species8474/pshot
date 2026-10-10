@@ -68,6 +68,7 @@ import Ps_script_events_class from './script-events.js';
 import { install_shape_modes } from './shape-modes.js';
 import Ps_channel_view_class from './channel-view.js';
 import Ps_recent_files_class from './recent-files.js';
+import Ps_hud_class from './hud.js';
 
 const PANEL_TITLES = {
 	color: 'Color', swatches: 'Swatches', adjustments: 'Adjustments', styles: 'Styles',
@@ -139,6 +140,7 @@ class Ps_workspace_class {
 		this.Proof = new Ps_proof_class();
 		this.Channel_view = new Ps_channel_view_class();
 		this.Recent = new Ps_recent_files_class();
+		this.Hud = new Ps_hud_class();
 		this.Color = new Ps_color_management_class();
 		this.Auto_align = new Ps_auto_align_class();
 		this.Automate = new Ps_automate_class();
@@ -206,6 +208,7 @@ class Ps_workspace_class {
 		this.render_channels();
 		this.Preferences.install();
 		this.Recent.load();
+		this.Hud.install();
 		this.Notes.install();
 		this.Mask.install();
 		this.Clone_source.install();

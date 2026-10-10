@@ -307,6 +307,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Preferences > Interface: Standard Screen Mode color (Default / Black / Dark / Medium / Light Gray / Custom) and border (Drop Shadow / Line / None), Open Documents as Tabs (off: new documents float), Enable Floating Document Window Docking (Ctrl also skips docking), Large Tabs, Show Transformation Values (X/Y, W/H or angle by the pointer while transforming), Show Channels in Color. Right-click on the pasteboard: its color (Default, grays, Custom, Select Custom Color...).
   - File > Open Recent (ps/recent-files.js): opened files are kept in IndexedDB (the file itself), listed newest first up to Preferences > File Handling > Recent File List Contains, Clear Recent File List.
   - Preferences > Transparency & Gamut > Gamut Warning color and opacity (View > Gamut Warning).
+  - Painting HUDs (ps/hud.js): Alt+Shift+right-drag the HUD Color Picker (Preferences > General > HUD Color Picker: Hue Strip / Hue Wheel, Small / Medium / Large; square = saturation / brightness, strip or ring = hue; sets the foreground on release); Alt+right-drag brush size (left / right) and hardness (up / down) with a red tip preview. The canvas context menu stays closed for these.
   - Preferences > Type > Use Smart Quotes (typed ' and " become curly: opening after a space or bracket).
 
 ## Known gaps / next
