@@ -146,6 +146,75 @@ class Ps_alpha_channels_class {
 	}
 
 	/**
+	 * Duplicate Channel... (an alpha channel, or a color channel as a new alpha channel)
+	 * source: alpha index, or 'r' / 'g' / 'b' / 'rgb'
+	 */
+	duplicate_channel(source) {
+		var alpha = typeof source == 'number';
+		var src_name = alpha ? this.list()[source].name : { r: 'Red', g: 'Green', b: 'Blue', rgb: 'Gray' }[source];
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Duplicate Channel',
+			params: [
+				{ title: 'Duplicate: ' + src_name },
+				{ name: 'name', title: 'As:', value: src_name + ' copy' },
+				{ name: 'invert', title: 'Invert', value: false },
+			],
+			on_finish: (p) => {
+				var mask = alpha ? clone_canvas(this.list()[source].mask) : this.color_channel_mask(source);
+				if (p.invert) {
+					var ctx = mask.getContext('2d');
+					var img = ctx.getImageData(0, 0, mask.width, mask.height), d = img.data;
+					for (var i = 3; i < d.length; i += 4) d[i] = 255 - d[i];
+					ctx.putImageData(img, 0, 0);
+				}
+				var list = this.list().slice();
+				list.push({ name: p.name || src_name + ' copy', mask: mask });
+				this.commit(list, list.length - 1, 'Duplicate Channel');
+			},
+		});
+	}
+
+	/**
+	 * a color channel of the composite as a mask (channel value = selection strength)
+	 */
+	color_channel_mask(channel) {
+		var w = config.WIDTH, h = config.HEIGHT;
+		var c = document.createElement('canvas');
+		c.width = w;
+		c.height = h;
+		var ctx = c.getContext('2d', { willReadFrequently: true });
+		app.Layers.convert_layers_to_canvas(ctx, null, false);
+		var img = ctx.getImageData(0, 0, w, h), d = img.data;
+		for (var i = 0; i < d.length; i += 4) {
+			var v = channel == 'r' ? d[i] : (channel == 'g' ? d[i + 1] : (channel == 'b' ? d[i + 2] : 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]));
+			v = v * d[i + 3] / 255;
+			d[i] = d[i + 1] = d[i + 2] = 255;
+			d[i + 3] = v;
+		}
+		ctx.putImageData(img, 0, 0);
+		return c;
+	}
+
+	/**
+	 * Channel Options... (an alpha channel's name)
+	 */
+	channel_options(index) {
+		var ch = this.list()[index];
+		if (!ch) return;
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Channel Options',
+			params: [{ name: 'name', title: 'Name:', value: ch.name }],
+			on_finish: (p) => {
+				var list = this.list().slice();
+				list[index] = Object.assign({}, ch, { name: p.name || ch.name });
+				this.commit(list, config.ps_alpha_active, 'Channel Options');
+			},
+		});
+	}
+
+	/**
 	 * channel thumbnail: white = selected, black = not (CS6)
 	 */
 	thumb(canvas, mask) {

@@ -59,6 +59,7 @@ import Ps_actions_panel_class from './actions-panel.js';
 import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
+import { install_panel_context_menus, delete_state } from './panel-context.js';
 import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
@@ -195,6 +196,7 @@ class Ps_workspace_class {
 		this.Clone_source.install();
 		this.Tool_presets.install();
 		this.Slices.install();
+		install_panel_context_menus();
 		this.snapshot_tool_defaults();
 
 		setInterval(() => this.tick(), 250);
@@ -1550,6 +1552,7 @@ class Ps_workspace_class {
 			row.addEventListener('click', () => this.restore_snapshot(parseInt(row.dataset.snapshot)));
 		});
 		el.querySelector('.ps_history_snap').addEventListener('click', () => this.create_snapshot());
+		el.querySelector('.ps_history_delete').addEventListener('click', () => delete_state(app.State.action_history_index));
 		el.querySelector('.ps_history_newdoc').addEventListener('click', () => app.GUI.modules['ps/commands'].duplicate_document());
 		var list = el.querySelector('.ps_history_list');
 		var active = el.querySelector('.ps_history_item.active');
