@@ -135,6 +135,7 @@ class Ps_float_windows_class {
 				this.draw_inactive(doc, pic);
 			}
 		});
+		this.render_views();
 		//the active document is tabbed: its view goes back under the tab bar
 		var cur = docs[active];
 		if (cur && !cur.float && middle.parentNode !== area) {
@@ -234,6 +235,137 @@ class Ps_float_windows_class {
 		};
 		document.addEventListener('mousemove', move, true);
 		document.addEventListener('mouseup', up, true);
+	}
+
+	// ---------- Window > Arrange > New Window for <document> ----------
+
+	/**
+	 * a second window on the active document: its own zoom and scroll, redrawn as the document changes
+	 */
+	new_view() {
+		var doc = this.docs().current();
+		if (!doc) return;
+		doc.views = doc.views || [];
+		var r = this.default_rect(doc.views.length + 1);
+		doc.views.push({ vid: 'v' + (++this.z), rect: r, zoom: config.ZOOM, ox: 0, oy: 0, z: ++this.z });
+		this.refresh();
+	}
+
+	view_source(doc) {
+		if (doc !== this.docs().current()) return doc.flat;
+		var sig = app.State.action_history_index + ':' + app.State.action_history.length + ':' + config.layers.length;
+		if (!this.live || this.live_sig !== sig || this.live_doc !== doc) {
+			var c = this.live && this.live.width == config.WIDTH && this.live.height == config.HEIGHT ? this.live : document.createElement('canvas');
+			c.width = config.WIDTH;
+			c.height = config.HEIGHT;
+			var ctx = c.getContext('2d');
+			ctx.clearRect(0, 0, c.width, c.height);
+			app.Layers.convert_layers_to_canvas(ctx, null, false);
+			this.live = c;
+			this.live_sig = sig;
+			this.live_doc = doc;
+		}
+		return this.live;
+	}
+
+	draw_view(doc, view, canvas) {
+		var body = canvas.parentNode, w = Math.max(1, body.clientWidth), h = Math.max(1, body.clientHeight);
+		if (canvas.width != w) canvas.width = w;
+		if (canvas.height != h) canvas.height = h;
+		var ctx = canvas.getContext('2d');
+		ctx.fillStyle = getComputedStyle(document.getElementById('ps_docarea')).backgroundColor || '#282828';
+		ctx.fillRect(0, 0, w, h);
+		var src = this.view_source(doc);
+		if (!src) return;
+		var z = view.zoom, dw = src.width * z, dh = src.height * z;
+		var x = Math.round((w - dw) / 2 + view.ox), y = Math.round((h - dh) / 2 + view.oy);
+		ctx.imageSmoothingEnabled = z < 1;
+		ctx.fillStyle = '#fff';
+		ctx.fillRect(x, y, dw, dh);
+		ctx.drawImage(src, x, y, dw, dh);
+	}
+
+	render_views() {
+		var layer = this.layer(), docs = this.docs().docs;
+		var live_ids = [];
+		docs.forEach((doc, i) => {
+			(doc.views || []).forEach((view) => {
+				live_ids.push(view.vid);
+				var win = layer.querySelector('.ps_float_win[data-vid="' + view.vid + '"]');
+				if (!win) win = this.build_view(doc, view);
+				var r = view.rect;
+				Object.assign(win.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', zIndex: view.z });
+				var label = (this.labels[i] || doc.name).replace(/ @ \d+(\.\d+)?%/, ' @ ' + Math.round(view.zoom * 100) + '%');
+				win.querySelector('.ps_float_label').textContent = label;
+				this.draw_view(doc, view, win.querySelector('canvas.ps_float_pic'));
+			});
+		});
+		layer.querySelectorAll('.ps_float_win[data-vid]').forEach(w => { if (!live_ids.includes(w.dataset.vid)) w.remove(); });
+	}
+
+	/**
+	 * the views of the active document follow its edits (called from the workspace tick)
+	 */
+	update_views() {
+		var doc = this.docs().current();
+		if (!doc || !(doc.views || []).length) return;
+		var sig = app.State.action_history_index + ':' + app.State.action_history.length;
+		if (sig === this.views_sig) return;
+		this.views_sig = sig;
+		this.render_views();
+	}
+
+	build_view(doc, view) {
+		var win = document.createElement('div');
+		win.className = 'ps_float_win ps_float_view';
+		win.dataset.vid = view.vid;
+		win.innerHTML = '<div class="ps_float_title"><span class="ps_float_label"></span><button type="button" class="ps_float_close" title="Close">&times;</button></div>'
+			+ '<div class="ps_float_body"><canvas class="ps_float_pic"></canvas></div><div class="ps_float_grip" title="Resize"></div>';
+		var find = () => {
+			for (var d of this.docs().docs) for (var v of (d.views || [])) if (v.vid == view.vid) return [d, v];
+			return [null, null];
+		};
+		win.addEventListener('mousedown', (e) => {
+			if (e.target.closest('.ps_float_close')) return;
+			var [d] = find();
+			view.z = ++this.z;
+			win.style.zIndex = view.z;
+			var i = this.docs().docs.indexOf(d);
+			if (i >= 0 && i != this.docs().active) this.docs().switch_to(i);
+		}, true);
+		win.querySelector('.ps_float_close').addEventListener('click', () => {
+			var [d] = find();
+			if (d) d.views = d.views.filter(v => v.vid != view.vid);
+			this.render_views();
+		});
+		var drag = (e, kind) => {
+			e.preventDefault();
+			var start = { x: e.clientX, y: e.clientY }, orig = Object.assign({}, view.rect), o = { x: view.ox, y: view.oy };
+			var move = (ev) => {
+				var dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+				if (kind == 'move') { view.rect.x = orig.x + dx; view.rect.y = Math.max(0, orig.y + dy); }
+				else if (kind == 'resize') { view.rect.w = Math.max(MIN_W, orig.w + dx); view.rect.h = Math.max(MIN_H, orig.h + dy); }
+				else { view.ox = o.x + dx; view.oy = o.y + dy; }
+				this.render_views();
+			};
+			var up = () => {
+				document.removeEventListener('mousemove', move, true);
+				document.removeEventListener('mouseup', up, true);
+			};
+			document.addEventListener('mousemove', move, true);
+			document.addEventListener('mouseup', up, true);
+		};
+		win.querySelector('.ps_float_title').addEventListener('mousedown', (e) => { if (e.button == 0 && !e.target.closest('.ps_float_close')) drag(e, 'move'); });
+		win.querySelector('.ps_float_grip').addEventListener('mousedown', (e) => { if (e.button == 0) { e.stopPropagation(); drag(e, 'resize'); } });
+		//drag in the view to scroll it, wheel to zoom
+		win.querySelector('.ps_float_body').addEventListener('mousedown', (e) => { if (e.button == 0) drag(e, 'pan'); });
+		win.querySelector('.ps_float_body').addEventListener('wheel', (e) => {
+			e.preventDefault();
+			view.zoom = Math.max(0.05, Math.min(32, view.zoom * (e.deltaY < 0 ? 1.25 : 0.8)));
+			this.render_views();
+		}, { passive: false });
+		this.layer().appendChild(win);
+		return win;
 	}
 
 	over_tabs(e) {

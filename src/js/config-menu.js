@@ -383,7 +383,7 @@ const M = [
 			{ name: 'Match Location', target: 'ps/commands.match_view', parameter: 'location' },
 			{ name: 'Match Rotation', target: 'ps/commands.match_view', parameter: 'rotation' },
 			{ name: 'Match All', target: 'ps/commands.match_view', parameter: 'all' }, '-',
-			'New Window for Untitled-1']],
+			{ name: 'New Window for Untitled-1', target: 'ps/commands.new_view_window', dynamic_name: 'new_view_label' }]],
 		{
 			name: 'Workspace',
 			//user workspaces (New Workspace) are listed after the CS6 ones

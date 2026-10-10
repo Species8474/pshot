@@ -783,6 +783,8 @@ class Ps_commands_class {
 	auto_align() { app.GUI.Ps_workspace.Auto_align.align_dialog(); }
 	auto_blend() { app.GUI.Ps_workspace.Auto_align.blend_dialog(); }
 	create_style_layers() { app.GUI.Ps_workspace.Styles.create_layers(); }
+	new_view_window() { app.GUI.Ps_workspace.Float.new_view(); }
+	new_view_label() { return 'New Window for ' + app.GUI.Ps_workspace.Documents.current().name; }
 	float_in_window() { app.GUI.Ps_workspace.Float.float_current(); }
 	float_all() { app.GUI.Ps_workspace.Float.float_all(); }
 	consolidate_tabs() { app.GUI.Ps_workspace.Float.consolidate(); }

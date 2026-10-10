@@ -262,6 +262,7 @@ class Ps_workspace_class {
 		this.render_document_tab();
 		this.render_statusbar();
 		this.render_fg_bg();
+		this.Float.update_views();
 		var signature = app.State.action_history_index + ':' + app.State.action_history.length;
 		if (signature !== this.last_history_signature) {
 			this.last_history_signature = signature;
