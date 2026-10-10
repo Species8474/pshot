@@ -271,7 +271,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
-- Actions: droplets and recording of tool strokes, Slice tools, 3D.
+- Actions: droplets, Insert Stop / Menu Item / Conditional / Path, Action and Playback Options; eraser and retouch strokes are not recorded. 3D.
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning presets are approximations.
 - Styles: Contour/Texture/quality contours are not written to PSD; PSD placed layers (smart objects and their smart filters save as pixels).
 - Brush panel: Texture Each Tip off / the other Texture modes (Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height) render as Multiply; Dual Brush modes other than Multiply; tilt.
