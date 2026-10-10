@@ -1009,6 +1009,9 @@ body.theme-cs6 .layers_list {
 	color: #fff;
 }
 .ps_channel_key { margin-right: 10px; color: #dfe9f5; }
+/* only the targeted channels are highlighted */
+.ps_channel_row:not(.active) { background: transparent; color: var(--ps-text); }
+.ps_channel_row:not(.active) .ps_channel_key { color: var(--ps-text-dim); }
 
 /* ========== History ======================================================= */
 
