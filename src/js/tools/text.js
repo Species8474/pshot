@@ -2291,7 +2291,19 @@ class Text_class extends Base_tools_class {
 				}
 				else if (config.layer) {
 					const editor = this.get_editor(config.layer);
-					editor.insert_text_at_current_position(e.target.value);
+					let typed = e.target.value;
+					//pshot: Preferences > Type > Use Smart Quotes - opening after a space or bracket, closing otherwise
+					const prefs = app.GUI.Ps_workspace.Preferences;
+					if (/['"]/.test(typed) && (!prefs || prefs.values.smart_quotes !== false)) {
+						const pos = editor.selection.get_position();
+						let prev = editor.document.get_line_text(pos.line).charAt(pos.character - 1);
+						typed = typed.replace(/['"]/g, (q) => {
+							const open = !prev || /[\s(\[{<\u2018\u201c-]/.test(prev);
+							prev = q;
+							return q == '"' ? (open ? '\u201c' : '\u201d') : (open ? '\u2018' : '\u2019');
+						});
+					}
+					editor.insert_text_at_current_position(typed);
 					e.target.value = '';
 					this.Base_layers.render();
 					this.extend_fixed_bounds(config.layer, editor);

@@ -303,6 +303,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Preferences > Guides, Grid & Slices live: guide color (CS6 list or Custom) / style (Lines, Dashed), smart guide color, grid color / style (Lines, Dashed, Dots) / subdivisions (lighter minor lines, 1 screen pixel), slice line color, Show Slice Numbers (Preferences.color(kind)).
   - Preferences > Cursors: Painting Cursors Standard / Precise / Normal Brush Tip (soft brushes: the 50% outline) / Full Size Brush Tip, Show Crosshair in Brush Tip, Show Only Crosshair While Painting; Caps Lock gives the precise cursor (base-tools show_mouse_cursor). Other Cursors stays greyed.
   - Preferences > General live: Image Interpolation (default for Image Size and Free Transform), Use Shift Key for Tool Switch (off: the letter cycles), Resize Image During Place, Zoom Resizes Windows (floating windows, View zoom in/out and the Zoom tool), Zoom with Scroll Wheel, Zoom Clicked Point to Center, Place or Drag Raster Images as Smart Objects. File > Place: a single image comes in as a smart object (full-resolution source, scaled to fit when larger) with the transform box (CS6). Free Transform options bar: H / V Skew fields (quad from the box) and Interpolation (Nearest Neighbor / Bilinear / Bicubic...).
+  - Preferences > Type > Use Smart Quotes (typed ' and " become curly: opening after a space or bracket).
 
 ## Known gaps / next
 

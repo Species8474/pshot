@@ -37,6 +37,7 @@ const DEFAULTS = {
 	zoom_resizes: false,
 	place_resize: true,
 	place_smart: true,
+	smart_quotes: true,
 	painting_cursor: 'Normal Brush Tip',
 	crosshair_in_tip: false,
 	crosshair_only: false,
@@ -243,7 +244,7 @@ class Ps_preferences_class {
 			]],
 			['Type', [
 				{ type: 'group', label: 'Type Options' },
-				{ type: 'check', label: 'Use Smart Quotes', value: true, disabled: true },
+				{ type: 'check', key: 'smart_quotes', label: 'Use Smart Quotes' },
 				{ type: 'check', label: 'Enable Missing Glyph Protection', value: true, disabled: true },
 				{ type: 'check', label: 'Show Font Names in English', value: true, disabled: true },
 				{ type: 'row', items: [{ type: 'select', label: 'Choose Text Engine Options:', values: ['East Asian'], disabled: true }] },
