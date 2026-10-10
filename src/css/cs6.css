@@ -1805,3 +1805,4 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_about_credits { margin-top: auto; font-size: 11px; line-height: 1.5; color: #8aa2ba; }
 .ps_about_credits p { margin: 0 0 4px; }
 .ps_about_credits a { color: #9fd3ff; }
+.ps_status_arrow, .ps_status_info { cursor: default; }

@@ -6,6 +6,7 @@
  * blindness uses the Vienot 1999 dichromat matrices.
  */
 
+import app from './../app.js';
 import config from './../config.js';
 
 const SETUPS = {
@@ -113,7 +114,8 @@ class Ps_proof_class {
 	 * CMYK documents always show CMYK colors; 32-bit documents their preview exposure
 	 */
 	forced() {
-		return config.ps_mode == 'CMYK' || (config.ps_depth == 32 && (this.hdr_exposure || this.hdr_gamma != 1));
+		var cm = app.GUI && app.GUI.Ps_workspace && app.GUI.Ps_workspace.Color;
+		return config.ps_mode == 'CMYK' || (config.ps_depth == 32 && (this.hdr_exposure || this.hdr_gamma != 1)) || !!(cm && cm.display_converter());
 	}
 
 	label() {
@@ -142,6 +144,9 @@ class Ps_proof_class {
 	 * one color -> packed display color
 	 */
 	convert(r, g, b) {
+		//the document's profile shown on an sRGB monitor
+		var cm = app.GUI.Ps_workspace.Color, dc = cm && cm.display_converter();
+		if (dc) [r, g, b] = dc(r, g, b);
 		if (config.ps_depth == 32 && (this.hdr_exposure || this.hdr_gamma != 1)) {
 			//View > 32-bit Preview Options: exposure (stops) and gamma
 			var e = Math.pow(2, this.hdr_exposure || 0), gm = 1 / (this.hdr_gamma || 1);
@@ -197,7 +202,7 @@ class Ps_proof_class {
 	apply(ctx) {
 		if (!this.active()) return;
 		//the cache holds results for one set of settings
-		var key = config.ps_mode + '|' + config.ps_depth + '|' + this.hdr_exposure + '|' + this.hdr_gamma;
+		var key = config.ps_mode + '|' + config.ps_depth + '|' + this.hdr_exposure + '|' + this.hdr_gamma + '|' + config.ps_profile;
 		if (this.cache_key !== key) { this.cache.clear(); this.cache_key = key; }
 		var t = ctx.getTransform(), cv = ctx.canvas;
 		var x0 = Math.max(0, Math.floor(t.e)), y0 = Math.max(0, Math.floor(t.f));

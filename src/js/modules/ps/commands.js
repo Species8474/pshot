@@ -1510,6 +1510,10 @@ class Ps_commands_class {
 		});
 	}
 
+	color_settings() { app.GUI.Ps_workspace.Color.color_settings(); }
+	assign_profile() { app.GUI.Ps_workspace.Color.assign_profile(); }
+	convert_profile() { app.GUI.Ps_workspace.Color.convert_profile(); }
+
 	async mode_rgb() {
 		if (!config.ps_mode || config.ps_mode == 'RGB') return;
 		await app.State.do_action(new app.Actions.Bundle_action('mode', 'RGB Color', [new app.Actions.Update_config_action({ ps_mode: 'RGB' })]));

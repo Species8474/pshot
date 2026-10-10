@@ -161,6 +161,8 @@ class Ps_documents_class {
 			ps_alpha_active: config.ps_alpha_active,
 			ps_mode: config.ps_mode,
 			ps_depth: config.ps_depth,
+			ps_profile: config.ps_profile,
+			ps_cmyk_profile: config.ps_cmyk_profile,
 			ps_color_table: config.ps_color_table,
 			ps_fx_hidden: config.ps_fx_hidden,
 			ps_comps: config.ps_comps,
@@ -196,6 +198,8 @@ class Ps_documents_class {
 		commands.last_selection = state.last_selection;
 		config.ps_mode = state.ps_mode || 'RGB';
 		config.ps_depth = state.ps_depth || 8;
+		config.ps_profile = state.ps_profile;
+		config.ps_cmyk_profile = state.ps_cmyk_profile;
 		config.ps_color_table = state.ps_color_table || null;
 		config.ps_fx_hidden = !!state.ps_fx_hidden;
 		config.ps_comps = state.ps_comps || [];
@@ -282,6 +286,9 @@ class Ps_documents_class {
 		config.ps_alpha_active = -1;
 		config.ps_mode = 'RGB';
 		config.ps_depth = 8;
+		//new documents use the working RGB space (Edit > Color Settings)
+		config.ps_profile = app.GUI.Ps_workspace.Color.settings().rgb;
+		config.ps_cmyk_profile = null;
 		config.ps_color_table = null;
 		config.ps_fx_hidden = false;
 		config.ps_comps = [];

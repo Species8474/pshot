@@ -62,6 +62,7 @@ import { render_character, render_paragraph } from './type-panels.js';
 import { install_panel_context_menus, delete_state } from './panel-context.js';
 import Ps_float_windows_class from './float-windows.js';
 import { cmyk_safe, channel_value } from './proof.js';
+import Ps_color_management_class from './color-management.js';
 import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
@@ -130,6 +131,7 @@ class Ps_workspace_class {
 		this.Brush_presets = new Ps_brush_presets_class();
 		this.Tool_presets = new Ps_tool_presets_class();
 		this.Proof = new Ps_proof_class();
+		this.Color = new Ps_color_management_class();
 		this.Auto_align = new Ps_auto_align_class();
 		this.Automate = new Ps_automate_class();
 		this.Import_export = new Ps_import_export_class();
@@ -1398,6 +1400,24 @@ class Ps_workspace_class {
 			if (event.key == 'Enter') input.blur();
 		});
 		input.addEventListener('focus', () => input.select());
+		//CS6: the arrow (or the info text) chooses what the status bar shows
+		try { this.status_show = localStorage.getItem('pshot_status_show') || 'sizes'; } catch (e) { this.status_show = 'sizes'; }
+		var open = (event) => {
+			var item = (key, name, enabled) => ({ name: name, checked: this.status_show == key, action: enabled === false ? null : () => {
+				this.status_show = key;
+				try { localStorage.setItem('pshot_status_show', key); } catch (e) { /* storage blocked */ }
+				this.render_statusbar(true);
+			} });
+			show_popup_menu(event.currentTarget, [
+				{ name: 'Adobe Drive' },
+				{ divider: true },
+				item('sizes', 'Document Sizes'), item('profile', 'Document Profile'), item('dimensions', 'Document Dimensions'),
+				item('scale', 'Measurement Scale'), item('scratch', 'Scratch Sizes'), item('efficiency', 'Efficiency'), item('timing', 'Timing'),
+				item('tool', 'Current Tool'), item('exposure', '32-bit Exposure', config.ps_depth == 32), item('save', 'Save Progress'),
+			], { placement: 'above' });
+		};
+		document.querySelector('#ps_statusbar .ps_status_arrow').addEventListener('click', open);
+		document.getElementById('ps_status_info').addEventListener('click', open);
 	}
 
 	format_bytes(bytes) {
@@ -1423,6 +1443,22 @@ class Ps_workspace_class {
 			}
 		}
 		var text = 'Doc: ' + this.format_bytes(flat) + '/' + this.format_bytes(Math.max(layered, flat));
+		var doc = this.Documents.current() || {}, ppi = doc.ppi || 72;
+		switch (this.status_show) {
+			case 'profile': text = (config.ps_profile == 'none' ? 'Untagged RGB' : this.Color.profile()) + ' (' + (config.ps_depth || 8) + 'bpc)'; break;
+			case 'dimensions': text = +(config.WIDTH / ppi).toFixed(3) + ' in x ' + +(config.HEIGHT / ppi).toFixed(3) + ' in (' + ppi + ' ppi)'; break;
+			case 'scale': {
+				var sc = this.Measure_log && this.Measure_log.scale ? this.Measure_log.scale : { pixels: 1, length: 1, units: 'pixels' };
+				text = sc.pixels + ' pixel' + (sc.pixels == 1 ? '' : 's') + ' = ' + (+sc.length).toFixed(4) + ' ' + sc.units;
+				break;
+			}
+			case 'scratch': text = 'Scratch: ' + this.format_bytes(Math.max(layered, flat) * (1 + Math.min(20, app.State.action_history.length) * 0.25)) + '/' + this.format_bytes(1536 * 1024 * 1024); break;
+			case 'efficiency': text = 'Efficiency: 100%'; break;
+			case 'timing': text = (this.last_timing || 0).toFixed(1) + ' sec'; break;
+			case 'tool': text = this.active_member ? this.active_member.name : ''; break;
+			case 'exposure': text = 'Exposure: ' + (this.Proof.hdr_exposure || 0).toFixed(2); break;
+			case 'save': text = 'Save Progress: idle'; break;
+		}
 		var info = document.getElementById('ps_status_info');
 		if (info.textContent !== text) {
 			info.textContent = text;
@@ -1543,7 +1579,13 @@ class Ps_workspace_class {
 	// =================================================================
 
 	hook_state() {
-		//nothing to patch: tick() watches the history index/length
+		//tick() watches the history index/length; the status bar Timing needs the last command's time
+		var state = app.State, orig = state.do_action.bind(state);
+		state.do_action = async (...args) => {
+			var t = performance.now();
+			try { return await orig(...args); }
+			finally { this.last_timing = (performance.now() - t) / 1000; }
+		};
 	}
 
 	render_history() {

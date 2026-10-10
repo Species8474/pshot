@@ -96,6 +96,10 @@ function show_popup_menu(anchor, items, opts = {}) {
 		left = opts.point.x;
 		top = opts.point.y;
 	}
+	else if (opts.placement === 'above') {
+		left = rect.left;
+		top = Math.max(0, rect.top - mrect.height - 1);
+	}
 	else if (opts.placement === 'right') {
 		left = rect.right + 1;
 		top = rect.top;

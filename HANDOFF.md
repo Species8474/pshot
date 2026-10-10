@@ -240,6 +240,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Help > About pshot: CS6-style splash (click/Esc closes) with the miniPaint MIT credit and a not-affiliated-with-Adobe note.
   - View > Show > Count (count markers); Type > Save / Load Default Type Styles (saved in the browser, merged into the document's styles).
   - Image > Mode > CMYK Color (pixels and type/shape colors moved into the CMYK gamut, display and FG/BG kept in gamut via proof.js cmyk_safe, Cyan/Magenta/Yellow/Black channels), Lab Color (Lightness/a/b channels, pixels unchanged), Multichannel (flattens; Cyan/Magenta/Yellow), 8/16/32 Bits/Channel (config.ps_depth: label, menu checks, 32-bit Preview Options exposure/gamma on display). File > New has Color Mode and depth. Data stays 8-bit RGB internally; files are written as RGB.
+  - Color management (ps/color-management.js): Edit > Color Settings (working spaces, policies; saved in the browser), Assign Profile (display reinterpretation), Convert to Profile (pixels converted through XYZ with Bradford adaptation; sRGB, Adobe RGB (1998), Apple RGB, ColorMatch RGB, ProPhoto RGB). Documents keep config.ps_profile; non-sRGB documents are shown converted to sRGB (proof.js). New documents get the working RGB space.
+  - Status bar arrow / info text: Show Document Sizes, Document Profile, Document Dimensions, Measurement Scale, Scratch Sizes, Efficiency, Timing (last command, via a do_action wrapper in hook_state), Current Tool, 32-bit Exposure, Save Progress.
 
 ## Known gaps / next
 
