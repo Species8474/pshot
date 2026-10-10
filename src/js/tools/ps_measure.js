@@ -77,8 +77,16 @@ class Ps_measure_class extends Base_tools_class {
 			return;
 		}
 		if (mode == 'ruler') {
-			if (this.ruler && this.near({ x: this.ruler.x1, y: this.ruler.y1 }, p)) this.drag = { end: 1 };
-			else if (this.ruler && this.near({ x: this.ruler.x2, y: this.ruler.y2 }, p)) this.drag = { end: 2 };
+			var r = this.ruler;
+			if (r && r.x3 != null && this.near({ x: r.x3, y: r.y3 }, p)) this.drag = { end: 3 };
+			else if (r && e.altKey && r.x3 == null && (this.near({ x: r.x1, y: r.y1 }, p) || this.near({ x: r.x2, y: r.y2 }, p))) {
+				//protractor: Alt-drag from an end of the line draws the second arm from it
+				if (!this.near({ x: r.x1, y: r.y1 }, p)) Object.assign(r, { x1: r.x2, y1: r.y2, x2: r.x1, y2: r.y1 });
+				Object.assign(r, { x3: r.x1, y3: r.y1 });
+				this.drag = { end: 3 };
+			}
+			else if (r && this.near({ x: r.x1, y: r.y1 }, p)) this.drag = { end: 1 };
+			else if (r && this.near({ x: r.x2, y: r.y2 }, p)) this.drag = { end: 2 };
 			else {
 				this.ruler = { x1: p.x, y1: p.y, x2: p.x, y2: p.y };
 				this.drag = { end: 2 };
@@ -119,7 +127,7 @@ class Ps_measure_class extends Base_tools_class {
 		if (d.end && this.ruler) {
 			if (e.shiftKey) {
 				//constrain to 45 degree steps
-				var ox = d.end == 2 ? this.ruler.x1 : this.ruler.x2, oy = d.end == 2 ? this.ruler.y1 : this.ruler.y2;
+				var ox = d.end != 1 ? this.ruler.x1 : this.ruler.x2, oy = d.end != 1 ? this.ruler.y1 : this.ruler.y2;
 				var a = Math.round(Math.atan2(p.y - oy, p.x - ox) / (Math.PI / 4)) * (Math.PI / 4), l = Math.hypot(p.x - ox, p.y - oy);
 				p = { x: ox + Math.cos(a) * l, y: oy + Math.sin(a) * l };
 			}
@@ -165,6 +173,12 @@ class Ps_measure_class extends Base_tools_class {
 		if (!r) return null;
 		var w = r.x2 - r.x1, h = r.y2 - r.y1;
 		var angle = -Math.atan2(h, w) * 180 / Math.PI;
+		if (r.x3 != null) {
+			//protractor: the angle between the two arms at the first point
+			var w2 = r.x3 - r.x1, h2 = r.y3 - r.y1;
+			var between = Math.abs(Math.atan2(w * h2 - h * w2, w * w2 + h * h2)) * 180 / Math.PI;
+			return { x: Math.round(r.x1), y: Math.round(r.y1), w: null, h: null, a: between, l: Math.hypot(w, h), l2: Math.hypot(w2, h2), protractor: true };
+		}
 		return { x: Math.round(r.x1), y: Math.round(r.y1), w: Math.round(w), h: Math.round(h), a: angle, l: Math.hypot(w, h) };
 	}
 
@@ -175,15 +189,16 @@ class Ps_measure_class extends Base_tools_class {
 			var r = this.ruler;
 			ctx.strokeStyle = '#000';
 			ctx.beginPath();
-			ctx.moveTo(r.x1, r.y1);
-			ctx.lineTo(r.x2, r.y2);
+			ctx.moveTo(r.x2, r.y2);
+			ctx.lineTo(r.x1, r.y1);
+			if (r.x3 != null) ctx.lineTo(r.x3, r.y3);
 			ctx.stroke();
 			ctx.strokeStyle = '#fff';
 			ctx.setLineDash([3 / scale, 3 / scale]);
 			ctx.stroke();
 			ctx.setLineDash([]);
 			ctx.strokeStyle = '#000';
-			for (var [x, y] of [[r.x1, r.y1], [r.x2, r.y2]]) {
+			for (var [x, y] of [[r.x1, r.y1], [r.x2, r.y2]].concat(r.x3 != null ? [[r.x3, r.y3]] : [])) {
 				ctx.beginPath();
 				ctx.moveTo(x - 4 / scale, y); ctx.lineTo(x + 4 / scale, y);
 				ctx.moveTo(x, y - 4 / scale); ctx.lineTo(x, y + 4 / scale);
@@ -228,7 +243,8 @@ class Ps_measure_class extends Base_tools_class {
 	straighten() {
 		var m = this.measure();
 		if (!m || m.l < 1) return;
-		var a = m.a;
+		var r = this.ruler;
+		var a = -Math.atan2(r.y2 - r.y1, r.x2 - r.x1) * 180 / Math.PI;
 		//the nearest of horizontal / vertical
 		var target = Math.round(a / 90) * 90;
 		var rotate = (target - a) * Math.PI / 180;

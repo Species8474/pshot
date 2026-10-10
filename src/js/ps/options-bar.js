@@ -29,11 +29,14 @@ function aa_name() {
 
 function measure_text(key) {
 	var m = measure_tool().measure();
-	var labels = { x: 'X:', y: 'Y:', w: 'W:', h: 'H:', a: 'A:', l: 'L1:' };
-	if (!m) return labels[key];
+	var labels = { x: 'X:', y: 'Y:', w: 'W:', h: 'H:', a: 'A:', l: 'L1:', l2: 'L2:' };
+	if (!m || m[key] == null) return labels[key];
 	if (key == 'a') return 'A: ' + m.a.toFixed(1) + '°';
-	if (key == 'l') return 'L1: ' + m.l.toFixed(2);
-	return labels[key] + ' ' + m[key];
+	//Use Measurement Scale: lengths in the Image > Analysis scale's units
+	var sc = app.GUI.Ps_workspace.Measure_log.scale, f = 1;
+	if (config.TOOL.attributes.use_scale && sc) f = sc.length / sc.pixels;
+	if (key == 'l' || key == 'l2') return labels[key] + ' ' + (m[key] * f).toFixed(2);
+	return labels[key] + ' ' + (f == 1 ? m[key] : (m[key] * f).toFixed(2));
 }
 
 function paths() {
@@ -422,8 +425,8 @@ const LAYOUTS = {
 		{ type: 'readout', text: () => measure_text('h') },
 		{ type: 'readout', text: () => measure_text('a') },
 		{ type: 'readout', text: () => measure_text('l') },
-		{ type: 'readout', text: () => 'L2:' },
-		{ type: 'check', label: 'Use Measurement Scale', value: false },
+		{ type: 'readout', text: () => measure_text('l2') },
+		{ type: 'check', label: 'Use Measurement Scale', bind: 'use_scale', rerender: true },
 		{ type: 'sep' },
 		{ type: 'button', text: 'Straighten Layer', action: () => measure_tool().straighten() },
 		{ type: 'button', text: 'Clear', action: () => measure_tool().clear() },
@@ -1065,6 +1068,7 @@ class Ps_options_bar_class {
 				wrap.querySelector('input').addEventListener('change', (e) => {
 					this.set(c.bind, e.target.checked);
 					config.need_render = true;
+					if (c.rerender) this.render();
 				});
 			}
 			return wrap;

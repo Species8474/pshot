@@ -117,6 +117,7 @@ config.TOOLS = [
 		on_activate: 'on_activate',
 		attributes: {
 			mode: 'ruler',
+			use_scale: false,
 			sample_size: 'Point Sample',
 			note_author: '',
 			note_color: '#ffde4a',
