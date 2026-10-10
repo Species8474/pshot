@@ -799,6 +799,31 @@ class Ps_commands_class {
 	record_measurements() { app.GUI.Ps_workspace.Measure_log.record(); }
 	measurement_scale(kind) { app.GUI.Ps_workspace.Measure_log.set_scale(kind); }
 	data_points(kind) { app.GUI.Ps_workspace.Measure_log.select_points(kind); }
+	/**
+	 * View > Proof Setup > Custom...: Customize Proof Condition
+	 */
+	proof_custom() {
+		var P = app.GUI.Ps_workspace.Proof, c = P.custom || { device: 'U.S. Web Coated (SWOP) v2', preserve: false, paper: false, black: false };
+		var devices = ['U.S. Web Coated (SWOP) v2', 'U.S. Sheetfed Coated v2', 'U.S. Web Uncoated v2', 'Coated FOGRA39 (ISO 12647-2:2004)', 'Japan Color 2001 Coated', 'sRGB IEC61966-2.1', 'Adobe RGB (1998)', 'Apple RGB', 'ColorMatch RGB', 'ProPhoto RGB'];
+		this.POP.show({
+			title: 'Customize Proof Condition',
+			params: [
+				{ name: 'device', title: 'Device to Simulate:', values: devices, value: c.device, type: 'select' },
+				{ name: 'preserve', title: 'Preserve RGB Numbers', value: !!c.preserve },
+				{ name: 'intent', title: 'Rendering Intent:', values: ['Perceptual', 'Saturation', 'Relative Colorimetric', 'Absolute Colorimetric'], value: 'Relative Colorimetric', type: 'select' },
+				{ name: 'bpc', title: 'Black Point Compensation', value: true },
+				{ title: 'Display Options (On-Screen)' },
+				{ name: 'paper', title: 'Simulate Paper Color', value: !!c.paper },
+				{ name: 'black', title: 'Simulate Black Ink', value: !!c.black },
+			],
+			on_finish: (p) => {
+				P.set_custom({ device: p.device, preserve: !!p.preserve, paper: !!p.paper, black: !!p.black || !!p.paper });
+				app.GUI.Ps_workspace.last_tab_label = null;
+				app.GUI.Ps_workspace.render_document_tab();
+			},
+		});
+	}
+
 	proof_setup(s) { app.GUI.Ps_workspace.Proof.set_setup(s); app.GUI.Ps_workspace.render_document_tab(); }
 	proof_colors() { app.GUI.Ps_workspace.Proof.toggle_colors(); app.GUI.Ps_workspace.render_document_tab(); }
 	gamut_warning() { app.GUI.Ps_workspace.Proof.toggle_gamut(); }

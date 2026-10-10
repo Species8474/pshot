@@ -309,7 +309,7 @@ const M = [
 		'Browse 3D Content Online...',
 	]],
 	['View', [
-		['Proof Setup', ['Custom...', '-'].concat([
+		['Proof Setup', ['Custom...|ps/commands.proof_custom', '-'].concat([
 			['Working CMYK', 'cmyk'], ['Working Cyan Plate', 'cyan'], ['Working Magenta Plate', 'magenta'], ['Working Yellow Plate', 'yellow'], ['Working Black Plate', 'black'], ['Working CMY Plates', 'cmy'], '-',
 			['Legacy Macintosh RGB (Gamma 1.8)', 'mac'], ['Internet Standard RGB (sRGB)', 'srgb'], ['Monitor RGB', 'monitor'], '-',
 			['Color Blindness - Protanopia-type', 'protanopia'], ['Color Blindness - Deuteranopia-type', 'deuteranopia'],

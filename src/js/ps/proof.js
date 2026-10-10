@@ -8,10 +8,11 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import { converter, SRGB } from './color-management.js';
 
 const SETUPS = {
 	cmyk: 'CMYK', cyan: 'Cyan Plate', magenta: 'Magenta Plate', yellow: 'Yellow Plate', black: 'Black Plate', cmy: 'CMY Plates',
-	mac: 'Legacy Macintosh RGB', srgb: 'Internet Standard RGB', monitor: 'Monitor RGB', protanopia: 'Protanopia', deuteranopia: 'Deuteranopia',
+	custom: 'Custom', mac: 'Legacy Macintosh RGB', srgb: 'Internet Standard RGB', monitor: 'Monitor RGB', protanopia: 'Protanopia', deuteranopia: 'Deuteranopia',
 };
 
 //[hue degrees, max chroma, lightness of that chroma]
@@ -65,7 +66,8 @@ function cmyk_safe(r, g, b) {
 	var l = lab(r, g, b), ch = Math.hypot(l[1], l[2]);
 	var h = (Math.atan2(l[2], l[1]) * 180 / Math.PI + 360) % 360;
 	var m = max_chroma(l[0], h);
-	if (ch > m && ch > 0) {
+	//neutrals (and rounding noise around them) are always printable
+	if (ch > m + 1 && ch > 2) {
 		//out of gamut: toward the cusp lightness, then the chroma clipped
 		var L2 = l[0] + (cusp(h)[1] - l[0]) * Math.min(1, (ch - m) / ch) * 0.6;
 		var k = Math.min(1, max_chroma(L2, h) / ch);
@@ -119,7 +121,19 @@ class Ps_proof_class {
 	}
 
 	label() {
+		if (this.colors && this.setup == 'custom' && this.custom) return this.custom.device.replace(/ \(.*$/, '');
 		return this.colors ? SETUPS[this.setup] : '';
+	}
+
+	/**
+	 * View > Proof Setup > Custom: { device, preserve, paper, black }
+	 */
+	set_custom(c) {
+		this.custom = c;
+		var rgb = converter(SRGB, c.device), back = converter(c.device, SRGB);
+		this.custom_fns = { to: rgb, back: back };
+		this.set_setup('custom');
+		this.colors = true;
 	}
 
 	set_setup(s) {
@@ -162,11 +176,22 @@ class Ps_proof_class {
 		}
 		if (this.colors) {
 			var s = this.setup;
-			if (s == 'cmyk') {
+			if (s == 'custom' && this.custom) {
+				var cu = this.custom, fns = this.custom_fns || {};
+				if (!fns.to && !fns.back && cu.device != SRGB) {
+					//a press (CMYK) condition: its gamut, then paper white and black ink
+					[r, g, b] = cmyk_safe(r, g, b);
+					if (cu.paper) { r = r * 246 / 255; g = g * 243 / 255; b = b * 232 / 255; }
+					if (cu.black) { r = 26 + r * (1 - 26 / 255); g = 24 + g * (1 - 24 / 255); b = 24 + b * (1 - 24 / 255); }
+				}
+				else if (cu.preserve && fns.back) [r, g, b] = fns.back(r, g, b);
+				else if (fns.to && fns.back) { var t = fns.to(r, g, b); [r, g, b] = fns.back(t[0], t[1], t[2]); }
+			}
+			else if (s == 'cmyk') {
 				var l = lab(r, g, b), ch = Math.hypot(l[1], l[2]);
 				var h = (Math.atan2(l[2], l[1]) * 180 / Math.PI + 360) % 360;
 				var m = max_chroma(l[0], h);
-				if (ch > m && ch > 0) {
+				if (ch > m + 1 && ch > 2) {
 					//out of gamut: toward the cusp lightness, then the chroma clipped
 					var L2 = l[0] + (cusp(h)[1] - l[0]) * Math.min(1, (ch - m) / ch) * 0.6;
 					var k = Math.min(1, max_chroma(L2, h) / ch);
