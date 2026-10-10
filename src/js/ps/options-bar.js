@@ -696,7 +696,9 @@ const LAYOUTS = {
 		{ type: 'button', text: 'Shape', action: () => app.GUI.Ps_workspace.Shapes.from_current_path() },
 		{ type: 'sep' },
 		{ type: 'icon', icon: IC.path_ops, title: 'Path operations', action: (e) => paths().ops_menu(e.currentTarget, config.TOOL.name == 'ps_path_select') },
-		{ type: 'icon', icon: IC.gear, title: 'Set additional pen and path options' },
+		{ type: 'icon', icon: IC.gear, title: 'Set additional pen and path options', action: (e) => options_popup(e.currentTarget, 'ps_pen_opts', (pop) => {
+			pop.innerHTML = '<label class="ps_adj_check"><input type="checkbox" data-k="rubber_band"' + (config.TOOL.attributes.rubber_band ? ' checked' : '') + '> Rubber Band</label>';
+		}) },
 		{ type: 'check', label: 'Auto Add/Delete', bind: 'auto_add' },
 		{ type: 'check', label: 'Align Edges', bind: 'align_edges' },
 	],

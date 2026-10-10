@@ -138,6 +138,7 @@ config.TOOLS = [
 			mode: 'pen',
 			pen_mode: 'Path',
 			auto_add: true,
+			rubber_band: false,
 			align_edges: false,
 			curve_fit: 2,
 			//Freeform Pen > Magnetic: Width, Contrast, Frequency (as the Magnetic Lasso)

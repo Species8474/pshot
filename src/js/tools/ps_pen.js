@@ -44,8 +44,35 @@ class Ps_pen_class extends Base_tools_class {
 			this.mousedown(e);
 		});
 		document.addEventListener('mousemove', (e) => {
-			if (config.TOOL.name != this.name || !this.drag) return;
+			if (config.TOOL.name != this.name) return;
+			if (!this.drag) {
+				//Rubber Band (gear): the next segment follows the pointer
+				if (config.TOOL.attributes.rubber_band && (config.TOOL.attributes.mode || 'pen') == 'pen' && this.paths().drawing) {
+					this.hover = this.world(e);
+					app.GUI.Ps_workspace.Selection.draw_overlay();
+				}
+				return;
+			}
 			this.mousemove(e);
+		});
+		var Selection = app.GUI.Ps_workspace.Selection;
+		Selection.overlays = Selection.overlays || [];
+		Selection.overlays.push({
+			active: () => config.TOOL.name == this.name && config.TOOL.attributes.rubber_band && !this.drag && !!this.hover && this.paths().drawing,
+			draw: (ctx, scale) => {
+				var path = this.paths().active();
+				var sp = path && path.subpaths.length ? path.subpaths[path.subpaths.length - 1] : null;
+				if (!sp || sp.closed || !sp.pts.length) return;
+				var a = sp.pts[sp.pts.length - 1];
+				ctx.save();
+				ctx.lineWidth = 1 / scale;
+				ctx.strokeStyle = '#2a6fd6';
+				ctx.beginPath();
+				ctx.moveTo(a.x, a.y);
+				ctx.bezierCurveTo(a.ox, a.oy, this.hover.x, this.hover.y, this.hover.x, this.hover.y);
+				ctx.stroke();
+				ctx.restore();
+			},
 		});
 		document.addEventListener('mouseup', (e) => {
 			if (config.TOOL.name != this.name || !this.drag) return;
