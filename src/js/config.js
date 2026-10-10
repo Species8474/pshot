@@ -91,7 +91,13 @@ config.TOOLS = [
 		name: 'ps_pcrop',
 		title: 'Perspective Crop',
 		on_activate: 'on_activate',
-		attributes: {},
+		attributes: {
+			pc_w: '',
+			pc_h: '',
+			pc_res: '',
+			pc_res_unit: 'pixels/inch',
+			pc_grid: true,
+		},
 	},
 	{
 		name: 'ps_rotate_view',

@@ -118,9 +118,10 @@ class Ps_pcrop_class extends Base_tools_class {
 		ctx.stroke();
 		//perspective grid
 		var H = homography(q);
+		if (config.TOOL.attributes.pc_grid === false) H = null;
 		ctx.strokeStyle = 'rgba(255,255,255,0.5)';
 		ctx.beginPath();
-		for (var t = 1; t < 3; t++) {
+		for (var t = 1; H && t < 3; t++) {
 			var a = H(t / 3, 0), b = H(t / 3, 1), c2 = H(0, t / 3), d = H(1, t / 3);
 			ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
 			ctx.moveTo(c2.x, c2.y); ctx.lineTo(d.x, d.y);
@@ -169,6 +170,12 @@ class Ps_pcrop_class extends Base_tools_class {
 		var len = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
 		var w = Math.max(1, Math.round((len(q[0], q[1]) + len(q[3], q[2])) / 2));
 		var h = Math.max(1, Math.round((len(q[0], q[3]) + len(q[1], q[2])) / 2));
+		//options bar W x H (x Resolution): the result's size
+		var at = config.TOOL.attributes, ow = parseFloat(at.pc_w), oh = parseFloat(at.pc_h), res = parseFloat(at.pc_res);
+		if (ow > 0 && oh > 0) {
+			w = Math.round(ow);
+			h = Math.round(oh);
+		}
 		var H = homography(q);
 		var actions = [new app.Actions.Prepare_canvas_action('undo')];
 		for (var layer of config.layers) {
@@ -198,10 +205,38 @@ class Ps_pcrop_class extends Base_tools_class {
 		}
 		actions.push(new app.Actions.Update_config_action({ WIDTH: w, HEIGHT: h }));
 		actions.push(new app.Actions.Prepare_canvas_action('do'));
+		if (res > 0) app.GUI.Ps_workspace.Documents.current().ppi = at.pc_res_unit == 'pixels/cm' ? res * 2.54 : res;
 		app.State.do_action(new app.Actions.Bundle_action('perspective_crop', 'Perspective Crop', actions)).then(() => {
 			app.GUI.GUI_preview.zoom_auto(true);
 			app.GUI.Ps_workspace.Selection.draw_overlay();
 		});
+	}
+
+	/**
+	 * options bar: Front Image takes the document's size and resolution
+	 */
+	front_image() {
+		var a = config.TOOL.attributes, doc = app.GUI.Ps_workspace.Documents.current();
+		var ppi = doc && doc.ppi ? doc.ppi : 72;
+		a.pc_w = config.WIDTH;
+		a.pc_h = config.HEIGHT;
+		a.pc_res = a.pc_res_unit == 'pixels/cm' ? Math.round(ppi / 2.54 * 1000) / 1000 : ppi;
+		app.GUI.Ps_workspace.Options_bar.render();
+	}
+
+	clear_size() {
+		var a = config.TOOL.attributes;
+		a.pc_w = '';
+		a.pc_h = '';
+		a.pc_res = '';
+		app.GUI.Ps_workspace.Options_bar.render();
+	}
+
+	swap_size() {
+		var a = config.TOOL.attributes, w = a.pc_w;
+		a.pc_w = a.pc_h;
+		a.pc_h = w;
+		app.GUI.Ps_workspace.Options_bar.render();
 	}
 
 	on_activate() {

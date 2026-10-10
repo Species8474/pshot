@@ -16,6 +16,10 @@ import { picker_button } from './thumb-picker.js';
 import { font_button } from './font-menu.js';
 import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
+function pcrop() {
+	return app.GUI.GUI_tools.tools_modules.ps_pcrop.object;
+}
+
 function measure_tool() {
 	return app.GUI.GUI_tools.tools_modules.ps_measure.object;
 }
@@ -409,14 +413,15 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Finger Painting', bind: 'finger_painting' },
 	],
 	perspective_crop: [
-		{ type: 'num', label: 'W:', width: 50, unit: '' },
-		{ type: 'num', label: 'H:', width: 50, unit: '' },
-		{ type: 'num', label: 'Resolution:', width: 50, unit: '' },
-		{ type: 'select', values: ['pixels/inch', 'pixels/cm'], value: 'pixels/inch' },
-		{ type: 'button', text: 'Front Image' },
-		{ type: 'button', text: 'Clear' },
+		{ type: 'num', label: 'W:', width: 50, bind: 'pc_w', unit: 'px' },
+		{ type: 'icon', icon: SVG('<path d="M4 7h10l-3-3M14 11H4l3 3" fill="none" stroke="currentColor" stroke-width="1.3"/>'), title: 'Swaps height and width', action: () => pcrop().swap_size() },
+		{ type: 'num', label: 'H:', width: 50, bind: 'pc_h', unit: 'px' },
+		{ type: 'num', label: 'Resolution:', width: 50, bind: 'pc_res' },
+		{ type: 'select', values: ['pixels/inch', 'pixels/cm'], bind: 'pc_res_unit', map: { 'pixels/inch': 'pixels/inch', 'pixels/cm': 'pixels/cm' } },
+		{ type: 'button', text: 'Front Image', action: () => pcrop().front_image() },
+		{ type: 'button', text: 'Clear', action: () => pcrop().clear_size() },
 		{ type: 'sep' },
-		{ type: 'check', label: 'Show Grid', value: true },
+		{ type: 'check', label: 'Show Grid', bind: 'pc_grid' },
 	],
 	ruler: [
 		{ type: 'readout', text: () => measure_text('x') },
@@ -1127,7 +1132,8 @@ class Ps_options_bar_class {
 				input.addEventListener('change', () => {
 					var n = parseFloat(input.value);
 					if (!isNaN(n)) this.set(c.bind, c.type == 'pct' ? Math.max(1, Math.min(100, n)) : n);
-					input.value = this.get(c.bind) + unit;
+					else if (input.value.trim() == '' && typeof this.get(c.bind) == 'string') this.set(c.bind, '');
+					input.value = this.get(c.bind) === '' ? '' : this.get(c.bind) + unit;
 				});
 				input.addEventListener('keydown', (e) => {
 					if (e.key == 'ArrowUp' || e.key == 'ArrowDown') {
