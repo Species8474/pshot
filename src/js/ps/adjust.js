@@ -293,12 +293,38 @@ function wire_preset(root, state, presets, defaults, refresh, update) {
 	root.addEventListener('mouseup', (e) => { if (e.target.tagName == 'CANVAS') sel.value = 'Custom'; });
 }
 
+/**
+ * gray canvas -> alpha mask (white, alpha = the gray)
+ */
+function gray_mask(canvas) {
+	var g = canvas.getContext('2d', { willReadFrequently: true }), img = g.getImageData(0, 0, canvas.width, canvas.height), d = img.data;
+	for (var i = 0; i < d.length; i += 4) {
+		var v = Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);
+		d[i] = d[i + 1] = d[i + 2] = 255;
+		d[i + 3] = v;
+	}
+	var out = document.createElement('canvas');
+	out.width = canvas.width;
+	out.height = canvas.height;
+	out.getContext('2d').putImageData(img, 0, 0);
+	return out;
+}
+
 class Ps_adjust_class {
 
 	/**
 	 * prepares the active layer for an adjustment; returns null when impossible
 	 */
 	begin(title, allow_smart) {
+		//Channels panel: a targeted alpha channel takes filters and adjustments (as gray)
+		var CV = app.GUI.Ps_workspace.Channel_view, ai = CV ? CV.alpha_target() : null;
+		if (ai != null) {
+			var am = config.ps_alpha[ai].mask, W = am.width, H = am.height;
+			var gray = new ImageData(W, H), md = am.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+			for (var p = 0; p < md.length; p += 4) { gray.data[p] = gray.data[p + 1] = gray.data[p + 2] = md[p + 3]; gray.data[p + 3] = 255; }
+			var asel = app.GUI.Ps_workspace.Selection;
+			return { layer: config.layer || {}, original: gray, mask: asel.has() ? asel.mask : null, w: W, h: H, pending: false, alpha_index: ai };
+		}
 		ensure_pixel_layer();
 		var layer = config.layer;
 		if (!layer || layer.type != 'image' || !layer.link) {
@@ -357,7 +383,10 @@ class Ps_adjust_class {
 		job.pending = true;
 		requestAnimationFrame(() => {
 			job.pending = false;
-			if (enabled === false) {
+			if (job.alpha_index != null) {
+				app.GUI.Ps_workspace.Channel_view.preview_mask = enabled === false ? null : gray_mask(this.render(job, fn));
+			}
+			else if (enabled === false) {
 				delete job.layer.link_canvas;
 			}
 			else {
@@ -373,6 +402,15 @@ class Ps_adjust_class {
 	}
 
 	finish(job, fn, title, extra) {
+		if (job.alpha_index != null) {
+			//the result's gray becomes the alpha channel
+			app.GUI.Ps_workspace.Channel_view.preview_mask = null;
+			var list = config.ps_alpha.slice();
+			list[job.alpha_index] = Object.assign({}, list[job.alpha_index], { mask: gray_mask(this.render(job, fn)) });
+			return app.State.do_action(new app.Actions.Bundle_action('adjust', title, [
+				new app.Actions.Update_config_action({ ps_alpha: list, ps_alpha_active: job.alpha_index }),
+			])).then(() => app.GUI.Ps_workspace.render_channels(true));
+		}
 		delete job.layer.link_canvas;
 		var canvas = this.render(job, fn);
 		return app.State.do_action(new app.Actions.Bundle_action('adjust', title, [
@@ -381,6 +419,7 @@ class Ps_adjust_class {
 	}
 
 	cancel(job) {
+		if (job.alpha_index != null) app.GUI.Ps_workspace.Channel_view.preview_mask = null;
 		delete job.layer.link_canvas;
 		config.need_render = true;
 	}
@@ -422,7 +461,7 @@ class Ps_adjust_class {
 		if (!job) {
 			return;
 		}
-		if (job.layer.ps_smart) {
+		if (job.layer.ps_smart && job.alpha_index == null) {
 			//CS6: only filters apply to smart objects, as Smart Filters
 			if (!filter_key) {
 				alertify.error('Could not complete the ' + title + ' command because the smart object is not directly editable.');

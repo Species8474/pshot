@@ -138,7 +138,7 @@ class Ps_channel_view_class {
 			ctx.save();
 			ctx.fillStyle = '#000';
 			ctx.fillRect(0, 0, config.WIDTH, config.HEIGHT);
-			ctx.drawImage(this.mask_layer(alphas[s.alpha].mask, 'gray'), 0, 0);
+			ctx.drawImage(this.mask_layer(this.preview_mask || alphas[s.alpha].mask, 'gray'), 0, 0);
 			ctx.restore();
 		}
 		else this.apply_colors(ctx, s);
