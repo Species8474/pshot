@@ -417,7 +417,10 @@ class Ps_transform_class {
 	render_smart(layer, source) {
 		var smart = layer.ps_smart;
 		//Smart Filters run on the source before the transform
-		if (smart.filters && smart.filters.length) source = app.GUI.Ps_workspace.Smart_filters.filtered(Object.assign({}, smart, { source: source }));
+		if (smart.filters && smart.filters.length) {
+			var SF = app.GUI.Ps_workspace.Smart_filters, sm = Object.assign({}, smart, { source: source });
+			source = SF.masked(sm, SF.filtered(sm));
+		}
 		var dx = layer.x - smart.lx, dy = layer.y - smart.ly;
 		var out = doc_canvas();
 		var ctx = out.getContext('2d');

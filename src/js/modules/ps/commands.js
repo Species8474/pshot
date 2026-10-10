@@ -836,6 +836,10 @@ class Ps_commands_class {
 	comps_to_files() { app.GUI.Ps_workspace.Batch.comps_to_files(); }
 	image_processor() { app.GUI.Ps_workspace.Batch.image_processor(); }
 	smart_filters_label() { return app.GUI.Ps_workspace.Smart_filters.label(); }
+	filter_mask_exists() { app.GUI.Ps_workspace.Smart_filters.toggle_mask_exists(); }
+	filter_mask_toggle() { app.GUI.Ps_workspace.Smart_filters.toggle_mask(); }
+	filter_mask_label() { return app.GUI.Ps_workspace.Smart_filters.mask_label(); }
+	filter_mask_toggle_label() { return app.GUI.Ps_workspace.Smart_filters.mask_toggle_label(); }
 	smart_filters_toggle() { app.GUI.Ps_workspace.Smart_filters.toggle_all(); }
 	smart_filters_clear() { app.GUI.Ps_workspace.Smart_filters.clear(); }
 	convert_for_smart_filters() {

@@ -73,8 +73,123 @@ class Ps_smart_filters_class {
 		app.GUI.GUI_layers.render_layers();
 	}
 
+	/**
+	 * the selection in the smart object's source pixels (null: no selection)
+	 */
+	mask_from_selection(layer) {
+		var sel = app.GUI.Ps_workspace.Selection, smart = layer.ps_smart;
+		if (!sel.has() || !sel.mask) return null;
+		var src = smart.source, c = document.createElement('canvas');
+		c.width = src.width;
+		c.height = src.height;
+		var ctx = c.getContext('2d');
+		var dx = layer.x - smart.lx, dy = layer.y - smart.ly, b = smart.box;
+		if (smart.quad || smart.warp) {
+			//distorted: the bounds of the corners stand in for the box
+			var pts = smart.quad || smart.warp, xs = pts.map(p => p.x + dx), ys = pts.map(p => p.y + dy);
+			b = { cx: (Math.min(...xs) + Math.max(...xs)) / 2 - dx, cy: (Math.min(...ys) + Math.max(...ys)) / 2 - dy, w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), angle: 0 };
+		}
+		ctx.translate(src.width / 2, src.height / 2);
+		ctx.scale(src.width / b.w, src.height / b.h);
+		ctx.rotate(-b.angle);
+		ctx.translate(-(b.cx + dx), -(b.cy + dy));
+		ctx.drawImage(sel.mask, 0, 0);
+		return c;
+	}
+
+	white_mask(smart) {
+		var c = document.createElement('canvas');
+		c.width = smart.source.width;
+		c.height = smart.source.height;
+		var ctx = c.getContext('2d');
+		ctx.fillStyle = '#fff';
+		ctx.fillRect(0, 0, c.width, c.height);
+		return c;
+	}
+
+	/**
+	 * the filtered source limited by the filter mask (white: filtered, black: original)
+	 */
+	masked(smart, filtered) {
+		if (!smart.filter_mask || smart.filter_mask_disabled || filtered === smart.source) return filtered;
+		var c = document.createElement('canvas');
+		c.width = smart.source.width;
+		c.height = smart.source.height;
+		var ctx = c.getContext('2d');
+		var top = document.createElement('canvas');
+		top.width = c.width;
+		top.height = c.height;
+		var tctx = top.getContext('2d');
+		tctx.drawImage(filtered, 0, 0);
+		tctx.globalCompositeOperation = 'destination-in';
+		tctx.drawImage(smart.filter_mask, 0, 0);
+		ctx.drawImage(smart.source, 0, 0);
+		//where the mask hides the filters the original pixels show
+		ctx.globalCompositeOperation = 'destination-out';
+		ctx.drawImage(smart.filter_mask, 0, 0);
+		ctx.globalCompositeOperation = 'source-over';
+		var under = document.createElement('canvas');
+		under.width = c.width;
+		under.height = c.height;
+		var uctx = under.getContext('2d');
+		uctx.drawImage(c, 0, 0);
+		uctx.drawImage(top, 0, 0);
+		return under;
+	}
+
+	has_mask(layer) {
+		layer = layer || config.layer;
+		return !!(layer && layer.ps_smart && layer.ps_smart.filter_mask);
+	}
+
+	/**
+	 * Layer > Smart Filter > Add / Delete Filter Mask
+	 */
+	toggle_mask_exists(layer) {
+		layer = layer || config.layer;
+		if (!layer || !layer.ps_smart || !(layer.ps_smart.filters || []).length) return;
+		var smart = Object.assign({}, layer.ps_smart);
+		if (smart.filter_mask) {
+			smart.filter_mask = null;
+			return this.set(layer, smart, 'Delete Filter Mask');
+		}
+		smart.filter_mask = this.mask_from_selection(layer) || this.white_mask(smart);
+		smart.filter_mask_disabled = false;
+		return this.set(layer, smart, 'Add Filter Mask');
+	}
+
+	/**
+	 * Layer > Smart Filter > Disable / Enable Filter Mask (Shift+click its thumbnail)
+	 */
+	toggle_mask(layer) {
+		layer = layer || config.layer;
+		if (!this.has_mask(layer)) return;
+		var smart = Object.assign({}, layer.ps_smart, { filter_mask_disabled: !layer.ps_smart.filter_mask_disabled });
+		return this.set(layer, smart, smart.filter_mask_disabled ? 'Disable Filter Mask' : 'Enable Filter Mask');
+	}
+
+	mask_thumb(canvas, layer) {
+		var m = layer.ps_smart.filter_mask, ctx = canvas.getContext('2d');
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.drawImage(m, 0, 0, canvas.width, canvas.height);
+		if (layer.ps_smart.filter_mask_disabled) {
+			ctx.strokeStyle = '#e00';
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.moveTo(0, 0); ctx.lineTo(canvas.width, canvas.height);
+			ctx.moveTo(canvas.width, 0); ctx.lineTo(0, canvas.height);
+			ctx.stroke();
+		}
+	}
+
 	add(layer, key, title, settings) {
 		var smart = Object.assign({}, layer.ps_smart);
+		//CS6: the first smart filter brings a filter mask (from the selection, or white)
+		if (!(smart.filters || []).length && !smart.filter_mask) {
+			smart.filter_mask = this.mask_from_selection(layer) || this.white_mask(smart);
+			smart.filter_mask_disabled = false;
+		}
 		smart.filters = (smart.filters || []).concat([{ key: key, title: title, settings: JSON.parse(JSON.stringify(settings)), visible: true }]);
 		return this.set(layer, smart, title);
 	}
@@ -125,6 +240,15 @@ class Ps_smart_filters_class {
 		var adjust = app.GUI.modules['ps/commands'].Adjust;
 		adjust.smart_edit = { layer: layer, index: index, base: base };
 		F[f.key]();
+	}
+
+	mask_label() {
+		return this.has_mask() ? 'Delete Filter Mask' : 'Add Filter Mask';
+	}
+
+	mask_toggle_label() {
+		var l = config.layer;
+		return l && l.ps_smart && l.ps_smart.filter_mask_disabled ? 'Enable Filter Mask' : 'Disable Filter Mask';
 	}
 
 	label() {

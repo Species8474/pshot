@@ -676,7 +676,7 @@ class GUI_layers_class {
 				if (value.ps_smart && value.ps_smart.filters && value.ps_smart.filters.length) {
 					var sfs = value.ps_smart.filters, sf_off = !!value.ps_smart.filters_disabled;
 					html += '<div class="ps_effects ps_sfilters' + (sf_off ? ' disabled' : '') + '">';
-					html += '<div class="ps_effect_head"><span class="ps_sf_eye" data-sf-all="' + value.id + '" title="Show or hide all smart filters">' + (sf_off ? '' : ICON.eye) + '</span><span class="ps_sf_mask"></span><span>Smart Filters</span></div>';
+					html += '<div class="ps_effect_head"><span class="ps_sf_eye" data-sf-all="' + value.id + '" title="Show or hide all smart filters">' + (sf_off ? '' : ICON.eye) + '</span>' + (value.ps_smart.filter_mask ? '<canvas class="ps_sf_mask" width="14" height="11" data-sf-mask="' + value.id + '" title="Filter mask (Shift+click to disable)"></canvas>' : '<span class="ps_sf_mask ps_sf_nomask"></span>') + '<span>Smart Filters</span></div>';
 					for (var sfi = sfs.length - 1; sfi >= 0; sfi--) {
 						html += '<div class="ps_effect ps_sfilter" data-sf-layer="' + value.id + '" data-sf-index="' + sfi + '" title="Double-click to edit the filter settings">'
 							+ '<span class="ps_sf_eye" data-sf-eye="1">' + (sfs[sfi].visible === false ? '' : ICON.eye) + '</span><span class="ps_effect_name">' + this.Helper.escapeHtml(sfs[sfi].title) + '</span></div>';
@@ -692,6 +692,14 @@ class GUI_layers_class {
 			e.stopPropagation();
 			SF.toggle_all(this.Base_layers.get_layer(el.dataset.sfAll));
 		}));
+		target.querySelectorAll('canvas[data-sf-mask]').forEach((c) => {
+			var ml = this.Base_layers.get_layer(c.dataset.sfMask);
+			if (ml && ml.ps_smart && ml.ps_smart.filter_mask) SF.mask_thumb(c, ml);
+			c.addEventListener('click', (e) => {
+				e.stopPropagation();
+				if (e.shiftKey) SF.toggle_mask(ml);
+			});
+		});
 		target.querySelectorAll('[data-sf-index]').forEach((row) => {
 			var get = () => [this.Base_layers.get_layer(row.dataset.sfLayer), parseInt(row.dataset.sfIndex)];
 			row.addEventListener('click', (e) => {
