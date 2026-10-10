@@ -19,6 +19,7 @@ import { inpaint } from './../../ps/inpaint.js';
 import Ps_wide_angle_class from './../../ps/wide-angle.js';
 import Ps_digimarc_class from './../../ps/digimarc.js';
 import Ps_vanishing_point_class from './../../ps/vanishing-point.js';
+import { cmyk_safe } from './../../ps/proof.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -1398,6 +1399,116 @@ class Ps_commands_class {
 	mode_duotone() { return this.Adjust.duotone_mode(); }
 	mode_indexed() { if (config.ps_mode != 'Indexed') return this.Adjust.indexed_color(); }
 	color_table() { if (config.ps_mode == 'Indexed') this.Adjust.color_table(); }
+
+	/**
+	 * every layer's colors through `fn(r, g, b) -> [r, g, b]` (pixels, type and shape colors)
+	 */
+	map_layer_colors(fn) {
+		var hexfn = (hex) => {
+			if (!hex || hex[0] != '#' || hex.length < 7) return hex;
+			var c = fn(parseInt(hex.substr(1, 2), 16), parseInt(hex.substr(3, 2), 16), parseInt(hex.substr(5, 2), 16));
+			return '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('') + (hex.length == 9 ? hex.substr(7, 2) : '');
+		};
+		var actions = [];
+		for (var layer of config.layers) {
+			if (layer.type == 'image' && layer.link) {
+				var c = document.createElement('canvas');
+				c.width = layer.width_original;
+				c.height = layer.height_original;
+				var ctx = c.getContext('2d', { willReadFrequently: true });
+				ctx.drawImage(layer.link, 0, 0);
+				var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, cache = new Map();
+				for (var i = 0; i < d.length; i += 4) {
+					var key = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2], out = cache.get(key);
+					if (!out) { out = fn(d[i], d[i + 1], d[i + 2]); cache.set(key, out); }
+					d[i] = out[0]; d[i + 1] = out[1]; d[i + 2] = out[2];
+				}
+				ctx.putImageData(img, 0, 0);
+				actions.push(new app.Actions.Update_layer_image_action(c, layer.id));
+			}
+			else if (layer.type == 'text' && layer.data) {
+				var data = JSON.parse(JSON.stringify(layer.data));
+				data.forEach(line => line.forEach(span => { if (span.meta) { span.meta.fill_color = hexfn(span.meta.fill_color); span.meta.stroke_color = hexfn(span.meta.stroke_color); } }));
+				actions.push(new app.Actions.Update_layer_action(layer.id, { data: data }));
+			}
+			else if (layer.params && (layer.params.fill_color || layer.params.border_color)) {
+				actions.push(new app.Actions.Update_layer_action(layer.id, { params: Object.assign({}, layer.params, { fill_color: hexfn(layer.params.fill_color), border_color: hexfn(layer.params.border_color) }), color: hexfn(layer.color) }));
+			}
+		}
+		return actions;
+	}
+
+	/**
+	 * Image > Mode > CMYK Color: colors outside the press gamut move inside it;
+	 * from then on the document shows (and paints with) CMYK colors only
+	 */
+	async mode_cmyk() {
+		if (config.ps_mode == 'CMYK') return;
+		if (['Bitmap', 'Duotone', 'Indexed'].includes(config.ps_mode)) await this.mode_rgb();
+		var ws = app.GUI.Ps_workspace;
+		if (!ws.cmyk_warned) {
+			ws.cmyk_warned = true;
+			ws.status_message('Converted to CMYK using U.S. Web Coated (SWOP) v2.');
+		}
+		var actions = config.ps_mode == 'Grayscale' ? [] : this.map_layer_colors(cmyk_safe);
+		actions.push(new app.Actions.Update_config_action({ ps_mode: 'CMYK' }));
+		await app.State.do_action(new app.Actions.Bundle_action('mode', 'CMYK Color', actions));
+		ws.enforce_mode();
+	}
+
+	/**
+	 * Image > Mode > Lab Color: every RGB color has a Lab value, so the pixels stay
+	 */
+	async mode_lab() {
+		if (config.ps_mode == 'Lab') return;
+		if (['Bitmap', 'Duotone', 'Indexed'].includes(config.ps_mode)) await this.mode_rgb();
+		await app.State.do_action(new app.Actions.Bundle_action('mode', 'Lab Color', [new app.Actions.Update_config_action({ ps_mode: 'Lab' })]));
+		app.GUI.Ps_workspace.enforce_mode();
+	}
+
+	/**
+	 * Image > Mode > Multichannel: the layers are flattened; the channels become Cyan, Magenta, Yellow spot channels
+	 */
+	async mode_multichannel() {
+		if (config.ps_mode == 'Multichannel') return;
+		if (config.layers.filter(l => l.type != 'ps_group').length > 1) {
+			if (!window.confirm('Flatten image?')) return;
+			await this.flatten_image();
+		}
+		await app.State.do_action(new app.Actions.Bundle_action('mode', 'Multichannel', [new app.Actions.Update_config_action({ ps_mode: 'Multichannel' })]));
+		app.GUI.Ps_workspace.enforce_mode();
+	}
+
+	/**
+	 * Image > Mode > 8 / 16 / 32 Bits/Channel
+	 */
+	async mode_depth(bits) {
+		bits = parseInt(bits) || 8;
+		if ((config.ps_depth || 8) == bits) return;
+		if (bits != 8 && ['Bitmap', 'Indexed', 'Duotone'].includes(config.ps_mode)) {
+			app.GUI.Ps_workspace.status_message('16 and 32 Bits/Channel need RGB, CMYK, Lab or Grayscale.');
+			return;
+		}
+		await app.State.do_action(new app.Actions.Bundle_action('mode', bits + ' Bits/Channel', [new app.Actions.Update_config_action({ ps_depth: bits })]));
+		config.need_render = true;
+	}
+
+	/**
+	 * View > 32-bit Preview Options: exposure and gamma of the display
+	 */
+	preview_32bit() {
+		var P = app.GUI.Ps_workspace.Proof;
+		this.POP.show({
+			title: '32-bit Preview Options',
+			params: [
+				{ name: 'method', title: 'Method:', values: ['Exposure and Gamma', 'Highlight Compression'], value: 'Exposure and Gamma', type: 'select' },
+				{ name: 'exposure', title: 'Exposure:', value: P.hdr_exposure || 0, range: [-20, 20], step: 0.1 },
+				{ name: 'gamma', title: 'Gamma:', value: P.hdr_gamma || 1, range: [0.1, 9.99], step: 0.01 },
+			],
+			on_change: (p) => { P.hdr_exposure = parseFloat(p.exposure) || 0; P.hdr_gamma = parseFloat(p.gamma) || 1; config.need_render = true; },
+			on_finish: (p) => { P.hdr_exposure = parseFloat(p.exposure) || 0; P.hdr_gamma = parseFloat(p.gamma) || 1; config.need_render = true; },
+		});
+	}
 
 	async mode_rgb() {
 		if (!config.ps_mode || config.ps_mode == 'RGB') return;

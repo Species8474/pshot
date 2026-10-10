@@ -160,6 +160,7 @@ class Ps_documents_class {
 			ps_alpha: config.ps_alpha,
 			ps_alpha_active: config.ps_alpha_active,
 			ps_mode: config.ps_mode,
+			ps_depth: config.ps_depth,
 			ps_color_table: config.ps_color_table,
 			ps_fx_hidden: config.ps_fx_hidden,
 			ps_comps: config.ps_comps,
@@ -194,6 +195,7 @@ class Ps_documents_class {
 		commands.undo_toggle_index = state.undo_toggle_index;
 		commands.last_selection = state.last_selection;
 		config.ps_mode = state.ps_mode || 'RGB';
+		config.ps_depth = state.ps_depth || 8;
 		config.ps_color_table = state.ps_color_table || null;
 		config.ps_fx_hidden = !!state.ps_fx_hidden;
 		config.ps_comps = state.ps_comps || [];
@@ -279,6 +281,7 @@ class Ps_documents_class {
 		config.ps_alpha = [];
 		config.ps_alpha_active = -1;
 		config.ps_mode = 'RGB';
+		config.ps_depth = 8;
 		config.ps_color_table = null;
 		config.ps_fx_hidden = false;
 		config.ps_comps = [];

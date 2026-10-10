@@ -57,6 +57,43 @@ function max_chroma(L, h) {
 	return c[0] * Math.max(0, 1 - d * d);
 }
 
+/**
+ * a color moved into the (U.S. Web Coated SWOP-like) CMYK gamut
+ */
+function cmyk_safe(r, g, b) {
+	var l = lab(r, g, b), ch = Math.hypot(l[1], l[2]);
+	var h = (Math.atan2(l[2], l[1]) * 180 / Math.PI + 360) % 360;
+	var m = max_chroma(l[0], h);
+	if (ch > m && ch > 0) {
+		//out of gamut: toward the cusp lightness, then the chroma clipped
+		var L2 = l[0] + (cusp(h)[1] - l[0]) * Math.min(1, (ch - m) / ch) * 0.6;
+		var k = Math.min(1, max_chroma(L2, h) / ch);
+		return lab_rgb(L2, l[1] * k, l[2] * k);
+	}
+	return [r, g, b];
+}
+
+/**
+ * a channel's grayscale value (0..255) for the Channels panel and Duplicate Channel:
+ * 0 1 2 = R G B, c m y k = ink (white = none), L a b = Lab, gray = luminosity
+ */
+function channel_value(r, g, b, key) {
+	if (key === 0 || key === '0') return r;
+	if (key === 1 || key === '1') return g;
+	if (key === 2 || key === '2') return b;
+	if (key == 'c' || key == 'm' || key == 'y' || key == 'k') {
+		var k = 1 - Math.max(r, g, b) / 255, d = 1 - k || 1;
+		var ink = key == 'k' ? k : (1 - { c: r, m: g, y: b }[key] / 255 - k) / d;
+		return Math.round(255 * (1 - ink));
+	}
+	if (key == 'L' || key == 'a' || key == 'b') {
+		var l = lab(r, g, b);
+		if (key == 'L') return Math.round(l[0] / 100 * 255);
+		return Math.max(0, Math.min(255, Math.round(128 + (key == 'a' ? l[1] : l[2]))));
+	}
+	return Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+}
+
 class Ps_proof_class {
 
 	constructor() {
@@ -64,10 +101,19 @@ class Ps_proof_class {
 		this.colors = false;
 		this.gamut = false;
 		this.cache = new Map();
+		this.hdr_exposure = 0;
+		this.hdr_gamma = 1;
 	}
 
 	active() {
-		return this.colors || this.gamut;
+		return this.colors || this.gamut || this.forced();
+	}
+
+	/**
+	 * CMYK documents always show CMYK colors; 32-bit documents their preview exposure
+	 */
+	forced() {
+		return config.ps_mode == 'CMYK' || (config.ps_depth == 32 && (this.hdr_exposure || this.hdr_gamma != 1));
 	}
 
 	label() {
@@ -96,6 +142,14 @@ class Ps_proof_class {
 	 * one color -> packed display color
 	 */
 	convert(r, g, b) {
+		if (config.ps_depth == 32 && (this.hdr_exposure || this.hdr_gamma != 1)) {
+			//View > 32-bit Preview Options: exposure (stops) and gamma
+			var e = Math.pow(2, this.hdr_exposure || 0), gm = 1 / (this.hdr_gamma || 1);
+			r = gamma(Math.pow(Math.min(1, LIN[r] * e), gm));
+			g = gamma(Math.pow(Math.min(1, LIN[g] * e), gm));
+			b = gamma(Math.pow(Math.min(1, LIN[b] * e), gm));
+		}
+		if (config.ps_mode == 'CMYK') [r, g, b] = cmyk_safe(r, g, b);
 		if (this.gamut) {
 			var lg = lab(r, g, b), C = Math.hypot(lg[1], lg[2]);
 			var hg = (Math.atan2(lg[2], lg[1]) * 180 / Math.PI + 360) % 360;
@@ -142,6 +196,9 @@ class Ps_proof_class {
 	 */
 	apply(ctx) {
 		if (!this.active()) return;
+		//the cache holds results for one set of settings
+		var key = config.ps_mode + '|' + config.ps_depth + '|' + this.hdr_exposure + '|' + this.hdr_gamma;
+		if (this.cache_key !== key) { this.cache.clear(); this.cache_key = key; }
 		var t = ctx.getTransform(), cv = ctx.canvas;
 		var x0 = Math.max(0, Math.floor(t.e)), y0 = Math.max(0, Math.floor(t.f));
 		var x1 = Math.min(cv.width, Math.ceil(t.e + config.WIDTH * t.a)), y1 = Math.min(cv.height, Math.ceil(t.f + config.HEIGHT * t.d));
@@ -161,3 +218,4 @@ class Ps_proof_class {
 }
 
 export default Ps_proof_class;
+export { cmyk_safe, channel_value, lab };

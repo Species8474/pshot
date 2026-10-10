@@ -98,8 +98,8 @@ const M = [
 	]],
 	['Image', [
 		['Mode', [
-			{ name: 'Bitmap...', checked: 'mode_bitmap', target: 'ps/commands.mode_bitmap' }, { name: 'Grayscale', checked: 'mode_gray', target: 'ps/commands.mode_grayscale' }, { name: 'Duotone...', checked: 'mode_duotone', target: 'ps/commands.mode_duotone' }, { name: 'Indexed Color...', checked: 'mode_indexed', target: 'ps/commands.mode_indexed' }, { name: 'RGB Color', checked: 'mode_rgb', target: 'ps/commands.mode_rgb' }, 'CMYK Color', 'Lab Color', 'Multichannel', '-',
-			{ name: '8 Bits/Channel', checked: true, target: 'ps/commands.noop' }, '16 Bits/Channel', '32 Bits/Channel', '-', 'Color Table...|ps/commands.color_table',
+			{ name: 'Bitmap...', checked: 'mode_bitmap', target: 'ps/commands.mode_bitmap' }, { name: 'Grayscale', checked: 'mode_gray', target: 'ps/commands.mode_grayscale' }, { name: 'Duotone...', checked: 'mode_duotone', target: 'ps/commands.mode_duotone' }, { name: 'Indexed Color...', checked: 'mode_indexed', target: 'ps/commands.mode_indexed' }, { name: 'RGB Color', checked: 'mode_rgb', target: 'ps/commands.mode_rgb' }, { name: 'CMYK Color', checked: 'mode_cmyk', target: 'ps/commands.mode_cmyk' }, { name: 'Lab Color', checked: 'mode_lab', target: 'ps/commands.mode_lab' }, { name: 'Multichannel', checked: 'mode_multi', target: 'ps/commands.mode_multichannel' }, '-',
+			{ name: '8 Bits/Channel', checked: 'depth:8', target: 'ps/commands.mode_depth', parameter: 8 }, { name: '16 Bits/Channel', checked: 'depth:16', target: 'ps/commands.mode_depth', parameter: 16 }, { name: '32 Bits/Channel', checked: 'depth:32', target: 'ps/commands.mode_depth', parameter: 32 }, '-', 'Color Table...|ps/commands.color_table',
 		]],
 		'-',
 		['Adjustments', [
@@ -318,7 +318,7 @@ const M = [
 		{ name: 'Gamut Warning', shortcut: 'Shift+Ctrl+Y', target: 'ps/commands.gamut_warning', checked: 'gamut_warning' },
 		['Pixel Aspect Ratio', ['Custom Pixel Aspect Ratio...', 'Delete Pixel Aspect Ratio...', 'Reset Pixel Aspect Ratios...', '-', 'Square']],
 		'Pixel Aspect Ratio Correction',
-		'32-bit Preview Options...',
+		'32-bit Preview Options...|ps/commands.preview_32bit',
 		'-',
 		'Zoom In|Ctrl++|view/zoom.in',
 		'Zoom Out|Ctrl+-|view/zoom.out',

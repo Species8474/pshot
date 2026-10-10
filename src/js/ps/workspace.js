@@ -61,6 +61,7 @@ import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
 import { install_panel_context_menus, delete_state } from './panel-context.js';
 import Ps_float_windows_class from './float-windows.js';
+import { cmyk_safe, channel_value } from './proof.js';
 import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
@@ -610,6 +611,15 @@ class Ps_workspace_class {
 			};
 			if (config.COLOR && gray(config.COLOR) != config.COLOR.toLowerCase().substr(0, 7)) this.set_fg(gray(config.COLOR));
 			if (config.BG_COLOR && gray(config.BG_COLOR) != config.BG_COLOR.toLowerCase().substr(0, 7)) config.BG_COLOR = gray(config.BG_COLOR);
+		}
+		if (config.ps_mode == 'CMYK') {
+			//CS6: the color picker gives in-gamut colors in a CMYK document
+			var safe = (hex) => {
+				var c = cmyk_safe(parseInt(hex.substr(1, 2), 16), parseInt(hex.substr(3, 2), 16), parseInt(hex.substr(5, 2), 16));
+				return '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+			};
+			if (config.COLOR && config.COLOR[0] == '#' && safe(config.COLOR) != config.COLOR.toLowerCase().substr(0, 7)) this.set_fg(safe(config.COLOR));
+			if (config.BG_COLOR && config.BG_COLOR[0] == '#' && safe(config.BG_COLOR) != config.BG_COLOR.toLowerCase().substr(0, 7)) config.BG_COLOR = safe(config.BG_COLOR);
 		}
 		if (this.channels_mode !== config.ps_mode) {
 			this.channels_mode = config.ps_mode;
@@ -1184,6 +1194,12 @@ class Ps_workspace_class {
 			case 'mode_bitmap': return config.ps_mode == 'Bitmap';
 			case 'mode_duotone': return config.ps_mode == 'Duotone';
 			case 'mode_indexed': return config.ps_mode == 'Indexed';
+			case 'mode_cmyk': return config.ps_mode == 'CMYK';
+			case 'mode_lab': return config.ps_mode == 'Lab';
+			case 'mode_multi': return config.ps_mode == 'Multichannel';
+			case 'depth:8': return (config.ps_depth || 8) == 8;
+			case 'depth:16': return config.ps_depth == 16;
+			case 'depth:32': return config.ps_depth == 32;
 			case 'screen_mode_standard': return this.screen_mode == 'standard';
 			case 'screen_mode_menu': return this.screen_mode == 'menu';
 			case 'screen_mode_full': return this.screen_mode == 'full';
@@ -1294,7 +1310,7 @@ class Ps_workspace_class {
 	}
 
 	tab_label(name, zoom, layer) {
-		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + ({ Grayscale: 'Gray', Indexed: 'Index', Bitmap: 'Bitmap', Duotone: 'Duotone' }[config.ps_mode] || 'RGB') + (config.ps_mode == 'Indexed' || config.ps_mode == 'Bitmap' ? '' : '/8') + (this.Proof && this.Proof.label() ? '/' + this.Proof.label() : '') + ')';
+		return this.Helper.escapeHtml(name) + ' @ ' + zoom + ' (' + this.Helper.escapeHtml(layer) + ', ' + ({ Grayscale: 'Gray', Indexed: 'Index', Bitmap: 'Bitmap', Duotone: 'Duotone', CMYK: 'CMYK', Lab: 'Lab', Multichannel: 'Multichannel' }[config.ps_mode] || 'RGB') + (config.ps_mode == 'Indexed' || config.ps_mode == 'Bitmap' ? '' : '/' + (config.ps_depth || 8)) + (this.Proof && this.Proof.label() ? '/' + this.Proof.label() : '') + ')';
 	}
 
 	render_document_tab() {
@@ -1681,7 +1697,12 @@ class Ps_workspace_class {
 			delete el.dataset.ready;
 		}
 		if (!el.dataset.ready) {
-			var rows = config.ps_mode == 'Grayscale' ? [['Gray', 'Ctrl+2', null]] : [['RGB', 'Ctrl+2', null], ['Red', 'Ctrl+3', 0], ['Green', 'Ctrl+4', 1], ['Blue', 'Ctrl+5', 2]];
+			var rows = {
+				Grayscale: [['Gray', 'Ctrl+2', null]],
+				CMYK: [['CMYK', 'Ctrl+2', null], ['Cyan', 'Ctrl+3', 'c'], ['Magenta', 'Ctrl+4', 'm'], ['Yellow', 'Ctrl+5', 'y'], ['Black', 'Ctrl+6', 'k']],
+				Lab: [['Lab', 'Ctrl+2', null], ['Lightness', 'Ctrl+3', 'L'], ['a', 'Ctrl+4', 'a'], ['b', 'Ctrl+5', 'b']],
+				Multichannel: [['Cyan', 'Ctrl+1', 'c'], ['Magenta', 'Ctrl+2', 'm'], ['Yellow', 'Ctrl+3', 'y']],
+			}[config.ps_mode] || [['RGB', 'Ctrl+2', null], ['Red', 'Ctrl+3', 0], ['Green', 'Ctrl+4', 1], ['Blue', 'Ctrl+5', 2]];
 			var html = '';
 			for (var row of rows) {
 				html += '<div class="ps_channel_row' + (row[0] == 'RGB' ? '' : '') + ' active">'
@@ -1755,11 +1776,11 @@ class Ps_workspace_class {
 				ctx.drawImage(source, ox, oy);
 				return;
 			}
-			var c = parseInt(canvas.dataset.channel);
+			var c = canvas.dataset.channel;
 			var out = ctx.createImageData(source.width, source.height);
 			for (var i = 0; i < data.data.length; i += 4) {
 				var a = data.data[i + 3] / 255;
-				var v = Math.round(data.data[i + c] * a + 255 * (1 - a));
+				var v = Math.round(channel_value(data.data[i], data.data[i + 1], data.data[i + 2], c) * a + 255 * (1 - a));
 				out.data[i] = out.data[i + 1] = out.data[i + 2] = v;
 				out.data[i + 3] = 255;
 			}

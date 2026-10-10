@@ -239,6 +239,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Fix: dialog rows with a title and no value (group labels in Stroke, Duplicate, Save Selection...) printed "undefined".
   - Help > About pshot: CS6-style splash (click/Esc closes) with the miniPaint MIT credit and a not-affiliated-with-Adobe note.
   - View > Show > Count (count markers); Type > Save / Load Default Type Styles (saved in the browser, merged into the document's styles).
+  - Image > Mode > CMYK Color (pixels and type/shape colors moved into the CMYK gamut, display and FG/BG kept in gamut via proof.js cmyk_safe, Cyan/Magenta/Yellow/Black channels), Lab Color (Lightness/a/b channels, pixels unchanged), Multichannel (flattens; Cyan/Magenta/Yellow), 8/16/32 Bits/Channel (config.ps_depth: label, menu checks, 32-bit Preview Options exposure/gamma on display). File > New has Color Mode and depth. Data stays 8-bit RGB internally; files are written as RGB.
 
 ## Known gaps / next
 
