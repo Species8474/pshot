@@ -11,6 +11,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import Patterns from './patterns.js';
+import { enhance_pattern_select } from './thumb-picker.js';
 import { PRESETS, render_centered, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
 
 const STYLES = ['Linear', 'Radial', 'Angle', 'Reflected', 'Diamond'];
@@ -151,6 +152,7 @@ class Ps_fill_layers_class {
 			title: f.kind == 'gradient' ? 'Gradient Fill' : 'Pattern Fill',
 			params: params,
 			on_load: (p, pop) => {
+				enhance_pattern_select(pop.el.querySelector('#pop_data_pattern'));
 				if (f.kind != 'gradient') return;
 				var preview = pop.el.querySelector('#gf_preview');
 				var paint = () => { preview.style.background = gradient_css(f.gradient); };

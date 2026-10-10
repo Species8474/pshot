@@ -25,6 +25,7 @@ import Ps_zoomify_class from './../../ps/zoomify.js';
 import { copy_css } from './../../ps/copy-css.js';
 import zoomView from './../../libs/zoomView.js';
 import { preview_size, set_preview_size } from './../../ps/font-menu.js';
+import { enhance_pattern_select } from './../../ps/thumb-picker.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -308,6 +309,9 @@ class Ps_commands_class {
 				{name: 'pattern', title: 'Custom Pattern:', value: Patterns.names()[0], values: Patterns.names(), type: 'select'},
 				{name: 'opacity', title: 'Opacity (%):', value: 100, range: [1, 100]},
 			],
+			on_load: function (params, pop) {
+				enhance_pattern_select(pop.el.querySelector('#pop_data_pattern'));
+			},
 			on_finish: function (params) {
 				var colors = {
 					'Foreground Color': config.COLOR,

@@ -11,6 +11,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import Patterns from './patterns.js';
+import { enhance_pattern_select } from './thumb-picker.js';
 import { render_centered, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
 
 const BLEND = {
@@ -832,6 +833,7 @@ class Ps_styles_class {
 			}
 		}
 		panel.innerHTML = html;
+		panel.querySelectorAll('select[data-field="pattern"], select[data-field="texture_pattern"]').forEach(enhance_pattern_select);
 		var target = () => key == 'blending' ? null : (SUB[key] ? state.styles.bevel : state.styles[key]);
 		panel.querySelectorAll('[data-field]').forEach((input) => {
 			var update = () => {

@@ -109,4 +109,26 @@ function open_picker(kind, anchor, value, on_pick) {
 	setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
 }
 
-export { picker_button, pattern_thumb, shape_thumb };
+/**
+ * a pattern <select> in a dialog shown as the CS6 pattern picker (the select stays, hidden, as the value)
+ */
+function enhance_pattern_select(select) {
+	if (!select || select.dataset.picker) return;
+	select.dataset.picker = '1';
+	select.style.display = 'none';
+	var place = () => {
+		var old = select.parentNode.querySelector('.ps_opt_thumbpick[data-for]');
+		if (old) old.remove();
+		var b = picker_button('pattern', select.value, !select.disabled, (v) => {
+			select.value = v;
+			select.dispatchEvent(new Event('change', { bubbles: true }));
+			select.dispatchEvent(new Event('input', { bubbles: true }));
+			place();
+		});
+		b.dataset.for = '1';
+		select.parentNode.insertBefore(b, select);
+	};
+	place();
+}
+
+export { picker_button, pattern_thumb, shape_thumb, enhance_pattern_select };
