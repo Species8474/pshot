@@ -192,23 +192,125 @@ class Ps_styles_class {
 	 * Bevel & Emboss: shading of a height map built from the layer's alpha.
 	 * returns { inner: [highlight, shadow], outer: [highlight, shadow] } canvases
 	 */
-	bevel(content, e, scale) {
+	/**
+	 * Euclidean distance (px) from each pixel to the other side of the shape's
+	 * edge: [inside -> outside, outside -> inside] (Felzenszwalb & Huttenlocher)
+	 */
+	edge_distance(shape, w, h) {
+		var INF = 1e20;
+		var edt1 = (f, n) => {
+			var d = new Float64Array(n), v = new Int32Array(n), z = new Float64Array(n + 1), k = 0;
+			v[0] = 0; z[0] = -INF; z[1] = INF;
+			for (var q = 1; q < n; q++) {
+				var s2 = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+				while (s2 <= z[k]) { k--; s2 = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+				k++; v[k] = q; z[k] = s2; z[k + 1] = INF;
+			}
+			k = 0;
+			for (q = 0; q < n; q++) { while (z[k + 1] < q) k++; d[q] = (q - v[k]) * (q - v[k]) + f[v[k]]; }
+			return d;
+		};
+		var edt = (inside_target) => {
+			var g = new Float64Array(w * h);
+			for (var i = 0; i < w * h; i++) g[i] = (shape[i] > 0.5) == inside_target ? 0 : INF;
+			var col = new Float64Array(h);
+			for (var x = 0; x < w; x++) {
+				for (var y = 0; y < h; y++) col[y] = g[y * w + x];
+				var dc = edt1(col, h);
+				for (y = 0; y < h; y++) g[y * w + x] = dc[y];
+			}
+			var row = new Float64Array(w), out = new Float32Array(w * h);
+			for (y = 0; y < h; y++) {
+				for (x = 0; x < w; x++) row[x] = g[y * w + x];
+				var dr = edt1(row, w);
+				for (x = 0; x < w; x++) out[y * w + x] = Math.sqrt(dr[x]);
+			}
+			return out;
+		};
+		//inside pixels: distance to the nearest outside pixel, and the other way round
+		return [edt(false), edt(true)];
+	}
+
+	/**
+	 * a float box blur (radius r, `passes` times) that keeps the height field smooth
+	 */
+	smooth_field(a, w, h, r, passes) {
+		var tmp = new Float32Array(w * h);
+		for (var p = 0; p < passes; p++) {
+			for (var y = 0; y < h; y++) {
+				var acc = 0, row = y * w;
+				for (var x = -r; x <= r; x++) acc += a[row + Math.min(w - 1, Math.max(0, x))];
+				for (x = 0; x < w; x++) {
+					tmp[row + x] = acc / (2 * r + 1);
+					acc += a[row + Math.min(w - 1, x + r + 1)] - a[row + Math.max(0, x - r)];
+				}
+			}
+			for (x = 0; x < w; x++) {
+				acc = 0;
+				for (y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+				for (y = 0; y < h; y++) {
+					a[y * w + x] = acc / (2 * r + 1);
+					acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+				}
+			}
+		}
+		return a;
+	}
+
+	bevel(content, e, scale, stroke) {
 		var w = content.width, h = content.height;
 		var size = Math.max(1, e.size * scale);
 		var style = e.style || 'Inner Bevel';
+		var technique = e.technique || 'Smooth';
 		var shape = this.alpha_of(content);
+		var source = content, ring = null;
+		if (style == 'Stroke Emboss') {
+			//the bevel follows the outer edge of the Stroke effect; without a stroke there is nothing to emboss
+			if (!stroke) return [canvas_like(content), canvas_like(content)];
+			var ssz = (stroke.size || 3) * scale, pos = stroke.position || 'Outside';
+			var grow = pos == 'Inside' ? 0 : (pos == 'Center' ? ssz / 2 : ssz);
+			var dd = this.edge_distance(shape, w, h)[1];
+			var grown = new Float32Array(w * h);
+			ring = new Float32Array(w * h);
+			for (var gi = 0; gi < w * h; gi++) {
+				grown[gi] = shape[gi] > 0.5 || dd[gi] <= grow ? 1 : 0;
+				ring[gi] = grown[gi] && (shape[gi] <= 0.5 || pos != 'Outside') ? 1 : 0;
+			}
+			source = this.from_alpha(w, h, grown, '#000000', 1);
+			shape = grown;
+		}
 		var height;
-		if (style == 'Inner Bevel') {
+		if (technique == 'Chisel Hard' || technique == 'Chisel Soft') {
+			//straight ramps from the edge (Chisel); Soft rounds them a little
+			var dists = this.edge_distance(shape, w, h), din = dists[0], dout = dists[1];
+			height = new Float32Array(w * h);
+			for (var di = 0; di < w * h; di++) {
+				var inn = Math.min(1, din[di] / size), out = Math.min(1, dout[di] / size);
+				if (style == 'Inner Bevel' || style == 'Stroke Emboss') height[di] = shape[di] > 0.5 ? inn : 0;
+				else if (style == 'Outer Bevel') height[di] = shape[di] > 0.5 ? 1 : 1 - out;
+				else if (style == 'Pillow Emboss') height[di] = shape[di] > 0.5 ? inn : out;
+				else height[di] = shape[di] > 0.5 ? 0.5 + inn / 2 : 0.5 - out / 2;
+			}
+			if (technique == 'Chisel Soft') {
+				var hc = this.from_alpha(w, h, height, '#000000', 1);
+				height = this.alpha_of(this.blurred(hc, Math.max(0.5, size / 8)));
+			}
+		}
+		else if (style == 'Inner Bevel') {
 			//ramp inside the edge: blur of the shape, kept inside
 			height = this.alpha_of(this.blurred(this.inverted(content), size / 2));
 			for (var i = 0; i < height.length; i++) height[i] = 1 - height[i];
 		}
-		else if (style == 'Outer Bevel') {
+		else if (style == 'Pillow Emboss') {
+			//the edge is pressed in: the ramp rises both into the shape and away from it
 			height = this.alpha_of(this.blurred(content, size / 2));
+			for (var pi = 0; pi < height.length; pi++) height[pi] = Math.abs(height[pi] - 0.5) * 2;
 		}
 		else {
-			height = this.alpha_of(this.blurred(content, size / 2));
+			height = this.alpha_of(this.blurred(source, size / 2));
 		}
+		//8-bit and pixel-grid steps in the height would show as ridges: smooth it a little
+		this.smooth_field(height, w, h, 1, 2);
 		//Contour: reshape the edge profile (Range 50% = the full contour)
 		if (e.contour_on && CONTOURS[e.contour] && e.contour != 'Linear') {
 			var cf = CONTOURS[e.contour], mixk = Math.min(1, (e.contour_range == null ? 50 : e.contour_range) / 50);
@@ -236,7 +338,7 @@ class Ps_styles_class {
 				var len = Math.sqrt(gx * gx + gy * gy + 1);
 				var shade = (-gx * lx - gy * ly + lz) / len - lz;
 				var inside = shape[p];
-				var weight = style == 'Inner Bevel' ? inside : (style == 'Outer Bevel' ? 1 - inside : 1);
+				var weight = style == 'Inner Bevel' ? inside : (style == 'Outer Bevel' ? 1 - inside : (ring ? Math.max(ring[p], inside) : 1));
 				if (shade > 0) hi[p] = Math.min(1, shade / (1 - lz + 0.001)) * weight;
 				else sh[p] = Math.min(1, -shade / (lz + 0.001)) * weight;
 			}
@@ -313,7 +415,7 @@ class Ps_styles_class {
 			ctx.drawImage(glow, 0, 0);
 		}
 		//outer part of Bevel & Emboss
-		var bevel = on('bevel') ? this.bevel(content, s.bevel, scale) : null;
+		var bevel = on('bevel') ? this.bevel(content, s.bevel, scale, s.stroke && s.stroke.enabled ? s.stroke : null) : null;
 		if (bevel && (s.bevel.style || 'Inner Bevel') != 'Inner Bevel') {
 			var outside = (c) => {
 				var o = canvas_like(content);
@@ -456,7 +558,7 @@ class Ps_styles_class {
 		var below = [], above = [];
 		if (on('drop_shadow')) below.push([name + "'s Drop Shadow", only('drop_shadow'), s.drop_shadow.blend || 'Multiply']);
 		if (on('outer_glow')) below.push([name + "'s Outer Glow", only('outer_glow'), s.outer_glow.blend || 'Screen']);
-		var bevel = on('bevel') ? this.bevel(content, s.bevel, 1) : null;
+		var bevel = on('bevel') ? this.bevel(content, s.bevel, 1, s.stroke && s.stroke.enabled ? s.stroke : null) : null;
 		var style = bevel ? (s.bevel.style || 'Inner Bevel') : '';
 		var cut = (c, keep_inside) => {
 			var o = canvas_like(content), octx = o.getContext('2d');
