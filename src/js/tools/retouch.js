@@ -2,14 +2,14 @@
  * pshot - CS6 retouching brushes on pixel layers:
  *   mode 'smudge'       Smudge Tool: drags color along the stroke (Strength)
  *   mode 'spot_healing' Spot Healing Brush: fills the brushed spot from its
- *                       surroundings (diffusion inpainting), blending the edge
+ *                       surroundings (Type: Content-Aware, Proximity Match, Create Texture)
  */
 
 import app from './../app.js';
 import config from './../config.js';
 import Base_tools_class from './../core/base-tools.js';
 import Base_layers_class from './../core/base-layers.js';
-import { inpaint } from './../ps/inpaint.js';
+import { content_aware, proximity_match, create_texture } from './../ps/inpaint.js';
 import { alert_box } from './../ps/pixel-layer.js';
 import Patterns from './../ps/patterns.js';
 import { blend_rgb } from './../ps/blend.js';
@@ -1039,7 +1039,7 @@ class Retouch_class extends Base_tools_class {
 	}
 
 	/**
-	 * diffusion inpainting of the marked pixels from their unmarked neighbours
+	 * the marked pixels filled from their surroundings by the options bar Type
 	 */
 	heal() {
 		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
@@ -1048,6 +1048,8 @@ class Retouch_class extends Base_tools_class {
 		ctx.drawImage(config.layer.link, 0, 0);
 		var mode = this.getParams().heal_mode || 'Normal';
 		var before = mode != 'Normal' && mode != 'Replace' ? ctx.getImageData(0, 0, this.canvas.width, this.canvas.height) : null;
+		//Type: Proximity Match, Create Texture or Content-Aware
+		var fill = { 'Proximity Match': proximity_match, 'Create Texture': create_texture }[this.getParams().spot_type] || content_aware;
 		if (this.below) {
 			//Sample All Layers: heal what is seen (this layer over the others), keep only the spot
 			var seen = document.createElement('canvas');
@@ -1057,7 +1059,7 @@ class Retouch_class extends Base_tools_class {
 			sctx.drawImage(this.below, 0, 0);
 			sctx.drawImage(config.layer.link, 0, 0);
 			if (before) before = sctx.getImageData(0, 0, seen.width, seen.height);
-			inpaint(seen, this.spot);
+			fill(seen, this.spot);
 			var healed = sctx.getImageData(0, 0, seen.width, seen.height).data;
 			var own = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 			for (var q = 0; q < this.spot.length; q++) {
@@ -1066,7 +1068,7 @@ class Retouch_class extends Base_tools_class {
 			}
 			ctx.putImageData(own, 0, 0);
 		}
-		else inpaint(this.canvas, this.spot);
+		else fill(this.canvas, this.spot);
 		if (before) {
 			//Mode: the healed pixels blended with the original ones
 			var img = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height), d = img.data, o = before.data;

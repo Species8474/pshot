@@ -15,7 +15,7 @@ import Ps_size_dialogs_class from './../../ps/size-dialogs.js';
 import Patterns from './../../ps/patterns.js';
 import Ps_liquify_class from './../../ps/liquify.js';
 import Ps_save_for_web_class from './../../ps/save-for-web.js';
-import { inpaint } from './../../ps/inpaint.js';
+import { content_aware } from './../../ps/inpaint.js';
 import Ps_wide_angle_class from './../../ps/wide-angle.js';
 import Ps_digimarc_class from './../../ps/digimarc.js';
 import Ps_vanishing_point_class from './../../ps/vanishing-point.js';
@@ -375,7 +375,7 @@ class Ps_commands_class {
 		filled.width = w;
 		filled.height = h;
 		filled.getContext('2d').drawImage(canvas, 0, 0);
-		inpaint(filled, hole);
+		content_aware(filled, hole);
 		//blend by the selection's softness and Opacity
 		var piece = document.createElement('canvas');
 		piece.width = w;

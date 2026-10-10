@@ -626,7 +626,7 @@ const LAYOUTS = {
 		{ type: 'brush', bind: 'size' },
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: HEAL_MODES, bind: 'heal_mode', map: Object.fromEntries(HEAL_MODES.map(v => [v, v])) },
-		{ type: 'select', label: 'Type:', values: ['Proximity Match', 'Create Texture', 'Content-Aware'], value: 'Content-Aware', disabled_values: ['Proximity Match', 'Create Texture'] },
+		{ type: 'select', label: 'Type:', values: ['Proximity Match', 'Create Texture', 'Content-Aware'], bind: 'spot_type', map: { 'Proximity Match': 'Proximity Match', 'Create Texture': 'Create Texture', 'Content-Aware': 'Content-Aware' } },
 		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 	],
 	healing: [

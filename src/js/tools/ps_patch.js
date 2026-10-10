@@ -12,7 +12,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Base_tools_class from './../core/base-tools.js';
-import { inpaint } from './../ps/inpaint.js';
+import { content_aware } from './../ps/inpaint.js';
 import Patterns from './../ps/patterns.js';
 
 class Ps_patch_class extends Base_tools_class {
@@ -159,7 +159,7 @@ class Ps_patch_class extends Base_tools_class {
 				}
 			}
 			bctx.putImageData(out, 0, 0);
-			if (band) inpaint(base, band);
+			if (band) content_aware(base, band);
 			app.State.do_action(new app.Actions.Bundle_action('patch', 'Patch', [
 				new app.Actions.Update_layer_image_action(base, layer.id),
 			]));
@@ -199,7 +199,7 @@ class Ps_patch_class extends Base_tools_class {
 		}
 		pctx.globalCompositeOperation = 'destination-in';
 		pctx.drawImage(pmask, 0, 0);
-		if (at.move_mode != 'Extend') inpaint(base, hole);
+		if (at.move_mode != 'Extend') content_aware(base, hole);
 		bctx.drawImage(piece, ldx, ldy);
 		var moved = document.createElement('canvas');
 		moved.width = sel.mask.width;

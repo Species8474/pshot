@@ -202,6 +202,7 @@ config.TOOLS = [
 			blend: 'Normal',
 			pattern_aligned: true,
 			heal_mode: 'Normal',
+			spot_type: 'Content-Aware',
 			heal_source: 'Sampled',
 			heal_aligned: true,
 			heal_sample: 'Current Layer',
