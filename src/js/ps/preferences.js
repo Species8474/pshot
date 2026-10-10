@@ -7,6 +7,7 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import { show_popup_menu } from './popup-menu.js';
 
 const KEY = 'pshot_prefs_v1';
 
@@ -138,6 +139,17 @@ class Ps_preferences_class {
 		app.GUI.grid_size = [Math.max(2, parseInt(v.grid_every) || 50), Math.max(2, parseInt(v.grid_every) || 50)];
 		this.apply_checker();
 		config.need_render = true;
+	}
+
+	/**
+	 * the pasteboard's context menu: Default, Black, Dark / Medium / Light Gray, Custom, Select Custom Color
+	 */
+	pasteboard_menu(e) {
+		var v = this.values;
+		var pick = (name) => { v.screen_color = name; this.save(); this.apply(); };
+		var items = Object.keys(SCREEN_COLORS).map(n => ({ name: n, checked: v.screen_color == n, action: () => pick(n) }));
+		items.push({ divider: true }, { name: 'Select Custom Color...', action: () => app.GUI.Ps_workspace.color_dialog('Select custom canvas color:', v.screen_custom, (hex) => { v.screen_custom = hex; pick('Custom'); }) });
+		show_popup_menu(document.getElementById('main_wrapper'), items, { point: { x: e.clientX, y: e.clientY } });
 	}
 
 	/**

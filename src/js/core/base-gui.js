@@ -236,6 +236,12 @@ class Base_gui_class {
 			e.preventDefault();
 			if (app.GUI && app.GUI.Ps_workspace) canvas_context_menu(e);
 		}, false);
+		//pshot: right-click on the pasteboard: its color (CS6)
+		document.getElementById('main_wrapper').addEventListener('contextmenu', function (e) {
+			if (e.target.id != 'main_wrapper' || !(app.GUI && app.GUI.Ps_workspace)) return;
+			e.preventDefault();
+			app.GUI.Ps_workspace.Preferences.pasteboard_menu(e);
+		}, false);
 		//keep the type editor focused (and editing) through a right-click
 		document.getElementById('canvas_minipaint').addEventListener('mousedown', function (e) {
 			if (e.button == 2) e.preventDefault();
