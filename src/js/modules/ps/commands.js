@@ -892,6 +892,7 @@ class Ps_commands_class {
 	calculations() { app.GUI.Ps_workspace.Calculations.open(); }
 	blur_gallery(mode) { app.GUI.Ps_workspace.Blur_gallery.open(mode || 'field'); }
 	keyboard_shortcuts() { app.GUI.Ps_workspace.Shortcuts.open(); }
+	menus_dialog() { app.GUI.Ps_workspace.Shortcuts.open('menus'); }
 	preferences(pane) { app.GUI.Ps_workspace.Preferences.open(pane || 'General'); }
 	content_aware_scale() { app.GUI.Ps_workspace.Transform.start_content_aware(); }
 	transform_again() { app.GUI.Ps_workspace.Transform.again(); }

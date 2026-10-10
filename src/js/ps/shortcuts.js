@@ -8,6 +8,8 @@ import app from './../app.js';
 import menuDefinition from './../config-menu.js';
 
 const KEY = 'pshot_shortcuts_v1';
+const MENU_KEY = 'pshot_menu_custom_v1';
+const COLORS = ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Gray'];
 const S = 'fill="none" stroke="currentColor" stroke-width="1.2"';
 
 class Ps_shortcuts_class {
@@ -54,7 +56,28 @@ class Ps_shortcuts_class {
 	/**
 	 * remembers the defaults and applies the stored changes (before the keymap is built)
 	 */
+	/**
+	 * Edit > Menus: { path: { hidden, color } } -> flags on the menu definitions (items and submenus)
+	 */
+	load_menus() {
+		try { return JSON.parse(localStorage.getItem(MENU_KEY) || '{}') || {}; } catch (e) { return {}; }
+	}
+
+	apply_menus(custom) {
+		var visit = (items, path) => {
+			for (var it of items) {
+				if (it.divider) continue;
+				var p = path ? path + ' > ' + it.name : it.name, c = custom[p] || {};
+				if (c.hidden) it.ps_hidden = true; else delete it.ps_hidden;
+				if (c.color && c.color != 'None') it.ps_color = c.color; else delete it.ps_color;
+				if (it.children) visit(it.children, p);
+			}
+		};
+		visit(menuDefinition, '');
+	}
+
 	install() {
+		this.apply_menus(this.load_menus());
 		this.walk((it, p) => { this.defaults.menus[p] = it.shortcut || ''; });
 		for (var m of this.members()) this.defaults.tools[m.id] = m.key || '';
 		this.apply(this.load());
@@ -92,7 +115,7 @@ class Ps_shortcuts_class {
 		return (e.altKey ? 'Alt+' : '') + (e.shiftKey ? 'Shift+' : '') + (e.ctrlKey || e.metaKey ? 'Ctrl+' : '') + key;
 	}
 
-	open() {
+	open(tab) {
 		this.close();
 		var menus = {}, tools = {};
 		this.walk((it, p) => { menus[p] = it.shortcut || ''; });
@@ -105,7 +128,7 @@ class Ps_shortcuts_class {
 		el.className = 'popup ps_kbd';
 		el.style.display = 'block';
 		el.innerHTML = '<h2>Keyboard Shortcuts and Menus</h2>'
-			+ '<div class="ps_kbd_tabs"><button type="button" class="active">Keyboard Shortcuts</button><button type="button" disabled>Menus</button></div>'
+			+ '<div class="ps_kbd_tabs"><button type="button" data-tab="shortcuts" class="active">Keyboard Shortcuts</button><button type="button" data-tab="menus">Menus</button></div>'
 			+ '<div class="ps_kbd_body"><div class="ps_kbd_main">'
 			+ '<div class="ps_kbd_row"><span>Set:</span><select id="kbd_set"><option>Photoshop Defaults</option></select>'
 			+ '<button type="button" class="ps_opt_icon" disabled title="Save all changes to the current set of shortcuts"><svg viewBox="0 0 18 18" width="14" height="14"><path d="M3 3h10l2 2v10H3z M6 3v4h6V3" ' + S + '/></svg></button>'
@@ -121,6 +144,14 @@ class Ps_shortcuts_class {
 		document.getElementById('popups').appendChild(el);
 		this.el = el;
 		el.querySelector('#kbd_for').addEventListener('change', (e) => { this.kind = e.target.value; this.editing = null; this.render(); });
+		this.tab = 'shortcuts';
+		this.menu_draft = JSON.parse(JSON.stringify(this.load_menus()));
+		el.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+			this.tab = b.dataset.tab;
+			this.editing = null;
+			el.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('active', x === b));
+			this.render();
+		}));
 		el.querySelector('[data-b="ok"]').addEventListener('click', () => this.ok());
 		el.querySelector('[data-b="cancel"]').addEventListener('click', () => this.close());
 		el.querySelector('[data-b="accept"]').addEventListener('click', () => this.accept());
@@ -129,16 +160,20 @@ class Ps_shortcuts_class {
 		el.querySelector('[data-b="delete"]').addEventListener('click', () => this.delete_shortcut());
 		this.keys = (e) => this.on_key(e);
 		window.addEventListener('keydown', this.keys, true);
-		this.render();
+		if (tab == 'menus') el.querySelector('[data-tab="menus"]').click();
+		else this.render();
 	}
 
 	/**
 	 * rows: menus (collapsible) or tools
 	 */
 	render() {
+		if (this.tab == 'menus') return this.render_menus();
+		this.el.querySelectorAll('.ps_kbd_row, [data-b="accept"], [data-b="undo"], [data-b="delete"]').forEach(x => { x.style.display = ''; });
 		var esc = app.GUI.Ps_workspace.Helper.escapeHtml;
 		var list = this.el.querySelector('.ps_kbd_list');
-		this.el.querySelector('.ps_kbd_head span').textContent = this.kind == 'tools' ? 'Tool Panel Command' : 'Application Menu Command';
+		this.el.querySelector('.ps_kbd_head').classList.remove('ps_menus_head');
+		this.el.querySelector('.ps_kbd_head').innerHTML = '<span>' + (this.kind == 'tools' ? 'Tool Panel Command' : 'Application Menu Command') + '</span><span>Shortcut</span>';
 		var html = '';
 		var cell = (id, value, editable) => {
 			var ed = this.editing && this.editing.id == id;
@@ -189,6 +224,54 @@ class Ps_shortcuts_class {
 		this.el.querySelector('[data-b="accept"]').disabled = !editing;
 		this.el.querySelector('[data-b="undo"]').disabled = !editing;
 		this.message();
+	}
+
+	/**
+	 * the Menus tab: Visibility (eye) and Color for every menu command
+	 */
+	render_menus() {
+		var esc = app.GUI.Ps_workspace.Helper.escapeHtml, d = this.menu_draft;
+		this.el.querySelectorAll('.ps_kbd_row, [data-b="accept"], [data-b="undo"], [data-b="delete"]').forEach(x => { x.style.display = 'none'; });
+		var head = this.el.querySelector('.ps_kbd_head');
+		head.classList.add('ps_menus_head');
+		head.innerHTML = '<span>Application Menu Command</span><span>Visibility</span><span>Color</span>';
+		var html = '';
+		var row = (p, label, depth, toggle) => {
+			var c = d[p] || {};
+			return '<div class="ps_kbd_item ps_menu_row' + (toggle ? ' ps_kbd_menu' : '') + '"' + (toggle ? ' data-toggle="' + esc(p) + '"' : '') + ' style="padding-left:' + (4 + depth * 14) + 'px">'
+				+ '<span>' + label + '</span>'
+				+ '<button type="button" class="ps_menu_eye' + (c.hidden ? '' : ' on') + '" data-eye="' + esc(p) + '" title="Visibility">' + (c.hidden ? '' : '&#128065;') + '</button>'
+				+ '<select data-color="' + esc(p) + '">' + COLORS.map(n => '<option' + ((c.color || 'None') == n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></div>';
+		};
+		var visit = (items, path, depth) => {
+			for (var it of items) {
+				if (it.divider) continue;
+				var p = path ? path + ' > ' + it.name : it.name;
+				if (it.children) {
+					var open = !!this.open_paths[p];
+					html += row(p, (depth == 0 ? (open ? '&#9662; ' : '&#9656; ') : '') + esc(it.name), depth, depth == 0);
+					if (open || depth > 0) visit(it.children, p, depth + 1);
+				}
+				else html += row(p, esc(it.name), depth, false);
+			}
+		};
+		visit(menuDefinition, '', 0);
+		var list = this.el.querySelector('.ps_kbd_list');
+		list.innerHTML = html;
+		list.querySelectorAll('[data-toggle]').forEach((r) => r.addEventListener('click', (e) => {
+			if (e.target.closest('[data-eye], select')) return;
+			this.open_paths[r.dataset.toggle] = !this.open_paths[r.dataset.toggle];
+			this.render_menus();
+		}));
+		list.querySelectorAll('[data-eye]').forEach((b) => b.addEventListener('click', () => {
+			var p = b.dataset.eye;
+			d[p] = Object.assign({}, d[p], { hidden: !(d[p] && d[p].hidden) });
+			this.render_menus();
+		}));
+		list.querySelectorAll('[data-color]').forEach((s) => s.addEventListener('change', () => {
+			d[s.dataset.color] = Object.assign({}, d[s.dataset.color], { color: s.value });
+		}));
+		this.el.querySelector('.ps_kbd_msg').textContent = 'Hidden items are listed again with Show All Menu Items at the bottom of their menu.';
 	}
 
 	/**
@@ -272,6 +355,15 @@ class Ps_shortcuts_class {
 
 	ok() {
 		if (this.editing) this.accept();
+		if (this.menu_draft) {
+			var clean = {};
+			for (var k in this.menu_draft) {
+				var c = this.menu_draft[k];
+				if (c && (c.hidden || (c.color && c.color != 'None'))) clean[k] = c;
+			}
+			try { localStorage.setItem(MENU_KEY, JSON.stringify(clean)); } catch (e) { /* storage blocked */ }
+			this.apply_menus(clean);
+		}
 		var changes = this.changes_of(this.draft);
 		try { localStorage.setItem(KEY, JSON.stringify(changes)); } catch (e) { /* storage blocked */ }
 		this.apply(changes);

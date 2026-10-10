@@ -99,10 +99,12 @@ class GUI_menu_class {
 			if (definition.dynamic_name) {
 				name = this.Ps_commands()[definition.dynamic_name]();
 			}
+			const hidden = definition.ps_hidden && !this.show_all_items;
+			const color = definition.ps_color ? ' ps_menu_color_' + definition.ps_color.toLowerCase() : '';
 			return `
-				<li>
+				<li${ hidden ? ' style="display:none"' : '' }>
 					<a id="main_menu_${ level }_${ index }" role="menuitem" tabindex="-1" aria-haspopup="${ has_children + '' }"
-						${ disabled ? 'aria-disabled="true" class="disabled"' : '' }
+						class="${ disabled ? 'disabled' : '' }${ color }" ${ disabled ? 'aria-disabled="true"' : '' }
 						href="${ definition.href ? definition.href : 'javascript:void(0)' }"
 						target="${ definition.href ? '_blank' : '_self' }"
 						data-level="${ level }" data-index="${ index }">
@@ -328,6 +330,17 @@ class GUI_menu_class {
 
 		// Any link in the menu is clicked.
 		if (target && target.tagName === 'A') {
+			if (target.dataset.showAll) {
+				//reopen the same menu with every item
+				event.preventDefault();
+				this.show_all_items = true;
+				this.reopening = true;
+				const top = this.dropdownStack[0];
+				this.close_child_dropdowns(0);
+				if (top && top.opener) this.toggle_dropdown(top.opener, false);
+				this.reopening = false;
+				return;
+			}
 			if (target.classList.contains('disabled')) {
 				event.preventDefault();
 				return;
@@ -389,6 +402,8 @@ class GUI_menu_class {
 	}
 
 	close_child_dropdowns(level) {
+		//pshot: hidden menu items come back hidden once the menus close
+		if (level == 0 && !this.reopening) this.show_all_items = false;
 		for (let i = this.dropdownStack.length - 1; i >= 0; i--) {
 			if (i >= level) {
 				this.dropdownStack[i].element.parentNode.removeChild(this.dropdownStack[i].element);
@@ -417,6 +432,10 @@ class GUI_menu_class {
 		let dropdownTemplate = '';
 		for (let i = 0; i < children.length; i++) {
 			dropdownTemplate += this.generate_menu_dropdown_item_template(children[i], level + 1, i);
+		}
+		//pshot: Edit > Menus can hide items; CS6 then ends the menu with Show All Menu Items
+		if (!this.show_all_items && children.some(c => c.ps_hidden)) {
+			dropdownTemplate += '<li role="presentation"><hr></li><li><a role="menuitem" tabindex="-1" href="javascript:void(0)" data-show-all="1"><span class="check"></span><span class="name">Show All Menu Items</span></a></li>';
 		}
 		dropdownElement.innerHTML = dropdownTemplate;
 

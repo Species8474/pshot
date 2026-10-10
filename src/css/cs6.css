@@ -1807,3 +1807,14 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_about_credits a { color: #9fd3ff; }
 .ps_status_arrow, .ps_status_info { cursor: default; }
 .ps_sf_nomask { visibility: hidden; }
+/* Edit > Menus: item colors and the Menus tab */
+.menu_dropdown a.ps_menu_color_red, .ps_popup_menu a.ps_menu_color_red { background: rgba(220, 60, 60, 0.35); }
+.menu_dropdown a.ps_menu_color_orange { background: rgba(230, 140, 40, 0.35); }
+.menu_dropdown a.ps_menu_color_yellow { background: rgba(230, 210, 40, 0.35); }
+.menu_dropdown a.ps_menu_color_green { background: rgba(60, 170, 70, 0.35); }
+.menu_dropdown a.ps_menu_color_blue { background: rgba(60, 120, 220, 0.35); }
+.menu_dropdown a.ps_menu_color_violet { background: rgba(150, 80, 200, 0.35); }
+.menu_dropdown a.ps_menu_color_gray { background: rgba(140, 140, 140, 0.35); }
+.ps_menu_row { grid-template-columns: 1fr 70px 100px !important; }
+.ps_kbd_head.ps_menus_head { grid-template-columns: 1fr 70px 100px; }
+.ps_menu_eye { width: 22px; height: 18px; padding: 0; border: 1px solid #555; background: transparent; color: var(--ps-text); font-size: 11px; }
