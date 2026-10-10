@@ -663,6 +663,9 @@ config.TOOLS = [
 				value: false,
 				icon: `strikethrough.svg`
 			},
+			//pshot: Character panel All Caps / Small Caps and Superscript / Subscript
+			caps: '',
+			position: '',
 			fill: '#008800',
 			stroke: '#000000',
 			stroke_size: {

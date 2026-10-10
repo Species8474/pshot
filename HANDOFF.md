@@ -266,6 +266,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - PSD smart objects: saved as placed layers (placedLayer with the four corners, the source embedded as a PNG linked file) and opened back as smart objects (PNG/JPEG sources, or the composite of an embedded PSD/PSB); rotated boxes round-trip exactly, distorted ones keep their corners as a quad.
   - Options bar Pattern and Custom Shape pickers (ps/thumb-picker.js): a swatch button opening a thumbnail grid (small/large via the gear), right-click Rename/Delete (user items).
   - Font family menu (options bar and Character panel; ps/font-menu.js): each font with a "Sample" at Type > Font Preview Size (None to Huge, saved in the browser), typing filters, Enter picks the first. Web fonts not yet loaded preview in a fallback face.
+  - Character panel All Caps / Small Caps and Superscript / Subscript (span meta caps / position, text.js span_glyph: measured and drawn as shown). Ligatures and the other OpenType features stay greyed: the type engine draws letter by letter.
 
 ## Known gaps / next
 

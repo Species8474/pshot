@@ -32,8 +32,24 @@ export const metaDefaults = {
 	strikethrough: false,
 	fill_color: '#008800',
 	stroke_size: 0,
-	stroke_color: '#000000'
+	stroke_color: '#000000',
+	//pshot: Character panel All Caps / Small Caps ('all' | 'small') and Superscript / Subscript ('super' | 'sub')
+	caps: '',
+	position: ''
 };
+
+/**
+ * pshot: how a character of a span is drawn: the text (caps), the size factor and the baseline shift
+ */
+function span_glyph(span, character, size) {
+	const caps = span.meta.caps || '', position = span.meta.position || '';
+	if (!caps && !position) return null;
+	const upper = character.toUpperCase();
+	let scale = 1;
+	if (caps == 'small' && upper !== character) scale = 0.75;
+	if (position) scale *= 0.583;
+	return { text: caps ? upper : character, scale: scale, dy: position == 'super' ? -size * 0.333 : (position == 'sub' ? size * 0.15 : 0) };
+}
 
 // Global map of font name to font metrics information.
 const fontMetricsMap = new Map();
@@ -1458,7 +1474,16 @@ class Text_editor_class {
 						}
 						fontKerning = isHorizontalTextDirection && nextCharacter ? fontMetrics.get_kerning_offset(character + nextCharacter) : 0;
 					}
-					const characterSize = isHorizontalTextDirection ? ctx.measureText(character).width : fontMetrics.height;
+					let characterSize;
+					const glyph = isHorizontalTextDirection ? span_glyph(span, character, size) : null;
+					if (glyph) {
+						//caps / super / subscript: measured as drawn
+						const font_before = ctx.font;
+						if (glyph.scale != 1) ctx.font = ' ' + (span.meta.italic ? 'italic' : '') + ' ' + (span.meta.bold ? 'bold' : '') + ' ' + (size * glyph.scale) + 'px ' + family;
+						characterSize = ctx.measureText(glyph.text).width;
+						ctx.font = font_before;
+					}
+					else characterSize = isHorizontalTextDirection ? ctx.measureText(character).width : fontMetrics.height;
 					wrapAccumulativeSize += characterSize + fontKerning + kerning;
 					if (boundary !== 'dynamic' && wrapAccumulativeSize > textDirectionMaxSize && ![' ', '-'].includes(character)) {
 						// Find last span with space
@@ -1795,10 +1820,23 @@ class Text_editor_class {
 							}
 							ctx.fillStyle = fillStyle;
 							ctx.strokeStyle = strokeStyle;
-							ctx.fillText(letter, letterDrawX, letterDrawY);
-							if (stroke_size) {
-								ctx.lineWidth = stroke_size;
-								ctx.strokeText(letter, letterDrawX, letterDrawY);
+							const glyph = isHorizontalTextDirection ? span_glyph(span, letter, span.meta.size || metaDefaults.size) : null;
+							if (glyph) {
+								const font_before = ctx.font;
+								if (glyph.scale != 1) ctx.font = ' ' + (italic ? 'italic' : '') + ' ' + (bold ? 'bold' : '') + ' ' + ((span.meta.size || metaDefaults.size) * glyph.scale) + 'px ' + family;
+								ctx.fillText(glyph.text, letterDrawX, letterDrawY + glyph.dy);
+								if (stroke_size) {
+									ctx.lineWidth = stroke_size;
+									ctx.strokeText(glyph.text, letterDrawX, letterDrawY + glyph.dy);
+								}
+								ctx.font = font_before;
+							}
+							else {
+								ctx.fillText(letter, letterDrawX, letterDrawY);
+								if (stroke_size) {
+									ctx.lineWidth = stroke_size;
+									ctx.strokeText(letter, letterDrawX, letterDrawY);
+								}
 							}
 							if (strikethrough) {
 								ctx.fillStyle = fillStyle;
@@ -2576,6 +2614,12 @@ class Text_class extends Base_tools_class {
 			case 'strikethrough':
 				meta.strikethrough = value;
 				break;
+			case 'caps':
+				meta.caps = value || '';
+				break;
+			case 'position':
+				meta.position = value || '';
+				break;
 			case 'fill':
 				if (value) meta.fill_color = value;
 				break;
@@ -2623,6 +2667,8 @@ class Text_class extends Base_tools_class {
 			toolAttributes.italic.value = meta.italic.includes(false) ? false : true;
 			toolAttributes.underline.value = meta.underline.includes(false) ? false : true;
 			toolAttributes.strikethrough.value = meta.strikethrough.includes(false) ? false : true;
+			if (meta.caps) toolAttributes.caps = meta.caps.length === 1 ? (meta.caps[0] || '') : '';
+			if (meta.position) toolAttributes.position = meta.position.length === 1 ? (meta.position[0] || '') : '';
 			toolAttributes.fill = meta.fill_color.length === 1 ? meta.fill_color[0] : '#000000';
 			toolAttributes.stroke = meta.stroke_color.length === 1 ? meta.stroke_color[0] : '#000000';
 			toolAttributes.stroke_size.value = meta.stroke_size.length === 1 ? meta.stroke_size[0] : parseFloat(null);
@@ -2757,6 +2803,8 @@ class Text_class extends Base_tools_class {
 						italic: params.italic.value !== metaDefaults.italic ? params.italic.value : undefined,
 						underline: params.underline.value !== metaDefaults.underline ? params.underline.value : undefined,
 						strikethrough: params.strikethrough.value !== metaDefaults.strikethrough ? params.strikethrough.value : undefined,
+						caps: params.caps ? params.caps : undefined,
+						position: params.position ? params.position : undefined,
 						fill_color: params.fill !== metaDefaults.fill_color ? params.fill : undefined,
 						stroke_color: params.stroke !== metaDefaults.stroke_color ? params.stroke : undefined,
 						stroke_size: params.stroke_size !== metaDefaults.stroke_size && !isNaN(params.stroke_size) ? params.stroke_size : undefined,

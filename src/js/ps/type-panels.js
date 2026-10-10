@@ -68,8 +68,10 @@ function render_character(host) {
 		+ '<div class="ps_typ_row ps_typ_faux">'
 		+ '<button type="button" data-faux="bold" class="' + (bold ? 'pressed' : '') + '" title="Faux Bold"><b>T</b></button>'
 		+ '<button type="button" data-faux="italic" class="' + (italic ? 'pressed' : '') + '" title="Faux Italic"><i>T</i></button>'
-		+ '<button type="button" class="disabled" title="All Caps">TT</button><button type="button" class="disabled" title="Small Caps">Tт</button>'
-		+ '<button type="button" class="disabled" title="Superscript">T¹</button><button type="button" class="disabled" title="Subscript">T₁</button>'
+		+ '<button type="button" data-opt="caps" data-v="all" class="' + (get('caps') == 'all' ? 'pressed' : '') + '" title="All Caps">TT</button>'
+		+ '<button type="button" data-opt="caps" data-v="small" class="' + (get('caps') == 'small' ? 'pressed' : '') + '" title="Small Caps">Tт</button>'
+		+ '<button type="button" data-opt="position" data-v="super" class="' + (get('position') == 'super' ? 'pressed' : '') + '" title="Superscript">T¹</button>'
+		+ '<button type="button" data-opt="position" data-v="sub" class="' + (get('position') == 'sub' ? 'pressed' : '') + '" title="Subscript">T₁</button>'
 		+ '<button type="button" data-faux="underline" class="' + (get('underline') ? 'pressed' : '') + '" title="Underline"><u>T</u></button>'
 		+ '<button type="button" data-faux="strikethrough" class="' + (get('strikethrough') ? 'pressed' : '') + '" title="Strikethrough"><s>T</s></button>'
 		+ '</div>'
@@ -93,6 +95,11 @@ function render_character(host) {
 			$('ch_color').style.background = hex;
 		});
 	});
+	//All Caps / Small Caps and Superscript / Subscript: each pair is one choice (or none)
+	host.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => {
+		set(b.dataset.opt, get(b.dataset.opt) == b.dataset.v ? '' : b.dataset.v);
+		render_character(host);
+	}));
 	host.querySelectorAll('[data-faux]').forEach((b) => b.addEventListener('click', () => {
 		set(b.dataset.faux, !get(b.dataset.faux));
 		render_character(host);
