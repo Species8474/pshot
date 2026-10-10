@@ -300,6 +300,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Calculations: Source document menus (open documents of the same size, by their merged image; Documents doc.flat), Mask (a channel limits the blend, Invert). Apply Image: Source document and Channel (RGB / Red / Green / Blue).
   - Batch: Source Folder (folder picker, images only) / Files / Opened Files; Destination None / Save and Close (own name and type) / Folder; Errors Stop For Errors / Log Errors To File (downloaded text). Override Action "Open" Commands stays greyed.
   - Bitmap mode: Custom Pattern (the pattern's tones are the thresholds; pattern picker). Output resolution stays greyed (same as input).
+  - Preferences > Guides, Grid & Slices live: guide color (CS6 list or Custom) / style (Lines, Dashed), smart guide color, grid color / style (Lines, Dashed, Dots) / subdivisions (lighter minor lines, 1 screen pixel), slice line color, Show Slice Numbers (Preferences.color(kind)).
 
 ## Known gaps / next
 

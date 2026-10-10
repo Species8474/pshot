@@ -380,6 +380,30 @@ class Base_gui_class {
 			gap_x = 2;
 		if (gap_y < 2)
 			gap_y = 2;
+		//pshot: CS6 grid - Preferences color / style, gridlines with lighter subdivisions, 1 screen pixel wide
+		var prefs = this.Ps_workspace && this.Ps_workspace.Preferences;
+		if (prefs) {
+			var pv = prefs.values, color = prefs.color('grid'), sub = Math.max(1, parseInt(pv.grid_subdivisions) || 1);
+			var scale = Math.abs(ctx.getTransform().a) || 1;
+			ctx.save();
+			ctx.lineWidth = 1 / scale;
+			ctx.strokeStyle = color;
+			var style = pv.grid_style || 'Lines';
+			var line = (x1, y1, x2, y2, minor) => {
+				ctx.globalAlpha = minor ? 0.45 : 1;
+				ctx.setLineDash(style == 'Dashed Lines' ? [4 / scale, 3 / scale] : (style == 'Dots' ? [1 / scale, 3 / scale] : []));
+				ctx.beginPath();
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(x2, y2);
+				ctx.stroke();
+			};
+			var step = gap_x / sub, k = 1;
+			for (var gx = step; gx < width; gx += step, k++) line(gx, 0, gx, height, k % sub != 0);
+			step = gap_y / sub; k = 1;
+			for (var gy = step; gy < height; gy += step, k++) line(0, gy, width, gy, k % sub != 0);
+			ctx.restore();
+			return;
+		}
 		for (var i = gap_x; i < width; i = i + gap_x) {
 			if (gap_x == 0)
 				break;
@@ -433,6 +457,14 @@ class Base_gui_class {
 				ctx.lineWidth = 1;
 			else
 				ctx.lineWidth = 3;
+			//pshot: Preferences > Guides color / style, 1 screen pixel
+			var gprefs = this.Ps_workspace && this.Ps_workspace.Preferences;
+			if (gprefs) {
+				var gscale = Math.abs(ctx.getTransform().a) || 1;
+				ctx.strokeStyle = gprefs.color('guide');
+				ctx.lineWidth = (thick_guides == false ? 1 : 3) / gscale;
+				ctx.setLineDash(gprefs.values.guide_style == 'Dashed Lines' ? [5 / gscale, 4 / gscale] : []);
+			}
 
 			ctx.beginPath();
 			if (guide.y === null) {
@@ -447,6 +479,7 @@ class Base_gui_class {
 			}
 			ctx.stroke();
 		}
+		ctx.setLineDash([]);
 	}
 	
 	/**

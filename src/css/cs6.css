@@ -1897,3 +1897,4 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_ge_noise .ps_ge_row input[type=number] { width: 52px; }
 .ps_ge_chan { min-width: 24px; }
 .ps_ge_rough { width: 52px; }
+.ps_prefs_color { width: 34px; height: 22px; padding: 0; border: 1px solid var(--ps-border); vertical-align: middle; }

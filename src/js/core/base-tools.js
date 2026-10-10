@@ -557,7 +557,7 @@ class Base_tools_class {
 			if (ws.smart_guides === false) return;
 			ctx.save();
 			ctx.lineWidth = 1 / config.ZOOM;
-			ctx.strokeStyle = '#ff00ff';
+			ctx.strokeStyle = ws.Preferences ? ws.Preferences.color('smart') : '#ff00ff';
 			for (var info of [this.snap_line_info.x, this.snap_line_info.y]) {
 				if (!info) continue;
 				ctx.beginPath();

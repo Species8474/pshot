@@ -19,7 +19,21 @@ const DEFAULTS = {
 	type_units: 'Points',
 	grid_every: 50,
 	grid_subdivisions: 4,
+	guide_color: 'Cyan',
+	guide_custom: '#4af0ff',
+	guide_style: 'Lines',
+	smart_color: 'Magenta',
+	smart_custom: '#ff44ff',
+	grid_color: 'Custom',
+	grid_custom: '#888888',
+	grid_style: 'Lines',
+	slice_color: 'Light Blue',
+	slice_custom: '#2196f3',
+	slice_numbers: true,
 };
+
+//CS6 guide / grid / slice colors
+const LINE_COLORS = { 'Light Blue': '#4a90e2', 'Light Red': '#ff6a6a', 'Green': '#00b000', 'Medium Blue': '#0050ff', 'Yellow': '#e8e800', 'Magenta': '#ff00ff', 'Cyan': '#00e5ff', 'Light Gray': '#c0c0c0', 'Black': '#000000', 'Custom': null };
 
 //CS6 interface brightness: Black, Dark Gray (default), Medium Gray, Light Gray
 const THEMES = {
@@ -95,6 +109,14 @@ class Ps_preferences_class {
 		app.GUI.grid_size = [Math.max(2, parseInt(v.grid_every) || 50), Math.max(2, parseInt(v.grid_every) || 50)];
 		this.apply_checker();
 		config.need_render = true;
+	}
+
+	/**
+	 * a color preference (menu name or its Custom color)
+	 */
+	color(key) {
+		var v = this.values;
+		return LINE_COLORS[v[key + '_color']] || v[key + '_custom'] || '#888888';
 	}
 
 	apply_checker() {
@@ -192,15 +214,15 @@ class Ps_preferences_class {
 			]],
 			['Guides, Grid & Slices', [
 				{ type: 'group', label: 'Guides' },
-				{ type: 'row', items: [{ type: 'select', label: 'Color:', values: ['Cyan'], disabled: true }, { type: 'select', label: 'Style:', values: ['Lines'], disabled: true }] },
+				{ type: 'row', items: [{ type: 'select', key: 'guide_color', label: 'Color:', values: Object.keys(LINE_COLORS) }, { type: 'color', key: 'guide_custom', of: 'guide_color' }, { type: 'select', key: 'guide_style', label: 'Style:', values: ['Lines', 'Dashed Lines'] }] },
 				{ type: 'group', label: 'Smart Guides' },
-				{ type: 'row', items: [{ type: 'select', label: 'Color:', values: ['Magenta'], disabled: true }] },
+				{ type: 'row', items: [{ type: 'select', key: 'smart_color', label: 'Color:', values: Object.keys(LINE_COLORS) }, { type: 'color', key: 'smart_custom', of: 'smart_color' }] },
 				{ type: 'group', label: 'Grid' },
-				{ type: 'row', items: [{ type: 'select', label: 'Color:', values: ['Custom'], disabled: true }, { type: 'num', key: 'grid_every', label: 'Gridline Every:', min: 2, max: 1000, unit: 'Pixels' }] },
-				{ type: 'row', items: [{ type: 'select', label: 'Style:', values: ['Lines'], disabled: true }, { type: 'num', label: 'Subdivisions:', value: 4, disabled: true }] },
+				{ type: 'row', items: [{ type: 'select', key: 'grid_color', label: 'Color:', values: Object.keys(LINE_COLORS) }, { type: 'color', key: 'grid_custom', of: 'grid_color' }, { type: 'num', key: 'grid_every', label: 'Gridline Every:', min: 2, max: 1000, unit: 'Pixels' }] },
+				{ type: 'row', items: [{ type: 'select', key: 'grid_style', label: 'Style:', values: ['Lines', 'Dashed Lines', 'Dots'] }, { type: 'num', key: 'grid_subdivisions', label: 'Subdivisions:', min: 1, max: 100 }] },
 				{ type: 'group', label: 'Slices' },
-				{ type: 'row', items: [{ type: 'select', label: 'Line Color:', values: ['Light Blue'], disabled: true }] },
-				{ type: 'check', label: 'Show Slice Numbers', value: true, disabled: true },
+				{ type: 'row', items: [{ type: 'select', key: 'slice_color', label: 'Line Color:', values: Object.keys(LINE_COLORS) }, { type: 'color', key: 'slice_custom', of: 'slice_color' }] },
+				{ type: 'check', key: 'slice_numbers', label: 'Show Slice Numbers' },
 			]],
 			['Plug-Ins', [
 				{ type: 'check', label: 'Additional Plug-Ins Folder', value: false, disabled: true },
@@ -276,13 +298,15 @@ class Ps_preferences_class {
 					+ (c.min != null ? ' min="' + c.min + '"' : '') + (c.max != null ? ' max="' + c.max + '"' : '') + dis + '>' + (c.unit ? '<span class="ps_prefs_unit">' + esc(c.unit) + '</span>' : '') + '</label>';
 			}
 			if (c.type == 'readout') return '<span class="ps_prefs_field">' + label + '<span>' + esc(c.text || '') + '</span></span>';
+			//Custom...: the color well next to a color menu
+			if (c.type == 'color') return '<input type="color" class="ps_prefs_color" data-key="' + c.key + '" data-of="' + c.of + '" value="' + (d[c.key] || '#000000') + '"' + (d[c.of] == 'Custom' ? '' : ' style="visibility:hidden"') + '>';
 			if (c.type == 'checker') return '<span class="ps_prefs_checker"></span>';
 			return '';
 		};
 		var html = '<div class="ps_prefs_title">' + esc(pane[0]) + '</div>';
 		for (var c of pane[1]) {
 			if (c.type == 'group') html += '<div class="ps_prefs_group">' + esc(c.label) + '</div>';
-			else if (c.type == 'check') html += '<label class="ps_adj_check' + (c.disabled ? ' disabled' : '') + '"><input type="checkbox"' + (c.value ? ' checked' : '') + (c.disabled ? ' disabled' : '') + '> ' + esc(c.label) + '</label>';
+			else if (c.type == 'check') html += '<label class="ps_adj_check' + (c.disabled ? ' disabled' : '') + '"><input type="checkbox"' + (c.key ? ' data-key="' + c.key + '"' : '') + ((c.key ? d[c.key] : c.value) ? ' checked' : '') + (c.disabled ? ' disabled' : '') + '> ' + esc(c.label) + '</label>';
 			else if (c.type == 'row') html += '<div class="ps_prefs_row">' + c.items.map(control).join('') + '</div>';
 			else if (c.type == 'theme') html += '<div class="ps_prefs_row"><span class="ps_prefs_label">' + esc(c.label) + '</span>'
 				+ [1, 2, 3, 4].map(t => '<button type="button" class="ps_prefs_theme' + (d.theme == t ? ' active' : '') + '" data-theme="' + t + '" style="background:' + THEME_SWATCH[t] + '" title="Color theme ' + t + '"></button>').join('') + '</div>';
@@ -300,7 +324,8 @@ class Ps_preferences_class {
 		}));
 		root.querySelectorAll('[data-key]').forEach((input) => input.addEventListener('change', () => {
 			var k = input.dataset.key;
-			d[k] = input.type == 'number' ? parseFloat(input.value) : input.value;
+			d[k] = input.type == 'number' ? parseFloat(input.value) : (input.type == 'checkbox' ? input.checked : input.value);
+			root.querySelectorAll('.ps_prefs_color[data-of="' + k + '"]').forEach(w => { w.style.visibility = d[k] == 'Custom' ? '' : 'hidden'; });
 			this.draw_checker(root);
 		}));
 		this.draw_checker(root);

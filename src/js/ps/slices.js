@@ -319,6 +319,8 @@ class Ps_slices_class {
 
 	draw(ctx, scale) {
 		var sel = config.ps_slice_selected;
+		//Preferences: slice line color, Show Slice Numbers
+		var prefs = app.GUI.Ps_workspace.Preferences, blue = prefs ? prefs.color('slice') : '#2196f3', numbers = !prefs || prefs.values.slice_numbers !== false;
 		var tool = config.TOOL.name == 'ps_slice';
 		ctx.save();
 		ctx.lineWidth = 1 / scale;
@@ -328,16 +330,18 @@ class Ps_slices_class {
 			if (e.type == 'auto' && this.hide_auto) continue;
 			var r = e.rect, user = e.type != 'auto', chosen = e.slice && (e.slice.id == sel || (this.extra || []).includes(e.slice.id));
 			ctx.setLineDash(user ? [] : [3 / scale, 3 / scale]);
-			ctx.strokeStyle = chosen ? '#d6a000' : (user ? '#2196f3' : '#9a9a9a');
+			ctx.strokeStyle = chosen ? '#d6a000' : (user ? blue : '#9a9a9a');
 			ctx.strokeRect(r.x + 0.5 / scale, r.y + 0.5 / scale, r.w - 1 / scale, r.h - 1 / scale);
 			ctx.setLineDash([]);
 			//the number badge, with a mark for layer-based slices
 			var label = String(e.number).padStart(2, '0') + (e.type == 'layer' ? ' ▣' : '');
-			var bw = ctx.measureText(label).width + 6 / scale, bh = 13 / scale;
-			ctx.fillStyle = user ? (chosen ? '#d6a000' : '#2196f3') : '#9a9a9a';
-			ctx.fillRect(r.x + 1 / scale, r.y + 1 / scale, bw, bh);
-			ctx.fillStyle = '#ffffff';
-			ctx.fillText(label, r.x + 4 / scale, r.y + 2.5 / scale);
+			if (numbers) {
+				var bw = ctx.measureText(label).width + 6 / scale, bh = 13 / scale;
+				ctx.fillStyle = user ? (chosen ? '#d6a000' : blue) : '#9a9a9a';
+				ctx.fillRect(r.x + 1 / scale, r.y + 1 / scale, bw, bh);
+				ctx.fillStyle = '#ffffff';
+				ctx.fillText(label, r.x + 4 / scale, r.y + 2.5 / scale);
+			}
 			if (chosen && e.slice.id == sel && tool && e.type == 'user') {
 				//resize handles
 				ctx.fillStyle = '#d6a000';
