@@ -86,7 +86,7 @@ function row_items(layer) {
 		{ name: 'Blending Options...', action: bg ? null : cmd('layer_style', 'blending') },
 		{ name: 'Edit Adjustment...', action: layer.type == 'ps_adjust' ? () => app.GUI.Ps_workspace.Adjustment_layers.edit(layer) : null },
 		{ divider: true },
-		{ name: 'Copy CSS' },
+		{ name: 'Copy CSS', action: layer.type == 'ps_group' || layer.type == 'ps_adjust' ? null : cmd('copy_css') },
 		{ name: 'Duplicate Layer' + (multi ? 's...' : '...'), action: cmd('duplicate_layer_dialog') },
 		{ name: 'Delete Layer' + (multi ? 's' : ''), action: cmd('delete_layer') },
 	];

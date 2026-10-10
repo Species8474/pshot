@@ -725,7 +725,7 @@ class GUI_layers_class {
 				show_popup_menu(row, [
 					{ name: (g[0].ps_smart.filters[g[1]].visible === false ? 'Enable' : 'Disable') + ' Smart Filter', action: () => SF.toggle(g[0], g[1]) },
 					{ name: 'Edit Smart Filter...', action: () => SF.edit(g[0], g[1]) },
-					{ name: 'Edit Smart Filter Blending Options...' },
+					{ name: 'Edit Smart Filter Blending Options...', action: () => SF.blending_options(g[0], g[1]) },
 					{ name: 'Delete Smart Filter', action: () => SF.remove(g[0], g[1]) },
 				], { point: { x: e.clientX, y: e.clientY } });
 			});

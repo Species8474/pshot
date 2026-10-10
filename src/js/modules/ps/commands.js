@@ -22,6 +22,7 @@ import Ps_vanishing_point_class from './../../ps/vanishing-point.js';
 import { cmyk_safe } from './../../ps/proof.js';
 import { STACK_MODES, combine_stack } from './../../ps/stack-modes.js';
 import Ps_zoomify_class from './../../ps/zoomify.js';
+import { copy_css } from './../../ps/copy-css.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2094,6 +2095,7 @@ class Ps_commands_class {
 	}
 
 	mask_options() { app.GUI.Ps_workspace.Mask.options(); }
+	copy_css() { return copy_css(); }
 
 	/**
 	 * Select > Refine Edge becomes Refine Mask while the layer mask is targeted (CS6)

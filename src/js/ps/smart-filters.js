@@ -7,6 +7,13 @@
 
 import app from './../app.js';
 import config from './../config.js';
+import Dialog_class from './../libs/popup.js';
+
+const MODES = {
+	'Normal': 'source-over', 'Dissolve': 'source-over', 'Darken': 'darken', 'Multiply': 'multiply', 'Color Burn': 'color-burn', 'Lighten': 'lighten', 'Screen': 'screen',
+	'Color Dodge': 'color-dodge', 'Linear Dodge (Add)': 'lighter', 'Overlay': 'overlay', 'Soft Light': 'soft-light', 'Hard Light': 'hard-light',
+	'Difference': 'difference', 'Exclusion': 'exclusion', 'Hue': 'hue', 'Saturation': 'saturation', 'Color': 'color', 'Luminosity': 'luminosity',
+};
 
 class Ps_smart_filters_class {
 
@@ -49,7 +56,20 @@ class Ps_smart_filters_class {
 			var data = ctx.getImageData(0, 0, c.width, c.height);
 			var out = new ImageData(new Uint8ClampedArray(data.data), c.width, c.height);
 			b.build(state)(data.data, out.data, c.width, c.height);
-			ctx.putImageData(out, 0, 0);
+			var bl = f.blend;
+			if (bl && (bl.mode != 'Normal' || bl.opacity < 100)) {
+				//Smart Filter Blending Options: the filtered pixels over the pixels below them
+				var top = document.createElement('canvas');
+				top.width = c.width;
+				top.height = c.height;
+				top.getContext('2d').putImageData(out, 0, 0);
+				ctx.save();
+				ctx.globalAlpha = bl.opacity / 100;
+				ctx.globalCompositeOperation = MODES[bl.mode] || 'source-over';
+				ctx.drawImage(top, 0, 0);
+				ctx.restore();
+			}
+			else ctx.putImageData(out, 0, 0);
 		}
 		return c;
 	}
@@ -240,6 +260,26 @@ class Ps_smart_filters_class {
 		var adjust = app.GUI.modules['ps/commands'].Adjust;
 		adjust.smart_edit = { layer: layer, index: index, base: base };
 		F[f.key]();
+	}
+
+	/**
+	 * Blending Options (double-click the icon right of a smart filter): mode and opacity
+	 */
+	blending_options(layer, index) {
+		var f = layer.ps_smart.filters[index], bl = f.blend || { mode: 'Normal', opacity: 100 };
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Blending Options (' + f.title + ')',
+			params: [
+				{ name: 'mode', title: 'Mode:', values: Object.keys(MODES), value: bl.mode, type: 'select' },
+				{ name: 'opacity', title: 'Opacity (%):', value: bl.opacity, range: [0, 100], step: 1 },
+			],
+			on_finish: (p) => {
+				var smart = Object.assign({}, layer.ps_smart);
+				smart.filters = smart.filters.map((x, i) => i == index ? Object.assign({}, x, { blend: { mode: p.mode, opacity: Math.max(0, Math.min(100, parseFloat(p.opacity))) } }) : x);
+				this.set(layer, smart, 'Smart Filter Blending Options');
+			},
+		});
 	}
 
 	mask_label() {

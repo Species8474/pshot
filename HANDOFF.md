@@ -255,15 +255,15 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - File > Automate > Lens Correction: the same distortion / chromatic aberration / vignette correction (Filter > Lens Correction settings, no lens profiles) on chosen files, each saved as JPEG/PNG/PSD.
   - Layer masks: \\ shows the mask as a red overlay (keymap -> Mask.toggle_overlay), Alt+click the mask thumbnail shows the mask alone, Mask Options... (overlay color/opacity), Refine Mask... (the Refine Edge dialog on the mask; Select > Refine Edge becomes Refine Mask while the mask is targeted).
   - File > Scripts > Browse... runs a JavaScript file with (app, config, commands); File > Exit closes all documents (and the tab when the browser allows).
+  - Copy CSS (layer context menu; ps/copy-css.js): CSS for shape / type / pixel layers (position, size, fill, gradient overlay, border, radius, shadows, opacity, blend mode) to the clipboard. Smart filter Blending Options (mode and opacity per filter, applied over the pixels below it).
 
 ## Known gaps / next
 
 - PRIORITY (Josh, 2026-10-10): 1) Rasterize Layer Style DONE, 2) Combine Slices DONE, 3) Move to New Window DONE, 4) every Filter menu item working DONE. Then continue the rest of this list.
 
-- Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Refine Mask, Mask Options, Copy CSS, Rasterize Layer Style, Combine Slices, Check Spelling, Edit Smart Filter Blending Options, Move to New Window. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
+- Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
-- Filters: Adaptive Wide Angle, Vanishing Point.
 - Actions: droplets and recording of tool strokes, Freeform Pen's Magnetic option, Slice tools, 3D.  Make Work Path traces corner points only (no curve fitting).
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning has no Toning Curve (presets are approximations). Match Color has no selection-based statistics or Save/Load Statistics.
 - Styles: Contour/Texture/quality contours are not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). PSD placed layers (smart objects and their smart filters save as pixels).
