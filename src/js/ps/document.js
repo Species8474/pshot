@@ -98,6 +98,64 @@ function px(v) {
 
 //patterns used by Pattern Overlay styles while building a PSD
 var used_patterns = [];
+//smart object sources written as PSD linked files (embedded)
+var linked_files = [];
+
+function data_url_bytes(url) {
+	const b64 = url.slice(url.indexOf(',') + 1), bin = atob(b64), out = new Uint8Array(bin.length);
+	for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+	return out;
+}
+
+/**
+ * a smart object's four corners in the document: [TL, TR, BR, BL] as x, y pairs
+ */
+function smart_corners(layer) {
+	const s = layer.ps_smart, dx = layer.x - (s.lx || 0), dy = layer.y - (s.ly || 0);
+	if (s.quad) return s.quad.flatMap(c => [c.x + dx, c.y + dy]);
+	const b = s.box, cos = Math.cos(b.angle || 0), sin = Math.sin(b.angle || 0), hw = b.w / 2, hh = b.h / 2;
+	return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].flatMap(([x, y]) => [b.cx + dx + x * cos - y * sin, b.cy + dy + x * sin + y * cos]);
+}
+
+/**
+ * PSD placed layer corners -> pshot smart object box (or quad when distorted)
+ */
+function smart_from_corners(t) {
+	const p = [0, 2, 4, 6].map(i => ({ x: t[i], y: t[i + 1] }));
+	const w = Math.hypot(p[1].x - p[0].x, p[1].y - p[0].y), h = Math.hypot(p[3].x - p[0].x, p[3].y - p[0].y);
+	const angle = Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x);
+	const cx = (p[0].x + p[2].x) / 2, cy = (p[0].y + p[2].y) / 2;
+	//a rectangle (rotated or not) is a box; anything else keeps its four corners
+	const rect = Math.abs(Math.hypot(p[2].x - p[1].x, p[2].y - p[1].y) - h) < 0.5 && Math.abs(Math.hypot(p[3].x - p[2].x, p[3].y - p[2].y) - w) < 0.5
+		&& Math.abs((p[1].x - p[0].x) * (p[3].x - p[0].x) + (p[1].y - p[0].y) * (p[3].y - p[0].y)) < w * h * 0.001;
+	return { box: { cx: cx, cy: cy, w: Math.max(1, w), h: Math.max(1, h), angle: angle }, quad: rect ? null : p };
+}
+
+/**
+ * an embedded smart object file -> canvas (PNG / JPEG, or a PSD / PSB composite)
+ */
+async function linked_file_canvas(file) {
+	if (!file || !file.data) return null;
+	const d = file.data;
+	if (d[0] == 0x38 && d[1] == 0x42 && d[2] == 0x50) {
+		try {
+			const inner = readPsd(d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength), { skipLayerImageData: true, skipThumbnail: true });
+			return inner.canvas || null;
+		} catch (e) {
+			return null;
+		}
+	}
+	try {
+		const bmp = await createImageBitmap(new Blob([d]));
+		const c = document.createElement('canvas');
+		c.width = bmp.width;
+		c.height = bmp.height;
+		c.getContext('2d').drawImage(bmp, 0, 0);
+		return c;
+	} catch (e) {
+		return null;
+	}
+}
 
 /**
  * a stable UUID-shaped id for a pattern name (PSD patterns are referenced by id)
@@ -250,12 +308,12 @@ async function file_to_layers(file) {
 		}
 		const layers = [];
 		let group_key = 0;
-		const walk = (children, parent_key) => {
+		const walk = async (children, parent_key) => {
 			for (const child of children || []) {
 				if (child.children) {
 					//group: members first (bottom-up), then the group header above them
 					const key = ++group_key;
-					walk(child.children, key);
+					await walk(child.children, key);
 					layers.push({
 						name: child.name || 'Group',
 						type: 'ps_group',
@@ -332,6 +390,31 @@ async function file_to_layers(file) {
 				if (!child.canvas || child.canvas.width == 0 || child.canvas.height == 0) {
 					continue;
 				}
+				//placed layers (smart objects): their embedded file is the source
+				if (child.placedLayer && child.placedLayer.transform) {
+					const lf = (psd.linkedFiles || []).find(f => f.id == child.placedLayer.id);
+					const source = await linked_file_canvas(lf);
+					if (source) {
+						const full = document.createElement('canvas');
+						full.width = psd.width;
+						full.height = psd.height;
+						full.getContext('2d').drawImage(child.canvas, child.left || 0, child.top || 0);
+						const placed = smart_from_corners(child.placedLayer.transform);
+						layers.push({
+							name: child.name || 'Smart Object', type: 'image', x: 0, y: 0, width: psd.width, height: psd.height, width_original: psd.width, height_original: psd.height,
+							opacity: Math.round((child.opacity === undefined ? 1 : child.opacity) * 100),
+							visible: !child.hidden,
+							composition: child.clipping ? 'source-atop' : (FROM_PSD_BLEND[child.blendMode] || 'source-over'),
+							data: full.toDataURL('image/png'),
+							_ps_smart: { source: source, box: placed.box, quad: placed.quad, lx: 0, ly: 0 },
+							_ps_mask: child.mask && (child.mask.canvas || child.mask.defaultColor !== undefined) ? child.mask : null,
+							_ps_styles: child.effects && !child.effects.disabled ? effects_to_styles(child.effects) : null,
+							_ps_fill: child.fillOpacity !== undefined ? Math.round(child.fillOpacity * 100) : null,
+							_parent_key: parent_key,
+						});
+						continue;
+					}
+				}
 				layers.push({
 					name: child.name || 'Layer',
 					type: 'image',
@@ -353,7 +436,7 @@ async function file_to_layers(file) {
 				});
 			}
 		};
-		walk(psd.children, null);
+		await walk(psd.children, null);
 		if (layers.length == 0 && psd.canvas) {
 			//flat PSD: use the composite image
 			layers.push({
@@ -443,6 +526,10 @@ async function open_document(files) {
 	await app.State.do_action(new app.Actions.Bundle_action('open', 'Open', actions));
 	//layer styles, fill opacity and vector masks
 	for (const settings of doc.layers) {
+		if (settings._ps_smart) {
+			const smart_layer = config.layers.find(l => l.order == settings.order);
+			if (smart_layer) smart_layer.ps_smart = settings._ps_smart;
+		}
 		if (settings._ps_styles || settings._ps_fill != null || settings._ps_vmask) {
 			const layer = config.layers.find(l => l.order == settings.order);
 			if (layer) {
@@ -699,6 +786,13 @@ function psd_node(layer) {
 		top = 0;
 	}
 	const shape = layer.type == 'ps_shape' ? app.GUI.Ps_workspace.Shapes.to_psd(layer) : (layer.type == 'ps_fill' && layer.ps_fill_layer ? app.GUI.Ps_workspace.Fill_layers.to_psd(layer) : {});
+	//smart objects: the source is embedded, the layer is placed at its corners
+	if (layer.ps_smart && layer.ps_smart.source) {
+		const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'pshot-' + Date.now() + '-' + linked_files.length;
+		const src = layer.ps_smart.source;
+		linked_files.push({ id: id, name: (layer.name || 'Smart Object').replace(/[\\/:*?"<>|]+/g, '_') + '.png', type: 'png ', creator: '8BIM', data: data_url_bytes(src.toDataURL('image/png')) });
+		shape.placedLayer = { id: id, placed: id, type: 'raster', transform: smart_corners(layer), width: src.width, height: src.height };
+	}
 	return {
 		...shape,
 		name: layer.name,
@@ -759,6 +853,7 @@ function build_psd() {
 	composite.height = config.HEIGHT;
 	app.Layers.convert_layers_to_canvas(composite.getContext('2d'), null, false);
 	used_patterns = [];
+	linked_files = [];
 	const children = build(null);
 	const patterns = used_patterns.map(pattern_info);
 	const Slices = app.GUI.Ps_workspace.Slices;
@@ -774,7 +869,7 @@ function build_psd() {
 			};
 		}),
 	}] } : undefined;
-	return { width: config.WIDTH, height: config.HEIGHT, children: children, canvas: composite, annotations: app.GUI.Ps_workspace.Notes.to_psd(), patterns: patterns.length ? patterns : undefined, imageResources: image_resources };
+	return { width: config.WIDTH, height: config.HEIGHT, children: children, canvas: composite, annotations: app.GUI.Ps_workspace.Notes.to_psd(), patterns: patterns.length ? patterns : undefined, imageResources: image_resources, linkedFiles: linked_files.length ? linked_files : undefined };
 }
 
 function save_psd(file_name) {

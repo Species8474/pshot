@@ -263,6 +263,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Match Color: Ignore Selection when Applying Adjustment, Use Selection in Source (active document) / Target to Calculate, Save / Load Statistics (JSON).
   - HDR Toning: Toning Curve and Histogram (Local Adaptation): curve points over the luminance histogram (click adds, drag moves, drag off deletes, Reset Curve), applied to the toned luminance.
   - Actions panel menu (New Action/Set, Duplicate, Delete, Play, Start Recording, Allow Tool Recording, Clear All, Reset, Load/Replace/Save Actions as JSON). Allow Tool Recording: brush and pencil strokes are recorded (commit_stroke -> Actions.record_stroke) as ps/commands.replay_stroke steps (tool, options, color, document points) and replayed by dispatching pointer events. Layers/History panel menus: Lock Layers, Edit Contents, New Snapshot, Delete, New Document wired.
+  - PSD smart objects: saved as placed layers (placedLayer with the four corners, the source embedded as a PNG linked file) and opened back as smart objects (PNG/JPEG sources, or the composite of an embedded PSD/PSB); rotated boxes round-trip exactly, distorted ones keep their corners as a quad.
 
 ## Known gaps / next
 
@@ -273,7 +274,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
 - Actions: droplets, Insert Stop / Menu Item / Conditional / Path, Action and Playback Options; eraser and retouch strokes are not recorded. 3D.
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning presets are approximations.
-- Styles: Contour/Texture/quality contours are not written to PSD; PSD placed layers (smart objects and their smart filters save as pixels).
+- Styles: Contour/Texture/quality contours are not written to PSD; Smart filters are not written to PSD (the placed layer's pixels include them).
 - Brush panel: Texture Each Tip off / the other Texture modes (Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height) render as Multiply; Dual Brush modes other than Multiply; tilt.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T in a normal window, so those commands work from the menus there. The full screen modes (F) also take the browser full screen and call the Keyboard Lock API, so the shortcuts reach pshot (not verifiable in headless tests).
 
