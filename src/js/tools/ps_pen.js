@@ -76,6 +76,16 @@ class Ps_pen_class extends Base_tools_class {
 		var mode = this.mode();
 		if (mode == 'freeform') {
 			//Freeform Pen: collect the pointer trail, fit a path on release
+			this.magnet = null;
+			if (config.TOOL.attributes.magnetic) {
+				//Magnetic: the trail snaps to the strongest edge near the pointer (the Magnetic Lasso's edges)
+				var S = app.GUI.GUI_tools.tools_modules.ps_select && app.GUI.GUI_tools.tools_modules.ps_select.object;
+				if (S) {
+					S.edges = S.edge_map();
+					this.magnet = S;
+					p = S.snap(p);
+				}
+			}
 			this.drag = { kind: 'freeform', pts: [p], after: () => this.finish_freeform() };
 			this.install_overlay();
 			return;
@@ -175,6 +185,7 @@ class Ps_pen_class extends Base_tools_class {
 	async finish_freeform() {
 		var pts = this.freeform || [];
 		this.freeform = null;
+		if (this.magnet) { this.magnet.edges = null; this.magnet = null; }
 		app.GUI.Ps_workspace.Selection.draw_overlay();
 		if (pts.length < 2) return;
 		var tol = Math.max(0.5, config.TOOL.attributes.curve_fit || 2);
@@ -241,7 +252,15 @@ class Ps_pen_class extends Base_tools_class {
 		var d = this.drag;
 		if (d.kind == 'freeform') {
 			var fp = this.world(e), last = d.pts[d.pts.length - 1];
-			if (Math.hypot(fp.x - last.x, fp.y - last.y) * (config.ZOOM || 1) >= 2) d.pts.push(fp);
+			if (this.magnet) {
+				var dist = Math.hypot(fp.x - last.x, fp.y - last.y), n = Math.floor(dist / 2);
+				for (var si = 1; si <= n; si++) {
+					var q = this.magnet.snap({ x: last.x + (fp.x - last.x) * si / n, y: last.y + (fp.y - last.y) * si / n });
+					var prev = d.pts[d.pts.length - 1];
+					if (Math.hypot(q.x - prev.x, q.y - prev.y) >= 0.5) d.pts.push(q);
+				}
+			}
+			else if (Math.hypot(fp.x - last.x, fp.y - last.y) * (config.ZOOM || 1) >= 2) d.pts.push(fp);
 			this.freeform = d.pts;
 			app.GUI.Ps_workspace.Selection.draw_overlay();
 			return;

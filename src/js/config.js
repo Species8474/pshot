@@ -130,6 +130,11 @@ config.TOOLS = [
 			pen_mode: 'Path',
 			auto_add: true,
 			curve_fit: 2,
+			//Freeform Pen > Magnetic: Width, Contrast, Frequency (as the Magnetic Lasso)
+			magnetic: false,
+			width: 10,
+			contrast: 10,
+			frequency: 57,
 		},
 	},
 	{

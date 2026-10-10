@@ -13,6 +13,7 @@ import config from './../config.js';
 import { tool_icons } from './tools-def.js';
 import Patterns from './patterns.js';
 import { show_popup_menu } from './popup-menu.js';
+import Dialog_class from './../libs/popup.js';
 import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
 function measure_tool() {
@@ -612,7 +613,8 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'icon', icon: IC.path_ops, title: 'Path operations' },
 		{ type: 'num', label: 'Curve Fit:', bind: 'curve_fit', unit: 'px', width: 40 },
-		{ type: 'check', label: 'Magnetic', value: false },
+		{ type: 'icon', icon: IC.gear, title: 'Set additional pen and path options', action: () => freeform_options() },
+		{ type: 'check', label: 'Magnetic', bind: 'magnetic' },
 		{ type: 'check', label: 'Align Edges', value: false },
 	],
 	path_selection: [
@@ -691,6 +693,28 @@ function shape_ops_menu(anchor) {
 		{ divider: true },
 		{ name: 'Merge Shape Components', action: shape_layer ? () => ws.Shapes.merge_components() : null },
 	]);
+}
+
+/**
+ * Freeform Pen options (gear): Curve Fit, Magnetic Width / Contrast / Frequency
+ */
+function freeform_options() {
+	var a = config.TOOL.attributes;
+	var POP = new Dialog_class();
+	POP.show({
+		title: 'Freeform Pen Options',
+		params: [
+			{ name: 'curve_fit', title: 'Curve Fit (px):', value: a.curve_fit, range: [0.5, 10], step: 0.5 },
+			{ name: 'magnetic', title: 'Magnetic', value: !!a.magnetic },
+			{ name: 'width', title: 'Width (px):', value: a.width, range: [1, 256], step: 1 },
+			{ name: 'contrast', title: 'Contrast (%):', value: a.contrast, range: [1, 100], step: 1 },
+			{ name: 'frequency', title: 'Frequency:', value: a.frequency, range: [5, 100], step: 1 },
+		],
+		on_finish: (p) => {
+			Object.assign(a, { curve_fit: parseFloat(p.curve_fit) || 2, magnetic: !!p.magnetic, width: parseFloat(p.width) || 10, contrast: parseFloat(p.contrast) || 10, frequency: parseFloat(p.frequency) || 57 });
+			app.GUI.Ps_workspace.Options_bar.render();
+		},
+	});
 }
 
 function fill_screen() {
