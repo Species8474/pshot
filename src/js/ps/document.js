@@ -676,6 +676,8 @@ function text_to_psd(layer) {
 				fontSize: size, fauxBold: !!m.bold, fauxItalic: !!m.italic, underline: !!m.underline, strikethrough: !!m.strikethrough,
 				tracking: Math.round((m.kerning || 0) / size * 1000), autoLeading: !m.leading, leading: m.leading ? size + m.leading : undefined,
 				fillColor: hex(m.fill_color || '#000000'),
+				//Character panel caps / position, OpenType Standard Ligatures
+				fontCaps: m.caps == 'small' ? 1 : (m.caps == 'all' ? 2 : 0), fontBaseline: m.position == 'super' ? 1 : (m.position == 'sub' ? 2 : 0), ligatures: m.liga !== false,
 			} });
 		});
 		if (li < lines.length - 1) text += '\r';
@@ -741,6 +743,9 @@ function text_from_psd(child) {
 			fill_color: st.fillColor ? rgb_to_hex(st.fillColor) : '#000000',
 		};
 		if (st.tracking) m.kerning = st.tracking / 1000 * m.size;
+		if (st.fontCaps) m.caps = st.fontCaps == 1 ? 'small' : 'all';
+		if (st.fontBaseline) m.position = st.fontBaseline == 1 ? 'super' : 'sub';
+		if (st.ligatures === false) m.liga = false;
 		return m;
 	};
 	var lines = [[]], pos = 0;

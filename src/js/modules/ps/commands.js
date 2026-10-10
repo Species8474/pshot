@@ -26,6 +26,7 @@ import { copy_css } from './../../ps/copy-css.js';
 import zoomView from './../../libs/zoomView.js';
 import { preview_size, set_preview_size } from './../../ps/font-menu.js';
 import { enhance_pattern_select } from './../../ps/thumb-picker.js';
+import { type_set } from './../../ps/type-panels.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2193,6 +2194,25 @@ class Ps_commands_class {
 	/**
 	 * Actions: a Stop step (shown by the Actions panel during playback) and Insert Path
 	 */
+	/**
+	 * Type > OpenType: Standard Ligatures, Ordinals, Fractions (the selected text,
+	 * or the whole type layer, or the Type tool's setting)
+	 */
+	opentype(key) {
+		type_set(key, !this.opentype_is(key));
+		config.need_render = true;
+	}
+
+	opentype_is(key) {
+		var l = config.layer;
+		if (l && l.type == 'text' && l.data && l.data[0] && l.data[0][0]) {
+			var v = l.data[0][0].meta[key];
+			return key == 'liga' ? v !== false : !!v;
+		}
+		var a = config.TOOLS.find(t => t.name == 'text').attributes[key];
+		return key == 'liga' ? a !== false : !!a;
+	}
+
 	action_stop() {}
 	action_conditional() {}
 

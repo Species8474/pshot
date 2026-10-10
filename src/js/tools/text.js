@@ -35,14 +35,91 @@ export const metaDefaults = {
 	stroke_color: '#000000',
 	//pshot: Character panel All Caps / Small Caps ('all' | 'small') and Superscript / Subscript ('super' | 'sub')
 	caps: '',
-	position: ''
+	position: '',
+	//pshot: Type > OpenType: Standard Ligatures (on in CS6), Ordinals, Fractions
+	liga: true,
+	ordn: false,
+	frac: false
 };
 
 /**
  * pshot: how a character of a span is drawn: the text (caps), the size factor and the baseline shift
  */
-function span_glyph(span, character, size) {
+//OpenType by glyph substitution (the renderer draws letter by letter)
+const LIGATURES = { ffi: '\uFB03', ffl: '\uFB04', ff: '\uFB00', fi: '\uFB01', fl: '\uFB02' };
+const FRACTIONS = { '1/2': '\u00BD', '1/4': '\u00BC', '3/4': '\u00BE', '1/3': '\u2153', '2/3': '\u2154', '1/8': '\u215B', '3/8': '\u215C', '5/8': '\u215D', '7/8': '\u215E', '1/5': '\u2155' };
+const glyph_cache = new Map();
+const plan_cache = new Map();
+
+/**
+ * the font has its own glyph for ch (the same width whichever fallback follows it)
+ */
+function has_glyph(family, ch) {
+	const key = family + '|' + ch;
+	if (!glyph_cache.has(key)) {
+		const g = document.createElement('canvas').getContext('2d');
+		g.font = '100px "' + family + '", serif';
+		const a = g.measureText(ch).width;
+		g.font = '100px "' + family + '", monospace';
+		glyph_cache.set(key, Math.abs(a - g.measureText(ch).width) < 0.01);
+	}
+	return glyph_cache.get(key);
+}
+
+/**
+ * per character of a span's text: the substituted glyph ({ text, scale, up }) or null
+ */
+function opentype_plan(text, liga, ordn, frac, family) {
+	const key = text + '|' + liga + ordn + frac + '|' + family;
+	if (plan_cache.has(key)) return plan_cache.get(key);
+	const plan = new Array(text.length).fill(null);
+	if (frac) {
+		//Fractions: precomposed where Unicode has one, otherwise numerator up, fraction slash, denominator down
+		const re = /(\d+)\/(\d+)/g;
+		let m;
+		while ((m = re.exec(text))) {
+			const pre = FRACTIONS[m[0]];
+			if (pre && has_glyph(family, pre)) {
+				plan[m.index] = { text: pre, scale: 1, up: 0 };
+				for (let i = 1; i < m[0].length; i++) plan[m.index + i] = { text: '', scale: 1, up: 0 };
+				continue;
+			}
+			for (let i = 0; i < m[1].length; i++) plan[m.index + i] = { text: m[1][i], scale: 0.6, up: 0.36 };
+			plan[m.index + m[1].length] = { text: '\u2044', scale: 1, up: 0 };
+			for (let i = 0; i < m[2].length; i++) plan[m.index + m[1].length + 1 + i] = { text: m[2][i], scale: 0.6, up: 0 };
+		}
+	}
+	if (ordn) {
+		//Ordinals: 1st 2nd 3rd 4th - the letters raised and smaller
+		const re = /\d(st|nd|rd|th)(?![A-Za-z])/gi;
+		let m;
+		while ((m = re.exec(text))) {
+			for (let i = 1; i < m[0].length; i++) if (!plan[m.index + i]) plan[m.index + i] = { text: m[0][i], scale: 0.6, up: 0.36 };
+		}
+	}
+	if (liga) {
+		for (let i = 0; i < text.length; i++) {
+			if (plan[i]) continue;
+			const three = text.substr(i, 3), two = text.substr(i, 2);
+			const seq = LIGATURES[three] ? three : (LIGATURES[two] ? two : null);
+			if (!seq || !has_glyph(family, LIGATURES[seq])) continue;
+			plan[i] = { text: LIGATURES[seq], scale: 1, up: 0 };
+			for (let k = 1; k < seq.length; k++) plan[i + k] = { text: '', scale: 1, up: 0 };
+			i += seq.length - 1;
+		}
+	}
+	if (plan_cache.size > 500) plan_cache.clear();
+	plan_cache.set(key, plan);
+	return plan;
+}
+
+function span_glyph(span, character, size, text, index, family) {
 	const caps = span.meta.caps || '', position = span.meta.position || '';
+	const liga = span.meta.liga !== false && !caps, ordn = !!span.meta.ordn, frac = !!span.meta.frac;
+	if (text != null && (liga || ordn || frac)) {
+		const g = opentype_plan(text, liga, ordn, frac, family || 'Arial')[index];
+		if (g) return { text: g.text, scale: g.scale, dy: -size * g.up };
+	}
 	if (!caps && !position) return null;
 	const upper = character.toUpperCase();
 	let scale = 1;
@@ -1480,7 +1557,7 @@ class Text_editor_class {
 						fontKerning = isHorizontalTextDirection && nextCharacter ? fontMetrics.get_kerning_offset(character + nextCharacter) : 0;
 					}
 					let characterSize;
-					const glyph = isHorizontalTextDirection ? span_glyph(span, character, size) : null;
+					const glyph = isHorizontalTextDirection ? span_glyph(span, character, size, span.text, c, family) : null;
 					if (glyph) {
 						//caps / super / subscript: measured as drawn
 						const font_before = ctx.font;
@@ -1860,7 +1937,7 @@ class Text_editor_class {
 							}
 							ctx.fillStyle = fillStyle;
 							ctx.strokeStyle = strokeStyle;
-							const glyph = isHorizontalTextDirection ? span_glyph(span, letter, span.meta.size || metaDefaults.size) : null;
+							const glyph = isHorizontalTextDirection ? span_glyph(span, letter, span.meta.size || metaDefaults.size, span.text, c, family) : null;
 							if (glyph) {
 								const font_before = ctx.font;
 								if (glyph.scale != 1) ctx.font = ' ' + (italic ? 'italic' : '') + ' ' + (bold ? 'bold' : '') + ' ' + ((span.meta.size || metaDefaults.size) * glyph.scale) + 'px ' + family;
@@ -2660,6 +2737,11 @@ class Text_class extends Base_tools_class {
 			case 'position':
 				meta.position = value || '';
 				break;
+			case 'liga':
+			case 'ordn':
+			case 'frac':
+				meta[param.key] = !!value;
+				break;
 			case 'fill':
 				if (value) meta.fill_color = value;
 				break;
@@ -2845,6 +2927,9 @@ class Text_class extends Base_tools_class {
 						strikethrough: params.strikethrough.value !== metaDefaults.strikethrough ? params.strikethrough.value : undefined,
 						caps: params.caps ? params.caps : undefined,
 						position: params.position ? params.position : undefined,
+						liga: params.liga === false ? false : undefined,
+						ordn: params.ordn ? true : undefined,
+						frac: params.frac ? true : undefined,
 						fill_color: params.fill !== metaDefaults.fill_color ? params.fill : undefined,
 						stroke_color: params.stroke !== metaDefaults.stroke_color ? params.stroke : undefined,
 						stroke_size: params.stroke_size !== metaDefaults.stroke_size && !isNaN(params.stroke_size) ? params.stroke_size : undefined,

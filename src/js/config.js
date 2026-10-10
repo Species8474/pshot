@@ -712,6 +712,9 @@ config.TOOLS = [
 			//pshot: Character panel All Caps / Small Caps and Superscript / Subscript
 			caps: '',
 			position: '',
+			liga: true,
+			ordn: false,
+			frac: false,
 			fill: '#008800',
 			stroke: '#000000',
 			stroke_size: {
