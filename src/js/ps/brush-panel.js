@@ -47,7 +47,7 @@ class Ps_brush_panel_class {
 		var right = '';
 		if (this.section == 'tip') {
 			right = row('size', 'Size:', 1, 2500, 'px') + row('angle', 'Angle:', -180, 180, '°') + row('roundness', 'Roundness:', 1, 100, '%')
-				+ row('hardness', 'Hardness:', 0, 100, '%') + '<label class="ps_adj_check"><input type="checkbox" checked disabled> Spacing</label>' + row('spacing', 'Spacing:', 1, 1000, '%');
+				+ row('hardness', 'Hardness:', 0, 100, '%') + '<label class="ps_adj_check"><input type="checkbox" class="ps_bp_spacing_on"' + (a.spacing_off ? '' : ' checked') + '> Spacing</label>' + row('spacing', 'Spacing:', 1, 1000, '%');
 		}
 		else if (this.section == 'dynamics') right = row('size_jitter', 'Size Jitter:', 0, 100, '%') + row('angle_jitter', 'Angle Jitter:', 0, 100, '%')
 			+ row('roundness_jitter', 'Roundness Jitter:', 0, 100, '%') + row('min_roundness', 'Minimum Roundness:', 1, 100, '%');
@@ -106,6 +106,9 @@ class Ps_brush_panel_class {
 		host.querySelectorAll('[data-key]').forEach(i => i.addEventListener('input', () => set(i.dataset.key, parseFloat(i.value))));
 		host.querySelectorAll('[data-num]').forEach(i => i.addEventListener('change', () => set(i.dataset.num, parseFloat(i.value))));
 		host.querySelectorAll('[data-check]').forEach(i => i.addEventListener('change', () => { attrs()[i.dataset.check] = i.checked; this.preview(host); }));
+		//Spacing off: the dabs follow the pointer's own samples (faster strokes spread them)
+		var sp_on = host.querySelector('.ps_bp_spacing_on');
+		if (sp_on) sp_on.addEventListener('change', () => { attrs().spacing_off = !sp_on.checked; this.preview(host); });
 		host.querySelectorAll('[data-sel]').forEach(i => i.addEventListener('change', () => { attrs()[i.dataset.sel] = i.value; this.preview(host); }));
 		this.preview(host);
 	}

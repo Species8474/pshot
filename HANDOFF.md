@@ -296,6 +296,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Gradient Editor: Gradient Type Noise (Roughness, Color Model RGB / HSB / LAB with channel ranges, Restrict Colors, Add Transparency, Randomize; gradients.js noise_lut, seeded). Noise gradients also keep 17 sampled stops for the places that only take solid gradients (PSD, Copy CSS). Smoothness stays greyed.
   - Character panel kerning menu: Metrics (font pairs), Optical (pshot uses the same pairs), 0 (none) - layer.params.kerning.
   - Lighting Effects Presets: Default, Blue Omni, Circle of Light, Crossing, Crossing Down, Five Lights Down / Up, Flashlight, Flood Light, Parallel Directional, RGB Lights, Soft Direct Lights, Soft Omni, Soft Spot Light, Three Down, Triple Spotlight (approximate light setups).
+  - Shadows/Highlights Save As Defaults (browser storage). Brush panel Brush Tip Shape Spacing checkbox (off: a dab per pointer sample, spacing_off).
 
 ## Known gaps / next
 

@@ -395,7 +395,7 @@ class Brush_class extends Base_tools_class {
 		return (params.spacing != null && params.spacing != 25) || (params.roundness != null && params.roundness != 100) || params.angle
 			|| params.size_jitter > 0 || params.scatter > 0 || params.opacity_jitter > 0 || (params.flow != null && params.flow < 100)
 			|| params.angle_jitter > 0 || params.roundness_jitter > 0 || params.count > 1 || params.color_dynamics || params.noise || params.wet_edges
-			|| !!params.tip || params.texture || params.dual || params.pose || params.airbrush || params.pressure_op;
+			|| !!params.tip || params.texture || params.dual || params.pose || params.airbrush || params.pressure_op || params.spacing_off;
 	}
 
 	/**
@@ -637,6 +637,10 @@ class Brush_class extends Base_tools_class {
 				continue;
 			}
 			var base = b[2] || params.size;
+			if (params.spacing_off) {
+				place(b[0], b[1], base, [1, 0]);
+				continue;
+			}
 			var step = Math.max(0.5, base * spacing / 100);
 			var len = Math.hypot(b[0] - a[0], b[1] - a[1]);
 			var t = step - carry;

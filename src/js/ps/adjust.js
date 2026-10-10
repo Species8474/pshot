@@ -2001,11 +2001,20 @@ class Ps_adjust_class {
 			html += '<div class="ps_adj_slider' + (simple[f[0]] ? '' : ' ps_sh_more') + '" data-sh="' + f[0] + '"><span data-label="' + f[0] + '">' + f[1] + '</span><input type="number" id="sh_' + f[0] + '_n" min="' + f[2] + '" max="' + f[3] + '" step="' + step + '">'
 				+ '<span class="ps_adj_unit">' + f[5] + '</span><input type="range" id="sh_' + f[0] + '" min="' + f[2] + '" max="' + f[3] + '" step="' + step + '"></div>';
 		}
-		html += '<label class="ps_adj_check ps_sh_more disabled"><input type="checkbox" disabled> Save As Defaults</label>'
+		html += '<div class="ps_adj_row ps_sh_more"><button type="button" class="button" id="sh_defaults">Save As Defaults</button></div>'
 			+ '<label class="ps_adj_check"><input type="checkbox" id="sh_more"> Show More Options</label>';
+		//Save As Defaults: the settings the dialog opens with (kept in the browser)
+		var saved = {};
+		try { saved = JSON.parse(localStorage.getItem('pshot_sh_defaults') || '{}') || {}; } catch (e) { saved = {}; }
 		this.show('Shadows/Highlights', html, (root, state, update) => {
+			root.querySelector('#sh_defaults').addEventListener('click', () => {
+				var keep = {};
+				F.forEach(f => { keep[f[0]] = state[f[0]]; });
+				try { localStorage.setItem('pshot_sh_defaults', JSON.stringify(keep)); } catch (e) { /* storage blocked */ }
+				app.GUI.Ps_workspace.status_message('Shadows/Highlights defaults saved');
+			});
 			for (let f of F) {
-				if (state[f[0]] === undefined) state[f[0]] = f[4];
+				if (state[f[0]] === undefined) state[f[0]] = saved[f[0]] != null ? saved[f[0]] : f[4];
 				let r = root.querySelector('#sh_' + f[0]), n = root.querySelector('#sh_' + f[0] + '_n');
 				r.value = n.value = state[f[0]];
 				let set = (v) => { if (isNaN(v)) return; state[f[0]] = Math.max(f[2], Math.min(f[3], v)); r.value = n.value = state[f[0]]; update(); };
