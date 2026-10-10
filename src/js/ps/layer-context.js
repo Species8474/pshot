@@ -232,6 +232,19 @@ function vmask_items(layer) {
  * contextmenu on the Layers panel: select the clicked layer, then show its menu
  */
 async function layer_context_menu(event) {
+	if (!event.target.closest('.ps_layer_row, .ps_effects') && event.target.closest('#layers')) {
+		//the panel's empty area: thumbnail options
+		event.preventDefault();
+		var GL = app.GUI.GUI_layers, o = GL.thumb_options();
+		var size = (v, name) => ({ name: name, checked: o.size == v, action: () => GL.set_thumb_options({ size: v }) });
+		show_popup_menu(event.target, [
+			size('none', 'No Thumbnails'), size('small', 'Small Thumbnails'), size('medium', 'Medium Thumbnails'), size('large', 'Large Thumbnails'),
+			{ divider: true },
+			{ name: 'Clip Thumbnails to Layer Bounds', checked: o.clip == 'layer', action: () => GL.set_thumb_options({ clip: 'layer' }) },
+			{ name: 'Clip Thumbnails to Document Bounds', checked: o.clip != 'layer', action: () => GL.set_thumb_options({ clip: 'document' }) },
+		], { point: { x: event.clientX, y: event.clientY } });
+		return true;
+	}
 	var fx = event.target.closest('.ps_effects');
 	var row = event.target.closest('.ps_layer_row');
 	if (fx) {

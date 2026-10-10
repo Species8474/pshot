@@ -1318,6 +1318,13 @@ body.theme-cs6 #popups .popup .ui_number_input input { color: var(--ps-text) !im
 .ps_mask_link svg { width: 11px; height: 11px; }
 .ps_mask_wrap { position: relative; line-height: 0; margin-right: 6px; }
 .ps_mask_thumb { width: 32px; height: 32px; border: 1px solid #1f1f1f; }
+/* Layers panel thumbnail sizes (right-click the panel's empty area) */
+#layers.ps_thumbs_small .ps_layer_row:not(.ps_group_row) { height: 26px; }
+#layers.ps_thumbs_small .ps_thumb, #layers.ps_thumbs_small .ps_mask_thumb, #layers.ps_thumbs_small .ps_shape_mask_thumb, #layers.ps_thumbs_small .ps_vmask_thumb { width: 20px !important; height: 20px !important; }
+#layers.ps_thumbs_large .ps_layer_row:not(.ps_group_row) { height: 62px; }
+#layers.ps_thumbs_large .ps_thumb, #layers.ps_thumbs_large .ps_mask_thumb, #layers.ps_thumbs_large .ps_shape_mask_thumb, #layers.ps_thumbs_large .ps_vmask_thumb { width: 56px !important; height: 56px !important; }
+#layers.ps_thumbs_none .ps_layer_row:not(.ps_group_row) { height: 24px; }
+#layers.ps_thumbs_none .ps_thumb_wrap, #layers.ps_thumbs_none .ps_mask_wrap, #layers.ps_thumbs_none .ps_mask_link { display: none; }
 .ps_mask_wrap.disabled::after {
 	content: ""; position: absolute; inset: 0;
 	background: linear-gradient(to top right, transparent 45%, #e02020 45%, #e02020 55%, transparent 55%),

@@ -507,6 +507,14 @@ class GUI_layers_class {
 		}
 		var W = config.WIDTH;
 		var H = config.HEIGHT;
+		//Clip Thumbnails to Layer Bounds: only the layer's own box
+		var bx = 0, by = 0;
+		if (this.thumb_options().clip == 'layer' && layer.type == 'image' && layer.width && layer.height) {
+			bx = layer.x;
+			by = layer.y;
+			W = layer.width;
+			H = layer.height;
+		}
 		var scale = Math.min(size / W, size / H);
 		var w = Math.max(1, Math.round(W * scale));
 		var h = Math.max(1, Math.round(H * scale));
@@ -527,6 +535,7 @@ class GUI_layers_class {
 		ctx.clip();
 		ctx.translate(ox, oy);
 		ctx.scale(scale, scale);
+		ctx.translate(-bx, -by);
 		var visible = layer.visible;
 		try {
 			layer.visible = true;
@@ -539,6 +548,24 @@ class GUI_layers_class {
 	}
 
 	/**
+	 * Layers panel thumbnails: size none / small / medium / large, clipped to
+	 * the document or to the layer's bounds
+	 */
+	thumb_options() {
+		if (!this.thumbs) {
+			try { this.thumbs = JSON.parse(localStorage.getItem('pshot_layer_thumbs_v1') || 'null'); } catch (e) { this.thumbs = null; }
+			this.thumbs = Object.assign({ size: 'medium', clip: 'document' }, this.thumbs || {});
+		}
+		return this.thumbs;
+	}
+
+	set_thumb_options(changes) {
+		Object.assign(this.thumb_options(), changes);
+		try { localStorage.setItem('pshot_layer_thumbs_v1', JSON.stringify(this.thumbs)); } catch (e) { /* storage blocked */ }
+		this.render_layers();
+	}
+
+	/**
 	 * renders layers list
 	 */
 	render_layers() {
@@ -546,6 +573,11 @@ class GUI_layers_class {
 		if (!target) {
 			return;
 		}
+		//Panel Options: thumbnail size (CS6 right-click on the panel's empty area)
+		var thumbs = this.thumb_options();
+		var tpx = { none: 32, small: 20, medium: 32, large: 56 }[thumbs.size] || 32;
+		target.classList.remove('ps_thumbs_none', 'ps_thumbs_small', 'ps_thumbs_large');
+		if (thumbs.size != 'medium') target.classList.add('ps_thumbs_' + thumbs.size);
 		//pshot: with a shape tool the options bar shows the selected shape layer
 		var ws_bar = app.GUI && app.GUI.Ps_workspace;
 		if (ws_bar && config.layer && ['rectangle', 'ellipse', 'pentagon'].includes(config.TOOL.name) && this.bar_layer !== config.layer.id) {
@@ -592,19 +624,19 @@ class GUI_layers_class {
 					html += '<span class="ps_clip_arrow">' + ICON.clip + '</span>';
 				}
 				var editing_mask = !!(value.ps_mask && value.ps_mask_editing);
-				html += '<span class="ps_thumb_wrap' + (value.ps_smart ? ' smart' : '') + '"><canvas class="ps_thumb' + (value.ps_mask && !editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="layer_thumb"></canvas></span>';
+				html += '<span class="ps_thumb_wrap' + (value.ps_smart ? ' smart' : '') + '"><canvas class="ps_thumb' + (value.ps_mask && !editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="' + tpx + '" height="' + tpx + '" data-id="' + value.id + '" data-action="layer_thumb"></canvas></span>';
 				if (value.ps_mask) {
 					html += '<span class="ps_mask_link" data-action="mask_link" data-id="' + value.id + '" title="Link layer and mask">' + (value.ps_mask_unlinked ? '' : ICON.link) + '</span>';
 					html += '<span class="ps_mask_wrap' + (value.ps_mask_disabled ? ' disabled' : '') + '">'
-						+ '<canvas class="ps_mask_thumb' + (editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="32" height="32" data-id="' + value.id + '" data-action="mask_thumb" title="Layer mask (Shift+click to disable)"></canvas></span>';
+						+ '<canvas class="ps_mask_thumb' + (editing_mask && value.id == config.layer.id ? ' targeted' : '') + '" width="' + tpx + '" height="' + tpx + '" data-id="' + value.id + '" data-action="mask_thumb" title="Layer mask (Shift+click to disable)"></canvas></span>';
 				}
 				if (value.type == 'ps_shape') {
 					html += '<span class="ps_mask_link">' + ICON.link + '</span>';
-					html += '<span class="ps_mask_wrap"><canvas class="ps_shape_mask_thumb" width="32" height="32" data-id="' + value.id + '" title="Vector mask"></canvas></span>';
+					html += '<span class="ps_mask_wrap"><canvas class="ps_shape_mask_thumb" width="' + tpx + '" height="' + tpx + '" data-id="' + value.id + '" title="Vector mask"></canvas></span>';
 				}
 				if (value.ps_vmask) {
 					html += '<span class="ps_mask_link" data-action="vmask_link" data-id="' + value.id + '" title="Link layer and vector mask">' + (value.ps_vmask.unlinked ? '' : ICON.link) + '</span>';
-					html += '<span class="ps_mask_wrap"><canvas class="ps_vmask_thumb" width="32" height="32" data-id="' + value.id + '" data-action="vmask_thumb" title="Vector mask (Shift+click to disable)"></canvas></span>';
+					html += '<span class="ps_mask_wrap"><canvas class="ps_vmask_thumb" width="' + tpx + '" height="' + tpx + '" data-id="' + value.id + '" data-action="vmask_thumb" title="Vector mask (Shift+click to disable)"></canvas></span>';
 				}
 				var is_background = value.name == 'Background' && value === layers[layers.length - 1];
 				html += '<span class="ps_layer_name' + (is_background ? ' background' : '') + '" data-id="' + value.id + '">' + this.Helper.escapeHtml(value.name) + '</span>';
