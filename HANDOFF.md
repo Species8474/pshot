@@ -290,6 +290,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Hue/Saturation (dialog and adjustment layers): Edit Master / Reds / Yellows / Greens / Cyans / Blues / Magentas with CS6 default ranges (a/b \ c/d degrees, falloff ramps, weighted by chroma), the before/after hue bars with draggable range markers, Presets (Default, Cyanotype, Further Increase Saturation, Increase Saturation, Old Style, Red Boost, Sepia, Strong Saturation, Yellow Boost - approximated values). PSD adjustment layers keep the six ranges.
   - Adjustment Preset menus (dialogs and adjustment layers; adjust.js preset_row / wire_preset, Default + CS6 names, edits switch to Custom): Levels, Curves, Exposure, Black & White, Channel Mixer (values approximate the shipped presets).
   - Image Size: Scale Styles (with Constrain Proportions; layer style sizes follow the resample, styles.js scale_styles shared with Scale Effects), Resolution in pixels/inch or pixels/cm, linked Width/Height unit menus. New dialog: Pixels/Inch or Pixels/Centimeter.
+  - Blur Gallery: Blur Effects Light Bokeh / Bokeh Color / Light Range (highlights in the range bloom in blurred areas, float box-blur so they stay bright without banding), Focus per Iris / Tilt-Shift pin, High Quality (more blur steps), Save Mask to Channels (alpha 'Blur Mask', white = sharp). Selection Bleed and Tilt-Shift Distortion stay greyed.
 
 ## Known gaps / next
 

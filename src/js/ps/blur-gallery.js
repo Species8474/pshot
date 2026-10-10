@@ -77,13 +77,15 @@ function blur_map(pins, w, h, k) {
 			var s = -1;
 			for (var sp of shaped) {
 				var dx = X - sp.x, dy = Y - sp.y, c = Math.cos(sp.angle), sn = Math.sin(sp.angle), v;
+				//Focus: how sharp the pin's center stays (100% = no blur there)
+				var floor = 1 - (sp.focus == null ? 100 : sp.focus) / 100;
 				if (sp.type == 'iris') {
 					var u = (dx * c + dy * sn) / sp.rx, vv = (-dx * sn + dy * c) / sp.ry;
-					v = sp.blur * smoothstep(sp.feather, 1, Math.sqrt(u * u + vv * vv));
+					v = sp.blur * (floor + (1 - floor) * smoothstep(sp.feather, 1, Math.sqrt(u * u + vv * vv)));
 				}
 				else {
 					var dist = Math.abs(-dx * sn + dy * c);
-					v = sp.blur * smoothstep(sp.h1, sp.h2, dist);
+					v = sp.blur * (floor + (1 - floor) * smoothstep(sp.h1, sp.h2, dist));
 				}
 				s = s < 0 ? v : Math.min(s, v);
 			}
@@ -94,16 +96,64 @@ function blur_map(pins, w, h, k) {
 }
 
 /**
+ * float Gaussian blur (three box passes) of an RGB float array, edges clamped
+ */
+function float_blur(src, w, h, sigma) {
+	var n = 3, ideal = Math.sqrt(12 * sigma * sigma / n + 1), wl = Math.floor(ideal);
+	if (wl % 2 == 0) wl--;
+	var m = Math.round((12 * sigma * sigma - n * wl * wl - 4 * n * wl - 3 * n) / (-4 * wl - 4));
+	var sizes = [];
+	for (var i = 0; i < n; i++) sizes.push(i < m ? wl : wl + 2);
+	var a = Float32Array.from(src), b = new Float32Array(src.length);
+	var pass = (from, to, r, horizontal) => {
+		var len = horizontal ? w : h, lines = horizontal ? h : w, inv = 1 / (r + r + 1);
+		for (var l = 0; l < lines; l++) {
+			var at = (k) => horizontal ? (l * w + k) * 3 : (k * w + l) * 3;
+			for (var c = 0; c < 3; c++) {
+				var first = from[at(0) + c], last = from[at(len - 1) + c], acc = (r + 1) * first;
+				for (var k = 0; k < r; k++) acc += from[at(Math.min(len - 1, k)) + c];
+				for (var k2 = 0; k2 < len; k2++) {
+					acc += from[at(Math.min(len - 1, k2 + r)) + c] - (k2 - r - 1 >= 0 ? from[at(k2 - r - 1) + c] : first);
+					to[at(k2) + c] = acc * inv;
+				}
+			}
+		}
+	};
+	for (var s of sizes) {
+		var r = (s - 1) / 2;
+		pass(a, b, r, true);
+		pass(b, a, r, false);
+	}
+	return a;
+}
+
+/**
  * src canvas -> ImageData blurred by the map
  */
-function render_blur(src, w, h, map) {
+function render_blur(src, w, h, map, fx) {
+	fx = fx || {};
 	var max = 0;
 	for (var i = 0; i < map.length; i++) if (map[i] > max) max = map[i];
 	var out = new ImageData(w, h);
 	var base = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
 	if (max < 0.3) { out.data.set(base); return out; }
-	var levels = [0, max / 8, max / 4, max / 2, max * 3 / 4, max];
+	//High Quality: more blur steps between sharp and the largest radius
+	var levels = fx.hq ? [0, max / 16, max / 8, max / 6, max / 4, max / 3, max / 2, max * 2 / 3, max * 3 / 4, max * 7 / 8, max] : [0, max / 8, max / 4, max / 2, max * 3 / 4, max];
 	var data = levels.map(r => r == 0 ? base : blurred(src, w, h, r));
+	//Light Bokeh: the bright pixels (Light Range) bloom in the blurred areas; Bokeh Color saturates them
+	var bokeh = (fx.bokeh || 0) / 100, glow = null;
+	if (bokeh > 0) {
+		var lo = fx.lo == null ? 191 : fx.lo, hi = fx.hi == null ? 255 : fx.hi, sat = 1 + (fx.color || 0) / 100 * 2;
+		var hl = new Float32Array(w * h * 3), any = false;
+		for (var q0 = 0, p0 = 0; q0 < base.length; q0 += 4, p0 += 3) {
+			var lum = base[q0] * 0.299 + base[q0 + 1] * 0.587 + base[q0 + 2] * 0.114;
+			if (lum < lo || lum > hi + 0.5) continue;
+			var wgt = hi > lo ? Math.min(1, (lum - lo) / Math.max(1, (hi - lo) * 0.5)) : 1;
+			for (var c0 = 0; c0 < 3; c0++) hl[p0 + c0] = Math.max(0, Math.min(255, lum + (base[q0 + c0] - lum) * sat)) * wgt;
+			any = true;
+		}
+		if (any) glow = levels.map(r => r == 0 ? null : float_blur(hl, w, h, r));
+	}
 	var o = out.data;
 	for (var j = 0; j < map.length; j++) {
 		var r = map[j], li = 0;
@@ -114,6 +164,14 @@ function render_blur(src, w, h, map) {
 		o[q + 1] = a[q + 1] + (b[q + 1] - a[q + 1]) * t;
 		o[q + 2] = a[q + 2] + (b[q + 2] - a[q + 2]) * t;
 		o[q + 3] = a[q + 3] + (b[q + 3] - a[q + 3]) * t;
+		if (glow && r > 0.3) {
+			//a highlight spread over the blur keeps its brightness (a bright out-of-focus light)
+			var ga = glow[li], gb = glow[li + 1], p3 = j * 3, gain = bokeh * Math.max(1.5, r * r / 12);
+			for (var c = 0; c < 3; c++) {
+				var gv = ga ? ga[p3 + c] + (gb[p3 + c] - ga[p3 + c]) * t : gb[p3 + c] * t;
+				o[q + c] = o[q + c] + gv * gain;
+			}
+		}
 	}
 	return out;
 }
@@ -137,7 +195,8 @@ class Ps_blur_gallery_class {
 		var sctx = small.getContext('2d');
 		sctx.imageSmoothingQuality = 'high';
 		sctx.drawImage(layer.link, 0, 0, pw, ph);
-		this.state = { layer: layer, W: W, H: H, k: k, pw: pw, ph: ph, small: small, pins: [], selected: null, tool: mode, preview: true, enabled: { field: true, iris: true, tilt: true } };
+		this.state = { layer: layer, W: W, H: H, k: k, pw: pw, ph: ph, small: small, pins: [], selected: null, tool: mode, preview: true, enabled: { field: true, iris: true, tilt: true },
+			fx: { bokeh: 0, color: 0, lo: 191, hi: 255, hq: false }, save_mask: false };
 		this.build_ui();
 		this.add_pin(mode, W / 2, H / 2);
 		this.sync_panel();
@@ -165,15 +224,16 @@ class Ps_blur_gallery_class {
 		el.className = 'popup ps_blurgallery';
 		el.style.display = 'block';
 		el.innerHTML = '<h2>Blur Gallery</h2>'
-			+ '<div class="ps_bg_bar"><span class="ps_bg_disabled">Selection Bleed: <input type="number" value="0" disabled>%</span><span class="ps_bg_disabled">Focus: <input type="number" value="100" disabled>%</span>'
-			+ '<label class="ps_adj_check disabled"><input type="checkbox" disabled> Save Mask to Channels</label><label class="ps_adj_check disabled"><input type="checkbox" disabled> High Quality</label>'
+			+ '<div class="ps_bg_bar"><span class="ps_bg_disabled">Selection Bleed: <input type="number" value="0" disabled>%</span><span class="ps_bg_focus">Focus: <input type="number" class="ps_bg_focus_n" value="100" min="0" max="100">%</span>'
+			+ '<label class="ps_adj_check"><input type="checkbox" class="ps_bg_savemask"> Save Mask to Channels</label><label class="ps_adj_check"><input type="checkbox" class="ps_bg_hq"> High Quality</label>'
 			+ '<label class="ps_adj_check"><input type="checkbox" class="ps_bg_preview" checked> Preview</label>'
 			+ '<button type="button" class="button ps_bg_remove" title="Remove all pins">Remove All Pins</button><button type="button" class="button ps_bg_cancel">Cancel</button><button type="button" class="button ps_bg_ok">OK</button></div>'
 			+ '<div class="ps_bg_body"><div class="ps_bg_view"><canvas width="' + s.pw + '" height="' + s.ph + '"></canvas></div>'
 			+ '<div class="ps_bg_side"><div class="ps_bg_panel"><div class="ps_bg_panel_title">Blur Tools</div>' + section('field') + section('iris') + section('tilt') + '</div>'
 			+ '<div class="ps_bg_panel"><div class="ps_bg_panel_title">Blur Effects</div>'
-			+ '<div class="ps_adj_slider disabled"><span>Light Bokeh:</span><input type="number" value="0" disabled><span class="ps_adj_unit">%</span><input type="range" value="0" disabled></div>'
-			+ '<div class="ps_adj_slider disabled"><span>Bokeh Color:</span><input type="number" value="0" disabled><span class="ps_adj_unit">%</span><input type="range" value="0" disabled></div>'
+			+ '<div class="ps_adj_slider"><span>Light Bokeh:</span><input type="number" data-fx="bokeh" min="0" max="100" value="0"><span class="ps_adj_unit">%</span><input type="range" data-fx-range="bokeh" min="0" max="100" value="0"></div>'
+			+ '<div class="ps_adj_slider"><span>Bokeh Color:</span><input type="number" data-fx="color" min="0" max="100" value="0"><span class="ps_adj_unit">%</span><input type="range" data-fx-range="color" min="0" max="100" value="0"></div>'
+			+ '<div class="ps_adj_slider ps_bg_lrange"><span>Light Range:</span><input type="number" data-fx="lo" min="0" max="255" value="191"><input type="number" data-fx="hi" min="0" max="255" value="255"></div>'
 			+ '</div></div></div>';
 		document.getElementById('popups').appendChild(el);
 		this.el = el;
@@ -183,6 +243,26 @@ class Ps_blur_gallery_class {
 		el.querySelector('.ps_bg_cancel').addEventListener('click', () => this.close());
 		el.querySelector('.ps_bg_remove').addEventListener('click', () => { s.pins = []; s.selected = null; this.sync_panel(); this.render(); });
 		el.querySelector('.ps_bg_preview').addEventListener('change', (e) => { s.preview = e.target.checked; this.render(); });
+		el.querySelector('.ps_bg_hq').addEventListener('change', (e) => { s.fx.hq = e.target.checked; });
+		el.querySelector('.ps_bg_savemask').addEventListener('change', (e) => { s.save_mask = e.target.checked; });
+		el.querySelector('.ps_bg_focus_n').addEventListener('change', (e) => {
+			var v = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+			e.target.value = v;
+			if (s.selected && s.selected.type != 'field') s.selected.focus = v;
+			this.render();
+		});
+		el.querySelectorAll('[data-fx]').forEach((input) => {
+			var key = input.dataset.fx, range = el.querySelector('[data-fx-range="' + key + '"]');
+			var set = (v) => {
+				if (isNaN(v)) return;
+				s.fx[key] = Math.max(0, Math.min(key == 'lo' || key == 'hi' ? 255 : 100, v));
+				input.value = s.fx[key];
+				if (range) range.value = s.fx[key];
+				this.render();
+			};
+			input.addEventListener('change', () => set(parseFloat(input.value)));
+			if (range) range.addEventListener('input', () => set(parseFloat(range.value)));
+		});
 		el.querySelectorAll('[data-section]').forEach((sec) => sec.addEventListener('mousedown', () => { s.tool = sec.dataset.section; this.sync_panel(); }));
 		el.querySelectorAll('[data-enable]').forEach((c) => c.addEventListener('change', () => { s.enabled[c.dataset.enable] = c.checked; this.render(); }));
 		el.querySelectorAll('[data-blur]').forEach((input) => {
@@ -329,6 +409,9 @@ class Ps_blur_gallery_class {
 			var pin = s.selected && s.selected.type == type ? s.selected : s.pins.slice().reverse().find(p => p.type == type);
 			input.value = range.value = pin ? Math.round(pin.blur) : 15;
 		});
+		var focus = el.querySelector('.ps_bg_focus_n'), fp = s.selected && s.selected.type != 'field' ? s.selected : null;
+		focus.value = fp && fp.focus != null ? fp.focus : 100;
+		focus.disabled = !fp;
 	}
 
 	active_pins() {
@@ -344,7 +427,7 @@ class Ps_blur_gallery_class {
 		if (!fast || !this.last_preview) {
 			if (s.preview && this.active_pins().length) {
 				var map = blur_map(this.active_pins(), s.pw, s.ph, s.k);
-				this.last_preview = render_blur(s.small, s.pw, s.ph, map);
+				this.last_preview = render_blur(s.small, s.pw, s.ph, map, s.fx);
 			}
 			else {
 				this.last_preview = s.small.getContext('2d').getImageData(0, 0, s.pw, s.ph);
@@ -434,7 +517,8 @@ class Ps_blur_gallery_class {
 		full.height = s.H;
 		full.getContext('2d').drawImage(layer.link, 0, 0);
 		var map = blur_map(pins, s.W, s.H, 1);
-		var out = render_blur(full, s.W, s.H, map);
+		var out = render_blur(full, s.W, s.H, map, s.fx);
+		var mask_action = s.save_mask ? this.mask_channel(map, s) : null;
 		var result = document.createElement('canvas');
 		result.width = s.W;
 		result.height = s.H;
@@ -444,7 +528,29 @@ class Ps_blur_gallery_class {
 		result = app.GUI.Ps_workspace.Selection.restrict(result, layer);
 		app.State.do_action(new app.Actions.Bundle_action('blur_gallery', title, [
 			new app.Actions.Update_layer_image_action(result, layer.id),
-		]));
+		].concat(mask_action ? [mask_action] : []))).then(() => { if (mask_action) app.GUI.Ps_workspace.render_channels(true); });
+	}
+
+	/**
+	 * Save Mask to Channels: the blur mask as an alpha channel (white = sharp)
+	 */
+	mask_channel(map, s) {
+		var max = 0;
+		for (var i = 0; i < map.length; i++) if (map[i] > max) max = map[i];
+		var m = document.createElement('canvas');
+		m.width = s.W;
+		m.height = s.H;
+		var mctx = m.getContext('2d'), img = mctx.createImageData(s.W, s.H);
+		for (var j = 0; j < map.length; j++) img.data[j * 4 + 3] = max > 0 ? 255 * (1 - map[j] / max) : 255;
+		mctx.putImageData(img, 0, 0);
+		var doc = document.createElement('canvas');
+		doc.width = config.WIDTH;
+		doc.height = config.HEIGHT;
+		doc.getContext('2d').drawImage(m, s.layer.x, s.layer.y, s.layer.width, s.layer.height);
+		var A = app.GUI.Ps_workspace.Alpha;
+		var list = A.list().slice();
+		list.push({ name: 'Blur Mask', mask: doc });
+		return new app.Actions.Update_config_action({ ps_alpha: list, ps_alpha_active: config.ps_alpha_active == null ? -1 : config.ps_alpha_active });
 	}
 
 	close() {

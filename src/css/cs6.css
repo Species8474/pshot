@@ -1607,7 +1607,7 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_bg_body { display: flex; gap: 10px; align-items: flex-start; padding: 0 10px 10px; }
 .ps_bg_view { background: var(--ps-well); border: 1px solid #1e1e1e; line-height: 0; }
 .ps_bg_view canvas { display: block; cursor: crosshair; }
-.ps_bg_side { width: 230px; display: flex; flex-direction: column; gap: 8px; }
+.ps_bg_side { width: 230px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: calc(100vh - 170px); }
 .ps_bg_panel { border: 1px solid var(--ps-border); background: var(--ps-panel); }
 .ps_bg_panel_title { background: var(--ps-tabstrip); padding: 3px 8px; }
 .ps_bg_panel > .ps_adj_slider { padding: 4px 8px; }
@@ -1892,3 +1892,5 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_hs_range { margin-top: 6px; }
 .ps_hs_degrees { min-height: 14px; font-size: 11px; text-align: center; color: var(--ps-text); }
 .ps_hs_range canvas { display: block; width: 100%; height: 34px; cursor: ew-resize; }
+.ps_bg_lrange input[type=number] { width: 48px; }
+.ps_bg_focus input { width: 46px; }
