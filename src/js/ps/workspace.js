@@ -1177,6 +1177,9 @@ class Ps_workspace_class {
 		if (key.indexOf('workspace:') === 0) {
 			return this.workspace_name == key.substr(10);
 		}
+		if (key.indexOf('stack:') === 0) {
+			return app.GUI.modules['ps/commands'].stack_mode_label(key.substr(6));
+		}
 		if (key.indexOf('proof:') === 0) {
 			return this.Proof.setup == key.substr(6);
 		}

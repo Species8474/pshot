@@ -245,6 +245,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - View > Proof Setup > Custom... (Customize Proof Condition: CMYK presses with Simulate Paper Color / Black Ink, RGB devices with or without Preserve RGB Numbers).
   - Fix: the CMYK gamut map (Proof Colors, CMYK mode) pulled near-neutral colors (whites, grays) toward the cusp lightness; neutrals are now always in gamut.
   - Smart filter masks: the first smart filter brings a filter mask (from the selection, else white) kept in the smart object's source pixels (follows its transform); Layer > Smart Filter > Add/Delete Filter Mask, Disable/Enable Filter Mask; thumbnail on the Smart Filters row (Shift+click disables). Painting on the filter mask is not supported yet.
+  - Convert to Smart Object with several layers selected keeps them as a stack (smart.stack); Layer > Smart Objects > Stack Mode (None, Entropy, Kurtosis, Maximum, Mean, Median, Minimum, Range, Skewness, Standard Deviation, Summation, Variance) via ps/stack-modes.js.
 
 ## Known gaps / next
 

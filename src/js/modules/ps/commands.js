@@ -20,6 +20,7 @@ import Ps_wide_angle_class from './../../ps/wide-angle.js';
 import Ps_digimarc_class from './../../ps/digimarc.js';
 import Ps_vanishing_point_class from './../../ps/vanishing-point.js';
 import { cmyk_safe } from './../../ps/proof.js';
+import { STACK_MODES, combine_stack } from './../../ps/stack-modes.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -1237,6 +1238,8 @@ class Ps_commands_class {
 	 * Free Transform resamples from them (non-destructive)
 	 */
 	async convert_to_smart_object() {
+		var Multi = app.GUI.Ps_workspace.Multi;
+		if (Multi.multiple()) return this.stack_to_smart_object(Multi.selected().filter(l => l.type != null && l.type != 'ps_group' && l.type != 'ps_adjust'));
 		var layer = config.layer;
 		if (!layer || layer.type == null || layer.type == 'ps_group' || layer.type == 'ps_adjust' || layer.ps_smart) return;
 		var full = this.Base_layers.convert_layer_to_canvas(layer.id, false, false);
@@ -1261,6 +1264,61 @@ class Ps_commands_class {
 			new app.Actions.Update_layer_image_action(doc, layer.id),
 		]));
 		app.GUI.GUI_layers.render_layers();
+	}
+
+	/**
+	 * several layers -> one smart object that keeps them as a stack (for Stack Mode)
+	 */
+	async stack_to_smart_object(layers) {
+		if (layers.length < 2) return;
+		var order = app.GUI.Ps_workspace.Groups.ordered();
+		layers.sort((a, b) => order.indexOf(b) - order.indexOf(a));
+		var fulls = layers.map(l => this.Base_layers.convert_layer_to_canvas(l.id, false, false));
+		var t = app.GUI.Ps_workspace.Transform, b = null;
+		for (var f of fulls) {
+			var fb = t.alpha_bounds(f);
+			if (!fb) continue;
+			b = b ? { x: Math.min(b.x, fb.x), y: Math.min(b.y, fb.y), r: Math.max(b.r, fb.x + fb.width), bt: Math.max(b.bt, fb.y + fb.height) } : { x: fb.x, y: fb.y, r: fb.x + fb.width, bt: fb.y + fb.height };
+		}
+		if (!b) return;
+		var bw = b.r - b.x, bh = b.bt - b.y;
+		var stack = fulls.map(f => {
+			var c = document.createElement('canvas');
+			c.width = bw;
+			c.height = bh;
+			c.getContext('2d').drawImage(f, -b.x, -b.y);
+			return c;
+		});
+		var source = combine_stack(stack, 'None');
+		var doc = document.createElement('canvas');
+		doc.width = config.WIDTH;
+		doc.height = config.HEIGHT;
+		doc.getContext('2d').drawImage(source, b.x, b.y);
+		var top = layers[layers.length - 1];
+		var actions = [new app.Actions.Insert_layer_action({
+			type: 'image', name: top.name, x: 0, y: 0, width: doc.width, height: doc.height, width_original: doc.width, height_original: doc.height,
+			data: doc.toDataURL('image/png'), order: top.order, ps_parent: top.ps_parent || null,
+			ps_smart: { source: source, stack: stack, stack_mode: 'None', box: { cx: b.x + bw / 2, cy: b.y + bh / 2, w: bw, h: bh, angle: 0 }, quad: null, lx: 0, ly: 0 },
+		}, false)];
+		for (var l of layers) actions.push(new app.Actions.Delete_layer_action(l.id));
+		await app.State.do_action(new app.Actions.Bundle_action('smart_object', 'Convert to Smart Object', actions));
+		app.GUI.Ps_workspace.Multi.clear();
+		app.GUI.Ps_workspace.Groups.after_change();
+	}
+
+	/**
+	 * Layer > Smart Objects > Stack Mode
+	 */
+	async stack_mode(mode) {
+		var layer = config.layer;
+		if (!layer || !layer.ps_smart || !layer.ps_smart.stack) return;
+		var smart = Object.assign({}, layer.ps_smart, { stack_mode: mode, source: combine_stack(layer.ps_smart.stack, mode) });
+		await app.GUI.Ps_workspace.Smart_filters.set(layer, smart, 'Stack Mode');
+	}
+
+	stack_mode_label(mode) {
+		var l = config.layer;
+		return !!(l && l.ps_smart && l.ps_smart.stack && (l.ps_smart.stack_mode || 'None') == mode);
 	}
 
 	async new_smart_object_via_copy() {
