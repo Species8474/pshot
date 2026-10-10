@@ -229,7 +229,15 @@ class Ps_adjustment_layers_class {
 				return { type: 'black & white', reds: v('reds', 40), yellows: v('yellows', 60), greens: v('greens', 40), cyans: v('cyans', 60), blues: v('blues', 20), magentas: v('magentas', 80),
 					useTint: !!s.tint, tintColor: s.tint ? (() => { var c = hsl_to_rgb_255(v('hue', 42), v('sat', 20)); return { r: c[0], g: c[1], b: c[2] }; })() : undefined };
 			}
-			case 'hue_saturation': return { type: 'hue/saturation', colorize: !!s.colorize, master: { a: 0, b: 0, c: 0, d: 0, hue: s.h || 0, saturation: s.s || 0, lightness: s.l || 0 } };
+			case 'hue_saturation': {
+				//Master and the six Edit ranges
+				var hs = { type: 'hue/saturation', colorize: !!s.colorize, master: { a: 0, b: 0, c: 0, d: 0, hue: s.h || 0, saturation: s.s || 0, lightness: s.l || 0 } };
+				for (var rk in (s.ranges || {})) {
+					var rr = s.ranges[rk];
+					hs[rk] = { a: rr.a, b: rr.b, c: rr.c, d: rr.d, hue: rr.h || 0, saturation: rr.s || 0, lightness: rr.l || 0 };
+				}
+				return hs;
+			}
 			case 'exposure': return { type: 'exposure', exposure: s.exposure || 0, offset: s.offset || 0, gamma: s.gamma || 1 };
 			case 'vibrance': return { type: 'vibrance', vibrance: s.vibrance || 0, saturation: s.saturation || 0 };
 			case 'photo_filter': return { type: 'photo filter', color: hex_rgb(s.color || '#ec8a00'), density: s.density == null ? 25 : s.density, preserveLuminosity: s.preserve !== false };
@@ -279,8 +287,12 @@ class Ps_adjustment_layers_class {
 			case 'black & white': return { kind: 'black_white', state: { reds: a.reds == null ? 40 : a.reds, yellows: a.yellows == null ? 60 : a.yellows, greens: a.greens == null ? 40 : a.greens,
 				cyans: a.cyans == null ? 60 : a.cyans, blues: a.blues == null ? 20 : a.blues, magentas: a.magentas == null ? 80 : a.magentas, tint: !!a.useTint } };
 			case 'hue/saturation': {
-				var m = a.master || {};
-				return { kind: 'hue_saturation', state: { h: m.hue || 0, s: m.saturation || 0, l: m.lightness || 0, colorize: !!a.colorize } };
+				var m = a.master || {}, ranges = {};
+				for (var rn of ['reds', 'yellows', 'greens', 'cyans', 'blues', 'magentas']) {
+					var ch = a[rn];
+					if (ch) ranges[rn] = { h: ch.hue || 0, s: ch.saturation || 0, l: ch.lightness || 0, a: ch.a, b: ch.b, c: ch.c, d: ch.d };
+				}
+				return { kind: 'hue_saturation', state: { h: m.hue || 0, s: m.saturation || 0, l: m.lightness || 0, colorize: !!a.colorize, ranges: ranges } };
 			}
 			case 'exposure': return { kind: 'exposure', state: { exposure: a.exposure || 0, offset: a.offset || 0, gamma: a.gamma || 1 } };
 			case 'vibrance': return { kind: 'vibrance', state: { vibrance: a.vibrance || 0, saturation: a.saturation || 0 } };

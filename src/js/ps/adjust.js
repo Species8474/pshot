@@ -145,6 +145,89 @@ const LOOKS = {
 	'TensionGreen.3DL': (r, g, b) => { var c = con_of(sat_of([r, g, b], 0.7), 1.15); return [c[0] * 0.9, c[1] * 1.08, c[2] * 0.95]; },
 };
 
+//CS6 Hue/Saturation Edit ranges: falloff start a, range b..c, falloff end d (degrees)
+const HS_EDIT = [['master', 'Master'], ['reds', 'Reds'], ['yellows', 'Yellows'], ['greens', 'Greens'], ['cyans', 'Cyans'], ['blues', 'Blues'], ['magentas', 'Magentas']];
+const HS_RANGES = { reds: [315, 345, 15, 45], yellows: [15, 45, 75, 105], greens: [75, 105, 135, 165], cyans: [135, 165, 195, 225], blues: [195, 225, 255, 285], magentas: [255, 285, 315, 345] };
+//CS6 presets (approximations of the shipped values)
+const HS_PRESETS = {
+	'Cyanotype': { colorize: true, h: 210, s: 30, l: 0 },
+	'Further Increase Saturation': { s: 30 },
+	'Increase Saturation': { s: 15 },
+	'Old Style': { s: -50, l: 5, ranges: { yellows: { s: 25 } } },
+	'Red Boost': { ranges: { reds: { s: 30 } } },
+	'Sepia': { colorize: true, h: 35, s: 25, l: 0 },
+	'Strong Saturation': { s: 50 },
+	'Yellow Boost': { ranges: { yellows: { s: 30 } } },
+};
+
+function deg(v) {
+	return Math.round(v) + '°';
+}
+
+/**
+ * old states had only the master values; add the six ranges
+ */
+function hs_normalize(state) {
+	state.h = state.h || 0;
+	state.s = state.s || 0;
+	state.l = state.l || 0;
+	state.colorize = !!state.colorize;
+	state.edit = state.edit || 'master';
+	state.ranges = state.ranges || {};
+	for (var k in HS_RANGES) {
+		var d = HS_RANGES[k], r = state.ranges[k] || {};
+		state.ranges[k] = { h: r.h || 0, s: r.s || 0, l: r.l || 0, a: r.a == null ? d[0] : r.a, b: r.b == null ? d[1] : r.b, c: r.c == null ? d[2] : r.c, d: r.d == null ? d[3] : r.d };
+	}
+	return state;
+}
+
+/**
+ * how much a hue (degrees) is inside a range: 1 inside b..c, ramps over a..b and c..d
+ */
+function hs_weight(h, r) {
+	var span = (from, to) => (to - from + 360) % 360;
+	var pos = span(r.a, h), ab = span(r.a, r.b), ac = span(r.a, r.c), ad = span(r.a, r.d) || 360;
+	if (pos > ad) return 0;
+	if (pos < ab) return ab ? pos / ab : 1;
+	if (pos <= ac) return 1;
+	return ad > ac ? 1 - (pos - ac) / (ad - ac) : 0;
+}
+
+/**
+ * the bars show the range centered (as CS6 does)
+ */
+function hs_view_start(r) {
+	var mid = (r.b + ((r.c - r.b + 360) % 360) / 2) % 360;
+	return (mid - 180 + 360) % 360;
+}
+
+/**
+ * the two hue bars (before / after) and the range markers
+ */
+function hs_draw_bars(canvas, state) {
+	var g = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+	var r = state.edit != 'master' && !state.colorize ? state.ranges[state.edit] : null;
+	var start = r ? hs_view_start(r) : 0;
+	g.clearRect(0, 0, w, h);
+	for (var x = 0; x < w; x++) {
+		var hue = (start + x / w * 360) % 360;
+		var shift = state.colorize ? 0 : state.h + (r ? r.h * hs_weight(hue, r) : 0);
+		g.fillStyle = 'hsl(' + hue + ',100%,50%)';
+		g.fillRect(x, 0, 1, 10);
+		g.fillStyle = 'hsl(' + ((hue + shift + 720) % 360) + ',100%,50%)';
+		g.fillRect(x, 24, 1, 10);
+	}
+	if (!r) return;
+	var px = (v) => ((v - start + 720) % 360) / 360 * w;
+	g.fillStyle = 'rgba(160,160,160,0.9)';
+	g.fillRect(px(r.b), 13, Math.max(1, (((r.c - r.b + 360) % 360) / 360) * w), 6);
+	g.fillStyle = 'rgba(110,110,110,0.9)';
+	g.fillRect(px(r.a), 14, Math.max(1, (((r.b - r.a + 360) % 360) / 360) * w), 4);
+	g.fillRect(px(r.c), 14, Math.max(1, (((r.d - r.c + 360) % 360) / 360) * w), 4);
+	g.fillStyle = '#e8e8e8';
+	['a', 'b', 'c', 'd'].forEach(k => g.fillRect(px(r[k]) - 1, 11, 3, 10));
+}
+
 class Ps_adjust_class {
 
 	/**
@@ -498,29 +581,83 @@ class Ps_adjust_class {
 	hue_saturation() {
 		var row = (id, label, min, max) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="' + id + '_n" value="0" min="' + min + '" max="' + max + '">'
 			+ '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="0"></div>';
-		var html = '<div class="ps_adj_row"><span>Preset:</span><select disabled><option>Default</option></select></div>'
-			+ '<div class="ps_adj_row"><select disabled><option>Master</option></select></div>'
+		var html = '<div class="ps_adj_row"><span>Preset:</span><select id="hs_preset">' + ['Custom', 'Default'].concat(Object.keys(HS_PRESETS)).map(n => '<option>' + n + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><select id="hs_edit">' + HS_EDIT.map(([k, n]) => '<option value="' + k + '">' + n + '</option>').join('') + '</select></div>'
 			+ row('hs_hue', 'Hue:', -180, 180) + row('hs_sat', 'Saturation:', -100, 100) + row('hs_light', 'Lightness:', -100, 100)
-			+ '<label class="ps_adj_check"><input type="checkbox" id="hs_colorize"> Colorize</label>';
+			+ '<label class="ps_adj_check"><input type="checkbox" id="hs_colorize"> Colorize</label>'
+			+ '<div class="ps_hs_range"><div class="ps_hs_degrees" id="hs_degrees"></div><canvas id="hs_bars" width="300" height="34"></canvas></div>';
 		this.show('Hue/Saturation', html, (root, state, update) => {
-			state.h = state.h || 0; state.s = state.s || 0; state.l = state.l || 0; state.colorize = !!state.colorize;
-			root.querySelector('#hs_colorize').checked = state.colorize;
+			hs_normalize(state);
+			var edit = root.querySelector('#hs_edit'), preset = root.querySelector('#hs_preset'), bars = root.querySelector('#hs_bars');
+			var target = () => state.edit == 'master' ? state : state.ranges[state.edit];
+			var sync = () => {
+				var t = target();
+				for (let [id, key] of [['hs_hue', 'h'], ['hs_sat', 's'], ['hs_light', 'l']]) {
+					root.querySelector('#' + id).value = root.querySelector('#' + id + '_n').value = t[key];
+				}
+				edit.value = state.edit;
+				edit.disabled = !!state.colorize;
+				root.querySelector('#hs_colorize').checked = !!state.colorize;
+				root.querySelector('#hs_sat').min = root.querySelector('#hs_sat_n').min = state.colorize && state.edit == 'master' ? 0 : -100;
+				var r = state.edit == 'master' ? null : state.ranges[state.edit];
+				root.querySelector('#hs_degrees').textContent = r ? [r.a, r.b].map(deg).join('/') + ' \\ ' + [r.c, r.d].map(deg).join('/') : '';
+				hs_draw_bars(bars, state);
+			};
+			var changed = () => { preset.value = 'Custom'; sync(); update(); };
 			for (let [id, key] of [['hs_hue', 'h'], ['hs_sat', 's'], ['hs_light', 'l']]) {
 				let range = root.querySelector('#' + id), num = root.querySelector('#' + id + '_n');
-				range.value = num.value = state[key];
-				let set = (v) => { state[key] = v; range.value = v; num.value = v; update(); };
+				let set = (v) => { target()[key] = v; changed(); };
 				range.addEventListener('input', () => set(parseInt(range.value)));
 				num.addEventListener('input', () => { var v = parseInt(num.value); if (!isNaN(v)) set(v); });
 			}
+			edit.addEventListener('change', () => { state.edit = edit.value; sync(); });
 			root.querySelector('#hs_colorize').addEventListener('change', (e) => {
 				state.colorize = e.target.checked;
-				if (state.colorize && state.s == 0) {
-					state.s = 25;
-					root.querySelector('#hs_sat').value = 25;
-					root.querySelector('#hs_sat_n').value = 25;
-				}
-				update();
+				state.edit = 'master';
+				if (state.colorize && state.s == 0) state.s = 25;
+				changed();
 			});
+			preset.addEventListener('change', () => {
+				if (preset.value == 'Custom') return;
+				var keep = preset.value;
+				Object.keys(state).forEach(k => delete state[k]);
+				Object.assign(state, JSON.parse(JSON.stringify(HS_PRESETS[keep] || {})));
+				hs_normalize(state);
+				sync();
+				update();
+				preset.value = keep;
+			});
+			//the range bar: drag the four markers (falloff and range ends) or the middle
+			var drag = null;
+			bars.addEventListener('mousedown', (e) => {
+				if (state.edit == 'master' || state.colorize) return;
+				var r = state.ranges[state.edit], x = e.offsetX / bars.clientWidth * 360;
+				var pos = (v) => ((v - hs_view_start(r) + 720) % 360);
+				var hit = ['a', 'b', 'c', 'd'].map(k => [k, Math.abs(pos(r[k]) - x)]).sort((p, q) => p[1] - q[1])[0];
+				drag = hit[1] < 12 ? { key: hit[0] } : { move: x, start: { a: r.a, b: r.b, c: r.c, d: r.d } };
+				e.preventDefault();
+				document.addEventListener('mousemove', on_move);
+				document.addEventListener('mouseup', on_up);
+			});
+			var on_move = (e) => {
+				if (!drag) return;
+				var rect = bars.getBoundingClientRect(), r = state.ranges[state.edit];
+				var x = Math.max(0, Math.min(360, (e.clientX - rect.left) / rect.width * 360));
+				if (drag.key) {
+					r[drag.key] = Math.round((x + hs_view_start(r) + 360) % 360);
+				}
+				else {
+					var dx = Math.round(x - drag.move);
+					['a', 'b', 'c', 'd'].forEach(k => { r[k] = (drag.start[k] + dx + 720) % 360; });
+				}
+				changed();
+			};
+			var on_up = () => {
+				drag = null;
+				document.removeEventListener('mousemove', on_move);
+				document.removeEventListener('mouseup', on_up);
+			};
+			sync();
 		}, (state) => this.build_hue_saturation(state), 'hue_saturation');
 	}
 
@@ -590,19 +727,35 @@ class Ps_adjust_class {
 	}
 
 	build_hue_saturation(state) {
-			var dh = state.h / 360, ds = state.s / 100, dl = state.l / 100, colorize = state.colorize;
+			hs_normalize(state);
+			var colorize = state.colorize;
+			var ranges = colorize ? [] : HS_EDIT.slice(1).map(([k]) => state.ranges[k]).filter(r => r.h || r.s || r.l);
 			return (src, dst) => {
 				for (var i = 0; i < src.length; i += 4) {
 					var hsl = rgb_to_hsl(src[i], src[i + 1], src[i + 2]);
 					var h = hsl[0], s = hsl[1], l = hsl[2];
+					var dh = state.h, ds = state.s, dl = state.l;
+					if (ranges.length && s > 0) {
+						//Edit: a color range adds its change where the pixel's hue is inside it (falloff at the ends)
+						var deg = h * 360, chroma = Math.min(1, s * 10);
+						for (var r of ranges) {
+							var w = hs_weight(deg, r) * chroma;
+							if (!w) continue;
+							dh += r.h * w;
+							ds += r.s * w;
+							dl += r.l * w;
+						}
+					}
 					if (colorize) {
 						h = ((state.h + 360) % 360) / 360;
 						s = clamp(state.s / 100, 0, 1);
 					}
 					else {
-						h = (h + dh + 1) % 1;
+						h = (h + dh / 360 + 1) % 1;
+						ds = clamp(ds, -100, 100) / 100;
 						s = ds > 0 ? s + (1 - s) * ds : s * (1 + ds);
 					}
+					dl = clamp(dl, -100, 100) / 100;
 					l = dl > 0 ? l + (1 - l) * dl : l * (1 + dl);
 					var rgb = hsl_to_rgb(h, clamp(s, 0, 1), clamp(l, 0, 1));
 					dst[i] = rgb[0];

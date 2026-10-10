@@ -1888,3 +1888,7 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_act_button:hover { filter: brightness(1.15); }
 .ps_act_button.label_red { background: #8c4442; } .ps_act_button.label_orange { background: #94633a; } .ps_act_button.label_yellow { background: #8f843a; }
 .ps_act_button.label_green { background: #4a7f4b; } .ps_act_button.label_blue { background: #46628f; } .ps_act_button.label_violet { background: #6e4d8a; } .ps_act_button.label_gray { background: #666; }
+/* Hue/Saturation range bars */
+.ps_hs_range { margin-top: 6px; }
+.ps_hs_degrees { min-height: 14px; font-size: 11px; text-align: center; color: var(--ps-text); }
+.ps_hs_range canvas { display: block; width: 100%; height: 34px; cursor: ew-resize; }

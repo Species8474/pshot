@@ -287,6 +287,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Brush panel Texture modes: Multiply, Subtract, Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height (stroke coverage vs texture tone and Depth; Hard Mix / Height use the pattern's own tone range). Dual Brush modes: Multiply, Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix.
   - Actions panel: dialog toggle column (filter steps with settings open their dialog during playback), Record Again (plays with every filter dialog and keeps the new settings), Insert Conditional (CS6 If Current conditions -> Then / Else Play Action of the same set; step target ps/commands.action_conditional, run_steps recursion), Button Mode (actions as colored buttons). Allow Tool Recording also records retouch-engine and Dodge/Burn/Sponge strokes.
   - Satin Contour (default Gaussian, CS6) in the Layer Style dialog and rendering.
+  - Hue/Saturation (dialog and adjustment layers): Edit Master / Reds / Yellows / Greens / Cyans / Blues / Magentas with CS6 default ranges (a/b \ c/d degrees, falloff ramps, weighted by chroma), the before/after hue bars with draggable range markers, Presets (Default, Cyanotype, Further Increase Saturation, Increase Saturation, Old Style, Red Boost, Sepia, Strong Saturation, Yellow Boost - approximated values). PSD adjustment layers keep the six ranges.
 
 ## Known gaps / next
 
