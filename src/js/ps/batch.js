@@ -12,13 +12,15 @@ import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js'
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 import { make_zip } from './zip.js';
 
-function pick(multiple) {
+function pick(multiple, folder) {
 	return new Promise((resolve) => {
 		var input = document.createElement('input');
 		input.type = 'file';
 		input.multiple = multiple;
 		input.accept = 'image/*,.psd';
-		input.addEventListener('change', () => resolve(Array.from(input.files || [])));
+		//Source: Folder - every image in a chosen folder
+		if (folder) input.webkitdirectory = true;
+		input.addEventListener('change', () => resolve(Array.from(input.files || []).filter(f => !folder || /\.(psd|png|jpe?g|gif|webp|bmp|tiff?)$/i.test(f.name))));
 		input.click();
 	});
 }
@@ -70,6 +72,23 @@ class Ps_batch_class {
 		ws.status_message('Done: ' + files.length + ' file' + (files.length == 1 ? '' : 's') + '.');
 	}
 
+	/**
+	 * Source: Opened Files - every open document in turn
+	 */
+	async each_open(fn) {
+		var ws = app.GUI.Ps_workspace, D = ws.Documents;
+		var docs = D.docs.slice();
+		for (var i = 0; i < docs.length; i++) {
+			var at = D.docs.indexOf(docs[i]);
+			if (at < 0) continue;
+			ws.status_message('Processing ' + (docs[i].name || 'Untitled') + ' (' + (i + 1) + ' of ' + docs.length + ')...');
+			await D.switch_to(at);
+			await wait(300);
+			await fn((docs[i].name || 'Untitled') + (docs[i].saved_as_psd ? '.psd' : '.png'));
+		}
+		ws.status_message('Done: ' + docs.length + ' document' + (docs.length == 1 ? '' : 's') + '.');
+	}
+
 	batch() {
 		var A = app.GUI.Ps_workspace.Actions;
 		var sets = A.sets;
@@ -85,13 +104,13 @@ class Ps_batch_class {
 			+ '<div class="ps_adj_row"><span>Set:</span><select id="bt_set">' + sets.map((s, i) => '<option value="' + i + '">' + esc(s.name) + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_row"><span>Action:</span><select id="bt_action"></select></div>'
 			+ '<div class="ps_adj_label">Source</div>'
-			+ '<div class="ps_adj_row"><select disabled><option>Files</option></select><button type="button" class="button" id="bt_choose">Choose...</button><span id="bt_count">No files</span></div>'
+			+ '<div class="ps_adj_row"><select id="bt_source"><option>Folder</option><option>Files</option><option>Opened Files</option></select><button type="button" class="button" id="bt_choose">Choose...</button><span id="bt_count">No files</span></div>'
 			+ '<label class="ps_adj_check disabled"><input type="checkbox" disabled> Override Action "Open" Commands</label>'
 			+ '<div class="ps_adj_label">Destination</div>'
-			+ '<div class="ps_adj_row"><select id="bt_dest"><option>None</option><option selected>Folder</option></select></div>'
+			+ '<div class="ps_adj_row"><select id="bt_dest"><option>None</option><option>Save and Close</option><option selected>Folder</option></select></div>'
 			+ '<div class="ps_adj_row"><span>File Type:</span><select id="bt_format"><option>JPEG</option><option>PNG</option><option>PSD</option></select></div>'
 			+ '<div class="ps_adj_row"><span>Quality:</span><input type="number" id="bt_quality" min="0" max="12" value="10" style="width:52px"></div>'
-			+ '<div class="ps_adj_label">Errors</div><div class="ps_adj_row"><select disabled><option>Stop For Errors</option></select></div></div>';
+			+ '<div class="ps_adj_label">Errors</div><div class="ps_adj_row"><select id="bt_errors"><option>Stop For Errors</option><option>Log Errors To File</option></select></div></div>';
 		POP.show({
 			title: 'Batch',
 			className: 'ps_adjust_dialog',
@@ -100,26 +119,53 @@ class Ps_batch_class {
 				var si = parseInt(document.getElementById('bt_set').value), ai = parseInt(document.getElementById('bt_action').value);
 				var dest = document.getElementById('bt_dest').value, format = document.getElementById('bt_format').value;
 				var q = Math.max(0, Math.min(12, parseInt(document.getElementById('bt_quality').value) || 10)) / 12;
-				if (!files.length) { alertify.error('Choose the source files.'); return; }
-				this.each(files, async (file) => {
-					A.selected = { set: si, action: ai };
-					await A.play();
-					if (dest == 'Folder') {
-						await this.save(file.name.replace(/\.[^.]+$/, ''), format, q);
+				var source = document.getElementById('bt_source').value, log_errors = document.getElementById('bt_errors').value == 'Log Errors To File';
+				var log = [];
+				var run = async (name) => {
+					try {
+						A.selected = { set: si, action: ai };
+						await A.play();
+					}
+					catch (e) {
+						if (!log_errors) throw e;
+						log.push(name + ': ' + e.message);
+					}
+					if (dest == 'Folder' || dest == 'Save and Close') {
+						//Save and Close keeps the file's own name and type
+						var keep = dest == 'Save and Close';
+						var fmt = keep ? (/\.psd$/i.test(name) ? 'PSD' : (/\.png$/i.test(name) ? 'PNG' : 'JPEG')) : format;
+						await this.save(name.replace(/\.[^.]+$/, ''), fmt, q);
 						await wait(200);
 						await this.close_current();
 					}
-				});
+				};
+				var done = () => {
+					if (log.length) filesaver.saveAs(new Blob([log.join('\r\n')], { type: 'text/plain' }), 'Batch Errors.txt');
+				};
+				if (source == 'Opened Files') {
+					this.each_open(run).then(done);
+					return;
+				}
+				if (!files.length) { alertify.error('Choose the source files.'); return; }
+				this.each(files, (file) => run(file.name)).then(done);
 			},
 		});
 		var set = document.getElementById('bt_set'), action = document.getElementById('bt_action');
 		var fill = () => { action.innerHTML = sets[parseInt(set.value)].actions.map((a, i) => '<option value="' + i + '">' + esc(a.name) + '</option>').join(''); };
 		set.addEventListener('change', fill);
 		fill();
-		document.getElementById('bt_choose').addEventListener('click', async () => {
-			files = await pick(true);
-			document.getElementById('bt_count').textContent = files.length ? files.length + ' file' + (files.length == 1 ? '' : 's') : 'No files';
+		var src = document.getElementById('bt_source'), choose = document.getElementById('bt_choose'), count = document.getElementById('bt_count');
+		var show_count = () => {
+			var n = src.value == 'Opened Files' ? app.GUI.Ps_workspace.Documents.docs.length : files.length;
+			count.textContent = n ? n + (src.value == 'Opened Files' ? ' open document' : ' file') + (n == 1 ? '' : 's') : 'No files';
+			choose.disabled = src.value == 'Opened Files';
+		};
+		src.addEventListener('change', () => { files = []; show_count(); });
+		choose.addEventListener('click', async () => {
+			files = await pick(true, src.value == 'Folder');
+			show_count();
 		});
+		show_count();
 	}
 
 	/**

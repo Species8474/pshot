@@ -298,6 +298,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Lighting Effects Presets: Default, Blue Omni, Circle of Light, Crossing, Crossing Down, Five Lights Down / Up, Flashlight, Flood Light, Parallel Directional, RGB Lights, Soft Direct Lights, Soft Omni, Soft Spot Light, Three Down, Triple Spotlight (approximate light setups).
   - Shadows/Highlights Save As Defaults (browser storage). Brush panel Brush Tip Shape Spacing checkbox (off: a dab per pointer sample, spacing_off).
   - Calculations: Source document menus (open documents of the same size, by their merged image; Documents doc.flat), Mask (a channel limits the blend, Invert). Apply Image: Source document and Channel (RGB / Red / Green / Blue).
+  - Batch: Source Folder (folder picker, images only) / Files / Opened Files; Destination None / Save and Close (own name and type) / Folder; Errors Stop For Errors / Log Errors To File (downloaded text). Override Action "Open" Commands stays greyed.
 
 ## Known gaps / next
 
