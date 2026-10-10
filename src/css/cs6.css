@@ -1855,3 +1855,8 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_font_row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 8px; font-size: 12px; cursor: default; white-space: nowrap; }
 .ps_font_row:hover, .ps_font_row.active { background: #91c9f7; }
 .ps_font_sample { color: #333; overflow: hidden; }
+.ps_act_step.off { color: var(--ps-text-dim, #888); }
+.ps_act_key { margin-left: auto; padding-left: 8px; color: var(--ps-text-dim, #999); font-size: 10px; }
+.ps_act_row.label_red { background: rgba(200,60,60,0.25); } .ps_act_row.label_orange { background: rgba(220,140,40,0.25); } .ps_act_row.label_yellow { background: rgba(220,200,40,0.25); }
+.ps_act_row.label_green { background: rgba(60,160,70,0.25); } .ps_act_row.label_blue { background: rgba(60,110,210,0.25); } .ps_act_row.label_violet { background: rgba(150,80,200,0.25); } .ps_act_row.label_gray { background: rgba(140,140,140,0.25); }
+.ps_act_check[data-step] { cursor: pointer; }

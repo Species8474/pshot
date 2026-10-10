@@ -268,6 +268,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Font family menu (options bar and Character panel; ps/font-menu.js): each font with a "Sample" at Type > Font Preview Size (None to Huge, saved in the browser), typing filters, Enter picks the first. Web fonts not yet loaded preview in a fallback face.
   - Character panel All Caps / Small Caps and Superscript / Subscript (span meta caps / position, text.js span_glyph: measured and drawn as shown). Ligatures and the other OpenType features stay greyed: the type engine draws letter by letter.
   - Paragraph panel: Justify last left / centered / right and Justify all (paragraph type: extra space spread over the word gaps), Indent left / right, Space before / after (horizontal type; layer.params indent_left, indent_right, space_before, space_after). First-line indent and Hyphenate stay greyed.
+  - Actions panel: step check column (unchecked steps are skipped), Insert Menu Item (any menu command, not run now), Insert Stop (message, Allow Continue), Insert Path (the active path as a Set Work Path step), Action Options (name, F2-F12 with Shift/Ctrl, color; double-click an action), Playback Options (Accelerated / Step by Step / Pause For).
 
 ## Known gaps / next
 
@@ -276,7 +277,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling.
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
-- Actions: droplets, Insert Stop / Menu Item / Conditional / Path, Action and Playback Options; eraser and retouch strokes are not recorded. 3D.
+- Actions: droplets, Record Again, Insert Conditional, Button Mode; eraser and retouch strokes are not recorded. 3D.
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning presets are approximations.
 - Styles: Contour/Texture/quality contours are not written to PSD; Smart filters are not written to PSD (the placed layer's pixels include them).
 - Brush panel: Texture Each Tip off / the other Texture modes (Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height) render as Multiply; Dual Brush modes other than Multiply; tilt.

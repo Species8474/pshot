@@ -218,6 +218,136 @@ class Ps_actions_panel_class {
 		this.render();
 	}
 
+	/**
+	 * a Stop step during playback: the message, Continue (when allowed) or Stop
+	 */
+	show_stop(p) {
+		return new Promise((resolve) => {
+			var POP = new Dialog_class();
+			POP.show({
+				title: 'Message',
+				params: [{ title: '', html: '<div class="ps_act_stopmsg">' + app.GUI.Ps_workspace.Helper.escapeHtml(p.message || 'Stop') + '</div>' }],
+				on_finish: () => resolve(!!p.allow_continue),
+				on_cancel: () => resolve(false),
+			});
+		});
+	}
+
+	insert_step(step) {
+		var a = this.current_action();
+		if (!a) return;
+		a.steps.push(step);
+		this.save();
+		this.render();
+	}
+
+	insert_stop() {
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Record Stop',
+			params: [
+				{ name: 'message', title: 'Message:', value: '' },
+				{ name: 'allow_continue', title: 'Allow Continue', value: true },
+			],
+			on_finish: (p) => this.insert_step({ target: 'ps/commands.action_stop', parameter: { message: p.message, allow_continue: !!p.allow_continue }, name: 'Stop' }),
+		});
+	}
+
+	/**
+	 * Insert Menu Item: any menu command as a step (it is not run now)
+	 */
+	insert_menu_item() {
+		var items = [];
+		var visit = (list, path) => {
+			for (var it of list) {
+				if (it.divider) continue;
+				var p = path ? path + ' > ' + it.name : it.name;
+				if (it.children) visit(it.children, p);
+				else if (it.target) items.push({ path: p, target: it.target, parameter: it.parameter });
+			}
+		};
+		visit(menuDefinition, '');
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Insert Menu Item',
+			params: [{ name: 'item', title: 'Menu Item:', values: items.map(i => i.path), value: items[0].path, type: 'select' }],
+			on_finish: (p) => {
+				var it = items.find(i => i.path == p.item);
+				if (it) this.insert_step({ target: it.target, parameter: it.parameter, name: this.label(it.target, it.parameter) });
+			},
+		});
+	}
+
+	/**
+	 * Insert Path: the active path becomes a step that makes it the work path again
+	 */
+	insert_path() {
+		var P = app.GUI.Ps_workspace.Paths, path = P.active();
+		if (!path || !path.subpaths || !path.subpaths.length) {
+			app.GUI.Ps_workspace.status_message('Select a path in the Paths panel first.');
+			return;
+		}
+		this.insert_step({ target: 'ps/commands.action_path', parameter: JSON.parse(JSON.stringify(path.subpaths)), name: 'Set Work Path' });
+	}
+
+	/**
+	 * Action Options: name, function key and color
+	 */
+	action_options() {
+		var a = this.current_action();
+		if (!a) return;
+		var keys = ['None'].concat(Array.from({ length: 11 }, (_, i) => 'F' + (i + 2)));
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Action Options',
+			params: [
+				{ name: 'name', title: 'Name:', value: a.name },
+				{ name: 'key', title: 'Function Key:', values: keys, value: a.key || 'None', type: 'select' },
+				{ name: 'shift', title: 'Shift', value: !!a.key_shift },
+				{ name: 'ctrl', title: 'Control', value: !!a.key_ctrl },
+				{ name: 'color', title: 'Color:', values: ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Gray'], value: a.color || 'None', type: 'select' },
+			],
+			on_finish: (p) => {
+				Object.assign(a, { name: p.name || a.name, key: p.key == 'None' ? '' : p.key, key_shift: !!p.shift, key_ctrl: !!p.ctrl, color: p.color == 'None' ? '' : p.color });
+				this.save();
+				this.render();
+			},
+		});
+	}
+
+	/**
+	 * a function key combo ("Shift+F5") plays the action it was given
+	 */
+	play_by_key(combo) {
+		for (var si = 0; si < this.sets.length; si++) {
+			var acts = this.sets[si].actions;
+			for (var ai = 0; ai < acts.length; ai++) {
+				var a = acts[ai];
+				if (!a.key) continue;
+				var want = (a.key_shift ? 'Shift+' : '') + (a.key_ctrl ? 'Ctrl+' : '') + a.key;
+				if (want == combo) {
+					this.selected = { set: si, action: ai };
+					this.play();
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	playback_options() {
+		var o = this.playback || { mode: 'Accelerated', pause: 1 };
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Playback Options',
+			params: [
+				{ name: 'mode', title: 'Performance:', values: ['Accelerated', 'Step by Step', 'Pause For'], value: o.mode },
+				{ name: 'pause', title: 'Pause For (seconds):', value: o.pause || 1, range: [0, 60], step: 1 },
+			],
+			on_finish: (p) => { this.playback = { mode: p.mode, pause: parseFloat(p.pause) || 0 }; },
+		});
+	}
+
 	panel_menu_items() {
 		var has = !!this.current_action(), sel = !!this.selected;
 		return [
@@ -231,15 +361,15 @@ class Ps_actions_panel_class {
 			{ divider: true },
 			{ name: 'Start Recording', action: has && !this.recording ? () => this.start_recording() : null },
 			{ name: 'Record Again...' },
-			{ name: 'Insert Menu Item...' },
-			{ name: 'Insert Stop...' },
+			{ name: 'Insert Menu Item...', action: has ? () => this.insert_menu_item() : null },
+			{ name: 'Insert Stop...', action: has ? () => this.insert_stop() : null },
 			{ name: 'Insert Conditional...' },
-			{ name: 'Insert Path' },
+			{ name: 'Insert Path', action: has ? () => this.insert_path() : null },
 			{ divider: true },
 			{ name: 'Allow Tool Recording', checked: !!this.allow_tools, action: () => { this.allow_tools = !this.allow_tools; } },
 			{ divider: true },
-			{ name: 'Action Options...' },
-			{ name: 'Playback Options...' },
+			{ name: 'Action Options...', action: has ? () => this.action_options() : null },
+			{ name: 'Playback Options...', action: () => this.playback_options() },
 			{ divider: true },
 			{ name: 'Clear All Actions', action: () => this.clear_all() },
 			{ name: 'Reset Actions', action: () => this.reset() },
@@ -270,8 +400,18 @@ class Ps_actions_panel_class {
 		//commands' confirmation prompts don't stop an action (CS6)
 		var confirm = window.confirm;
 		window.confirm = () => true;
+		var opts = this.playback || { mode: 'Accelerated', pause: 0 };
 		try {
 			for (var step of a.steps) {
+				//unchecked steps are skipped (CS6 check column)
+				if (step.off) continue;
+				if (step.target == 'ps/commands.action_stop') {
+					var go_on = await this.show_stop(step.parameter || {});
+					if (!go_on) break;
+					continue;
+				}
+				if (opts.mode == 'Step by Step') await new Promise(r => setTimeout(r, 400));
+				else if (opts.mode == 'Pause For') await new Promise(r => setTimeout(r, Math.max(0, opts.pause || 0) * 1000));
 				if (step.target.indexOf('ps/filters.') === 0 && step.settings) {
 					var key = step.target.split('.')[1];
 					if (!app.GUI.modules['ps/filters'].apply_settings(key, step.settings)) {
@@ -320,11 +460,11 @@ class Ps_actions_panel_class {
 			set.actions.forEach((a, ai) => {
 				var asel = this.selected && this.selected.set == si && this.selected.action == ai;
 				var rec = this.recording === a;
-				html += '<div class="ps_act_row ps_act_action' + (asel ? ' active' : '') + '" data-set="' + si + '" data-action="' + ai + '"><span class="ps_act_check">&#10003;</span><span class="ps_act_indent"></span>'
-					+ (rec ? '<span class="ps_act_rec">&#9679;</span> ' : '') + app.GUI.Ps_workspace.Helper.escapeHtml(a.name) + '</div>';
+				html += '<div class="ps_act_row ps_act_action' + (asel ? ' active' : '') + (a.color ? ' label_' + a.color.toLowerCase() : '') + '" data-set="' + si + '" data-action="' + ai + '"><span class="ps_act_check">&#10003;</span><span class="ps_act_indent"></span>'
+					+ (rec ? '<span class="ps_act_rec">&#9679;</span> ' : '') + app.GUI.Ps_workspace.Helper.escapeHtml(a.name) + (a.key ? '<span class="ps_act_key">' + (a.key_shift ? 'Shift+' : '') + (a.key_ctrl ? 'Ctrl+' : '') + a.key + '</span>' : '') + '</div>';
 				if (asel) {
-					a.steps.forEach((st) => {
-						html += '<div class="ps_act_row ps_act_step"><span class="ps_act_check">&#10003;</span><span class="ps_act_indent2"></span>' + app.GUI.Ps_workspace.Helper.escapeHtml(st.name) + '</div>';
+					a.steps.forEach((st, sti) => {
+						html += '<div class="ps_act_row ps_act_step' + (st.off ? ' off' : '') + '"><span class="ps_act_check" data-step="' + sti + '" title="Toggle item on/off">' + (st.off ? '' : '&#10003;') + '</span><span class="ps_act_indent2"></span>' + app.GUI.Ps_workspace.Helper.escapeHtml(st.name) + '</div>';
 					});
 				}
 			});
@@ -343,6 +483,17 @@ class Ps_actions_panel_class {
 			set.open = !set.open;
 			this.save();
 			this.render();
+		}));
+		el.querySelectorAll('[data-step]').forEach((c) => c.addEventListener('click', (e) => {
+			e.stopPropagation();
+			var a = this.current_action(), st = a && a.steps[parseInt(c.dataset.step)];
+			if (!st) return;
+			st.off = !st.off;
+			this.save();
+			this.render();
+		}));
+		el.querySelectorAll('.ps_act_set, .ps_act_action').forEach((row) => row.addEventListener('dblclick', () => {
+			if (row.dataset.action != null) this.action_options();
 		}));
 		el.querySelectorAll('.ps_act_set, .ps_act_action').forEach((row) => row.addEventListener('click', () => {
 			this.selected = { set: parseInt(row.dataset.set), action: row.dataset.action == null ? null : parseInt(row.dataset.action) };

@@ -2186,6 +2186,19 @@ class Ps_commands_class {
 	font_preview_size(v) { set_preview_size(v); }
 	font_preview_is(v) { return preview_size() == v; }
 
+	/**
+	 * Actions: a Stop step (shown by the Actions panel during playback) and Insert Path
+	 */
+	action_stop() {}
+
+	async action_path(subpaths) {
+		if (!Array.isArray(subpaths)) return;
+		var P = app.GUI.Ps_workspace.Paths;
+		var paths = JSON.parse(JSON.stringify(config.ps_paths || [])).filter(p => !p.work);
+		paths.push({ name: 'Work Path', work: true, subpaths: JSON.parse(JSON.stringify(subpaths)) });
+		await P.commit(paths, paths.length - 1, 'Set Work Path');
+	}
+
 	refine_edge_or_mask() {
 		return app.GUI.Ps_workspace.Mask.is_editing(config.layer) ? this.refine_mask() : this.refine_edge();
 	}

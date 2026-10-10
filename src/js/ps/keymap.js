@@ -203,6 +203,13 @@ class Ps_keymap_class {
 			return;
 		}
 
+		//Action Options function keys (F2..F12, with Shift / Ctrl)
+		if (/^F([2-9]|1[0-2])$/.test(event.key) && this.workspace.Actions.play_by_key((event.shiftKey ? 'Shift+' : '') + (ctrl ? 'Ctrl+' : '') + event.key)) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		//\\: the layer mask as a red overlay (CS6)
 		if (event.key == '\\' && !ctrl && !event.altKey && this.workspace.Mask.toggle_overlay()) {
 			event.preventDefault();
