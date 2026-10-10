@@ -39,8 +39,8 @@ function transform_items() {
 		{ name: 'Perspective', checked: mode == 'perspective', action: pixels ? set_mode('perspective') : null },
 		{ name: 'Warp', checked: mode == 'warp', action: pixels ? set_mode('warp') : null },
 		{ divider: true },
-		{ name: 'Content-Aware Scale' },
-		{ name: 'Puppet Warp' },
+		{ name: 'Content-Aware Scale', action: pixels ? () => { T.cancel(); cmd('content_aware_scale')(); } : null },
+		{ name: 'Puppet Warp', action: pixels ? () => { T.cancel(); cmd('puppet_warp')(); } : null },
 		{ divider: true },
 		{ name: 'Rotate 180°', action: () => T.orient('rotate', Math.PI) },
 		{ name: 'Rotate 90° CW', action: () => T.orient('rotate', Math.PI / 2) },
@@ -206,7 +206,7 @@ function note_items(event) {
 		{ name: 'Delete Note', action: i >= 0 ? () => N.remove(i) : null },
 		{ name: 'Delete All Notes', action: N.list().length ? () => N.clear_all() : null },
 		{ divider: true },
-		{ name: 'Export Notes...' },
+		{ name: 'Export Notes...', action: N.list().length ? () => N.export_text() : null },
 	];
 }
 

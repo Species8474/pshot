@@ -778,7 +778,7 @@ class Ps_workspace_class {
 				{ name: 'Merge Visible', shortcut: 'Shift+Ctrl+E', action: () => run_target('ps/commands.merge_visible') },
 				{ name: 'Flatten Image', action: () => run_target('ps/commands.flatten_image') },
 				{ divider: true },
-				{ name: 'Animation Options' }, { name: 'Panel Options...' },
+				{ name: 'Animation Options' }, { name: 'Panel Options...', action: () => this.layers_panel_options() },
 				{ divider: true },
 				{ name: 'Close', action: () => this.toggle_panel('layers') },
 				{ name: 'Close Tab Group', action: () => this.toggle_panel('layers') },
@@ -1680,6 +1680,26 @@ class Ps_workspace_class {
 			copies.push(copy);
 		}
 		return { width: config.WIDTH, height: config.HEIGHT, layers: copies };
+	}
+
+	/**
+	 * Layers panel > Panel Options: thumbnail size and contents
+	 */
+	layers_panel_options() {
+		var GL = app.GUI.GUI_layers, o = GL.thumb_options();
+		var names = { none: 'None', small: 'Small', medium: 'Medium', large: 'Large' };
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Layers Panel Options',
+			params: [
+				{ name: 'size', title: 'Thumbnail Size:', values: Object.values(names), value: names[o.size] || 'Medium' },
+				{ name: 'clip', title: 'Thumbnail Contents:', values: ['Layer Bounds', 'Entire Document'], value: o.clip == 'layer' ? 'Layer Bounds' : 'Entire Document' },
+			],
+			on_finish: (p) => {
+				var size = Object.keys(names).find(k => names[k] == p.size) || 'medium';
+				GL.set_thumb_options({ size: size, clip: p.clip == 'Layer Bounds' ? 'layer' : 'document' });
+			},
+		});
 	}
 
 	/**

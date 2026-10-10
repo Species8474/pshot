@@ -270,6 +270,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Paragraph panel: Justify last left / centered / right and Justify all (paragraph type: extra space spread over the word gaps), Indent left / right, Space before / after (horizontal type; layer.params indent_left, indent_right, space_before, space_after). First-line indent and Hyphenate stay greyed.
   - Actions panel: step check column (unchecked steps are skipped), Insert Menu Item (any menu command, not run now), Insert Stop (message, Allow Continue), Insert Path (the active path as a Set Work Path step), Action Options (name, F2-F12 with Shift/Ctrl, color; double-click an action), Playback Options (Accelerated / Step by Step / Pause For).
   - History Options (History panel menu): Automatically Create First Snapshot (the opened-state row), New Snapshot When Saving, Show New Snapshot Dialog by Default (Alt+click the snapshot button also names it), Make Layer Visibility Changes Undoable (base-state skips the eye otherwise). Allow Non-Linear History greyed.
+  - Layers Panel Options dialog (thumbnail size and contents); transform context menu Content-Aware Scale / Puppet Warp; Note tool context menu Export Notes (text file).
 
 ## Known gaps / next
 

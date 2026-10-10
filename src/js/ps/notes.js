@@ -195,6 +195,18 @@ class Ps_notes_class {
 
 	// ---------- PSD ----------
 
+	/**
+	 * Export Notes: the notes as a text file (author, position, text)
+	 */
+	export_text() {
+		var lines = this.list().map((n, i) => 'Note ' + (i + 1) + (n.author ? ' (' + n.author + ')' : '') + ' at ' + Math.round(n.x) + ', ' + Math.round(n.y) + ':\n' + (n.text || '') + '\n');
+		var a = document.createElement('a');
+		a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain' }));
+		a.download = app.GUI.Ps_workspace.document_name().replace(/\.[^.]+$/, '') + ' Notes.txt';
+		a.click();
+		setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+	}
+
 	to_psd() {
 		var list = this.list();
 		if (!list.length) return undefined;
