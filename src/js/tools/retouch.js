@@ -47,6 +47,10 @@ class Retouch_class extends Base_tools_class {
 
 	load() {
 		this.default_events();
+		//a pen's pressure (the pressure icons); a mouse has none
+		var pen = (e) => { this.pen = e.pointerType == 'pen' && e.pressure > 0 ? e.pressure : null; };
+		document.addEventListener('pointerdown', pen, true);
+		document.addEventListener('pointermove', pen, true);
 	}
 
 	default_dragMove(event) {
@@ -69,6 +73,35 @@ class Retouch_class extends Base_tools_class {
 		var layer = config.layer;
 		var sx = layer.width_original / layer.width, sy = layer.height_original / layer.height;
 		return { x: (point.x - layer.x) * sx, y: (point.y - layer.y) * sy, s: sx };
+	}
+
+	/**
+	 * the options bar pressure icons: a pen's pressure scales Size / Opacity
+	 */
+	getParams() {
+		var p = super.getParams();
+		if (this.pen != null && this.started) {
+			if (p.pressure_size) p.size = Math.max(1, p.size * this.pen);
+			if (p.pressure_op && p.opacity != null) p.opacity = p.opacity * this.pen;
+		}
+		return p;
+	}
+
+	/**
+	 * Airbrush: while the pointer rests the stamp keeps building up
+	 */
+	start_buildup() {
+		clearInterval(this.buildup);
+		var dabs = { clone: 'clone_dab', erase: 'erase_dab', history: 'history_dab', pattern_stamp: 'history_dab', mixer: 'mixer_dab' };
+		var fn = dabs[this.effective_mode()];
+		if (!fn || !this.getParams().airbrush) return;
+		var at = this.last;
+		this.buildup = setInterval(() => {
+			if (!this.started || !this.canvas) { clearInterval(this.buildup); return; }
+			if (this.last !== at) { at = this.last; return; }
+			this[fn](this.last);
+			config.need_render = true;
+		}, 80);
 	}
 
 	mousedown(e) {
@@ -258,6 +291,7 @@ class Retouch_class extends Base_tools_class {
 		}
 		config.layer.link_canvas = this.canvas;
 		config.need_render = true;
+		this.start_buildup();
 	}
 
 	mousemove(e) {
@@ -375,6 +409,7 @@ class Retouch_class extends Base_tools_class {
 			return;
 		}
 		this.started = false;
+		clearInterval(this.buildup);
 		var mode = this.effective_mode();
 		if (mode == 'clone') {
 			app.GUI.Ps_workspace.Clone_source.painting = false;
@@ -542,6 +577,19 @@ class Retouch_class extends Base_tools_class {
 		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
 		var O = this.original.data, S = this.source_data, M = this.history_mask;
+		var daub = null;
+		if (params.mode == 'pattern_stamp' && params.impressionist) {
+			//Impressionist: each dab is a daub of the pattern's average color near the pointer
+			var jx = p.x + (Math.random() - 0.5) * r, jy = p.y + (Math.random() - 0.5) * r, acc = [0, 0, 0, 0], n = 0;
+			for (var ay = Math.max(0, Math.floor(jy - r / 2)); ay < Math.min(h, Math.ceil(jy + r / 2)); ay++) {
+				for (var ax = Math.max(0, Math.floor(jx - r / 2)); ax < Math.min(w, Math.ceil(jx + r / 2)); ax++) {
+					var ai = (ay * w + ax) * 4;
+					for (var c = 0; c < 4; c++) acc[c] += S[ai + c];
+					n++;
+				}
+			}
+			if (n) daub = acc.map(v => v / n);
+		}
 		for (var y = y0; y < y1; y++) {
 			for (var x = x0; x < x1; x++) {
 				var d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / r;
@@ -552,7 +600,8 @@ class Retouch_class extends Base_tools_class {
 				//Flow builds up to the Opacity within a stroke
 				M[k] = M[k] + (f - M[k]) * flow;
 				var i = k * 4, j = ((y - y0) * (x1 - x0) + (x - x0)) * 4;
-				this.mix(O, i, S, i, M[k], mode, img.data, j);
+				if (daub) this.mix(O, i, daub, 0, M[k], mode, img.data, j);
+				else this.mix(O, i, S, i, M[k], mode, img.data, j);
 			}
 		}
 		ctx.putImageData(img, x0, y0);
