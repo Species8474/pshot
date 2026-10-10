@@ -200,7 +200,11 @@ async function convert(job) {
 		if (config.ps_path_active == 'layer') config.ps_path_active = -1;
 		if (subpath) {
 			var ed = Paths.editable();
-			(Array.isArray(subpath) ? subpath : [subpath]).forEach(sp => ed.path.subpaths.push(sp));
+			var path_op = app.GUI.Ps_workspace.shape_op && app.GUI.Ps_workspace.shape_op != 'new' ? app.GUI.Ps_workspace.shape_op : 'combine';
+			(Array.isArray(subpath) ? subpath : [subpath]).forEach((sp, i) => {
+				if (i == 0) Paths.tag_op(ed.path.subpaths, sp, path_op);
+				ed.path.subpaths.push(sp);
+			});
 			await Paths.commit(ed.paths, ed.index, ed.path.subpaths.length == 1 ? 'New Work Path' : 'Add Shape');
 		}
 		else {

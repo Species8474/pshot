@@ -276,6 +276,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Ruler: protractor (Alt-drag from an end of the line draws a second arm; A is the angle between the arms, L2 its length, W/H blank; Straighten uses the first arm). Use Measurement Scale shows X/Y/W/H/L1/L2 in the Image > Analysis scale.
   - Perspective Crop options: W / H (px, swap), Resolution (pixels/inch or cm, sets the document ppi), Front Image (document size and resolution), Clear, Show Grid. Options bar number fields bound to string attributes can be emptied.
   - Crop tool gear: Show Cropped Area (off hides what is cut), Enable Crop Shield, Color (Match Canvas / Custom), Opacity, Auto Adjust Opacity (lighter while dragging). Use Classic Mode shows checked and fixed (pshot's crop is the classic box-over-image mode); Auto Center Preview greyed.
+  - Path operations for work paths (Pen, Freeform Pen, shape tools in Path mode): Combine / Subtract Front Shape / Intersect / Exclude tag new subpaths (sp.op, same components as shape layers; Paths.shape_canvas composites them, so Make Selection, fill and stroke follow), Merge Shape Components traces the result. Path Selection tool: the ops menu changes the selected subpath's operation; Make Mask / Shape buttons wired. Pen / Freeform Pen Align Edges (Shape mode anchors on whole pixels).
 
 ## Known gaps / next
 

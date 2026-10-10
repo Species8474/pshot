@@ -311,10 +311,70 @@ class Ps_paths_class {
 		canvas.height = config.HEIGHT;
 		var ctx = canvas.getContext('2d');
 		ctx.fillStyle = '#000';
-		ctx.beginPath();
-		for (var sp of path.subpaths) trace(ctx, sp);
-		ctx.fill(fill_rule || 'evenodd');
+		//path operations: each component is combined with the ones below it
+		var GCO = { combine: 'source-over', subtract: 'destination-out', intersect: 'destination-in', exclude: 'xor' };
+		for (var comp of app.GUI.Ps_workspace.Shapes.components(path.subpaths)) {
+			ctx.globalCompositeOperation = GCO[comp.op] || 'source-over';
+			ctx.beginPath();
+			for (var sp of comp.subpaths) trace(ctx, sp);
+			ctx.fill(fill_rule || 'evenodd');
+		}
 		return canvas;
+	}
+
+	/**
+	 * a new subpath joins the path with the options bar's path operation
+	 */
+	tag_op(subs, sp, op) {
+		if (!subs.length || !op) return;
+		var last = 'combine';
+		for (var s of subs) if (s.op) last = s.op;
+		if (op != 'combine' || last != 'combine') sp.op = op;
+	}
+
+	/**
+	 * Path operations menu (Pen, Freeform Pen, Path Selection): the operation
+	 * for new subpaths, or with the Path Selection tool the selected subpath's
+	 */
+	ops_menu(anchor, for_selection) {
+		var ws = app.GUI.Ps_workspace;
+		var path = this.active(), sel = this.selected;
+		var target = for_selection && path && sel && sel.all ? path.subpaths[sel.sub] : null;
+		var cur = for_selection ? (target ? target.op || 'combine' : null) : ws.path_op || 'combine';
+		var set = (op) => {
+			if (!for_selection) { ws.path_op = op; return; }
+			if (!target) return;
+			var ed = this.editable();
+			var sp = ed.path.subpaths[sel.sub];
+			if (sel.sub == 0) delete sp.op;
+			else sp.op = op;
+			this.commit(ed.paths, ed.index, 'Path Operation');
+		};
+		var item = (name, op) => ({ name: name, checked: cur == op, action: !for_selection || target ? () => set(op) : null });
+		show_popup_menu(anchor, [
+			item('Combine Shapes', 'combine'),
+			item('Subtract Front Shape', 'subtract'),
+			item('Intersect Shape Areas', 'intersect'),
+			item('Exclude Overlapping Shapes', 'exclude'),
+			{ divider: true },
+			{ name: 'Merge Shape Components', action: path && path.subpaths.length > 1 ? () => this.merge_components() : null },
+		]);
+	}
+
+	/**
+	 * the visible result of the path's operations as plain subpaths
+	 */
+	async merge_components() {
+		if (config.ps_path_active == 'layer' && config.layer && config.layer.type == 'ps_shape') {
+			return app.GUI.Ps_workspace.Shapes.merge_components();
+		}
+		var ed = this.editable();
+		if (!ed || !ed.path.subpaths.length) return;
+		var subpaths = this.trace_mask(this.shape_canvas(ed.path, 'nonzero'), 0.75);
+		if (!subpaths.length) return;
+		ed.path.subpaths = subpaths;
+		this.selected = null;
+		await this.commit(ed.paths, ed.index, 'Merge Shape Components');
 	}
 
 	/**

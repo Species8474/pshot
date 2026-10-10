@@ -152,9 +152,12 @@ class Ps_pen_class extends Base_tools_class {
 		if (!current || current.closed) {
 			description = config.ps_path_active == 'layer' || (config.ps_paths && config.ps_paths[config.ps_path_active]) ? 'Add Anchor Point' : 'New Work Path';
 			current = { closed: false, pts: [] };
+			Paths.tag_op(subs, current, app.GUI.Ps_workspace.path_op);
 			subs.push(current);
 		}
-		current.pts.push(point(p.x, p.y));
+		//Align Edges: Shape mode anchors land on whole pixels
+		var snap = config.TOOL.attributes.align_edges && config.TOOL.attributes.pen_mode == 'Shape';
+		current.pts.push(snap ? point(Math.round(p.x), Math.round(p.y)) : point(p.x, p.y));
 		Paths.drawing = true;
 		await Paths.commit(ed4.paths, ed4.index, description);
 		this.drag = { kind: 'handles', hit: { sub: subs.length - 1, index: current.pts.length - 1 }, mirror: true };
@@ -223,7 +226,16 @@ class Ps_pen_class extends Base_tools_class {
 			await app.GUI.Ps_workspace.Shapes.create_empty(first.x, first.y);
 		}
 		var ed = Paths.editable();
-		ed.path.subpaths.push({ closed: closed, pts: anchors });
+		if (config.TOOL.attributes.align_edges && config.TOOL.attributes.pen_mode == 'Shape') {
+			anchors.forEach((a) => {
+				var dx = Math.round(a.x) - a.x, dy = Math.round(a.y) - a.y;
+				a.x += dx; a.ix += dx; a.ox += dx;
+				a.y += dy; a.iy += dy; a.oy += dy;
+			});
+		}
+		var added = { closed: closed, pts: anchors };
+		Paths.tag_op(ed.path.subpaths, added, app.GUI.Ps_workspace.path_op);
+		ed.path.subpaths.push(added);
 		await Paths.commit(ed.paths, ed.index, ed.path.subpaths.length == 1 && !ed.paths._layer_path ? 'New Work Path' : 'Freeform Pen');
 	}
 
