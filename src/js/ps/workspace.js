@@ -202,6 +202,7 @@ class Ps_workspace_class {
 		this.render_channels();
 		this.Preferences.install();
 		this.Notes.install();
+		this.Mask.install();
 		this.Clone_source.install();
 		this.Tool_presets.install();
 		this.Slices.install();

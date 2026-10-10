@@ -203,6 +203,13 @@ class Ps_keymap_class {
 			return;
 		}
 
+		//\\: the layer mask as a red overlay (CS6)
+		if (event.key == '\\' && !ctrl && !event.altKey && this.workspace.Mask.toggle_overlay()) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		var handled = this.handle(combo, key, ctrl, event);
 		//block everything else from miniPaint's legacy single-key handlers
 		event.stopPropagation();

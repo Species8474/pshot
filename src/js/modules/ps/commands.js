@@ -2084,11 +2084,34 @@ class Ps_commands_class {
 	 * Select > Refine Edge (Alt+Ctrl+R): Smooth, Feather, Contrast, Shift Edge;
 	 * view modes; output to selection, layer mask or new layer
 	 */
-	refine_edge() {
+	/**
+	 * Refine Mask...: the Refine Edge dialog on the active layer's mask
+	 */
+	refine_mask() {
+		var layer = config.layer;
+		if (!layer || !layer.ps_mask) return;
+		return this.refine_edge(layer);
+	}
+
+	mask_options() { app.GUI.Ps_workspace.Mask.options(); }
+
+	/**
+	 * Select > Refine Edge becomes Refine Mask while the layer mask is targeted (CS6)
+	 */
+	refine_edge_or_mask() {
+		return app.GUI.Ps_workspace.Mask.is_editing(config.layer) ? this.refine_mask() : this.refine_edge();
+	}
+
+	refine_label() {
+		return app.GUI.Ps_workspace.Mask.is_editing(config.layer) ? 'Refine Mask...' : 'Refine Edge...';
+	}
+
+	refine_edge(mask_layer) {
 		var sel = this.selection();
-		if (!sel.has()) return;
+		mask_layer = mask_layer && mask_layer.ps_mask ? mask_layer : null;
+		if (!mask_layer && !sel.has()) return;
 		var W = config.WIDTH, H = config.HEIGHT;
-		var original = sel.mask;
+		var original = mask_layer ? app.GUI.Ps_workspace.Mask.doc_mask(mask_layer) : sel.mask;
 		var state = this.refine_state || { smooth: 0, feather: 0, contrast: 0, shift: 0, view: 'On White', output: 'Selection' };
 		var flat = document.createElement('canvas');
 		flat.width = W;
@@ -2124,16 +2147,17 @@ class Ps_commands_class {
 			+ '<canvas id="re_preview" class="ps_cr_preview" width="' + pw + '" height="' + ph + '"></canvas>'
 			+ '<div class="ps_adj_label">Adjust Edge</div>'
 			+ slider('smooth', 'Smooth:', 0, 100, '') + slider('feather', 'Feather:', 0, 250, 'px') + slider('contrast', 'Contrast:', 0, 100, '%') + slider('shift', 'Shift Edge:', -100, 100, '%')
-			+ '<div class="ps_adj_row"><span>Output To:</span><select id="re_output">' + ['Selection', 'Layer Mask', 'New Layer', 'New Layer with Layer Mask'].map(v => '<option>' + v + '</option>').join('') + '</select></div>'
+			+ (mask_layer ? '' : '<div class="ps_adj_row"><span>Output To:</span><select id="re_output">' + ['Selection', 'Layer Mask', 'New Layer', 'New Layer with Layer Mask'].map(v => '<option>' + v + '</option>').join('') + '</select></div>')
 			+ '</div>';
 		var POP = new Dialog_class();
 		POP.show({
-			title: 'Refine Edge',
+			title: mask_layer ? 'Refine Mask' : 'Refine Edge',
 			className: 'ps_adjust_dialog',
 			params: [{ function() { return html; } }],
 			on_finish: () => {
 				this.refine_state = state;
-				this.refine_output(compute(), state.output);
+				if (mask_layer) app.GUI.Ps_workspace.Mask.set_mask(mask_layer, compute(), 'Refine Mask');
+				else this.refine_output(compute(), state.output);
 			},
 		});
 		var root = document.querySelector('#popups .popup .ps_cr');
@@ -2188,9 +2212,11 @@ class Ps_commands_class {
 		});
 		var view = root.querySelector('#re_view'), output = root.querySelector('#re_output');
 		view.value = state.view;
-		output.value = state.output;
 		view.addEventListener('change', () => { state.view = view.value; draw(); });
-		output.addEventListener('change', () => { state.output = output.value; });
+		if (output) {
+			output.value = state.output;
+			output.addEventListener('change', () => { state.output = output.value; });
+		}
 		draw();
 	}
 
@@ -2417,6 +2443,45 @@ class Ps_commands_class {
 	adaptive_wide_angle() {
 		this.Wide_angle = this.Wide_angle || new Ps_wide_angle_class();
 		this.Wide_angle.open();
+	}
+
+	/**
+	 * File > Scripts > Browse...: runs a JavaScript file with the pshot API
+	 * (app, config, commands); ExtendScript (.jsx) is not available
+	 */
+	browse_script() {
+		var input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.js,.jsx,text/javascript';
+		input.addEventListener('change', async () => {
+			var f = input.files && input.files[0];
+			if (!f) return;
+			var code = await f.text();
+			try {
+				var run = new Function('app', 'config', 'commands', '"use strict";\n' + code);
+				var r = run(app, config, this);
+				if (r && r.then) await r;
+				app.GUI.Ps_workspace.status_message('Script ' + f.name + ' finished.');
+			}
+			catch (e) {
+				alertify.error('Error in ' + f.name + ': ' + e.message);
+			}
+		});
+		input.click();
+	}
+
+	/**
+	 * File > Exit: closes every document, then the window when the browser allows it
+	 */
+	async exit_app() {
+		var docs = app.GUI.Ps_workspace.Documents;
+		var dirty = docs.docs.some((d, i) => (i == docs.active ? app.State.action_history.length : (d.state && d.state.history.length)) > 0);
+		if (dirty && !window.confirm('Close all documents and exit pshot?')) return;
+		var confirm = window.confirm;
+		window.confirm = () => true;
+		try { await this.close_all(); } finally { window.confirm = confirm; }
+		window.close();
+		app.GUI.Ps_workspace.status_message('All documents closed. Close this browser tab to exit.');
 	}
 
 	script_events_manager() { app.GUI.Ps_workspace.Script_events.open(); }

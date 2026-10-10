@@ -10,6 +10,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
+import Dialog_class from './../libs/popup.js';
 
 function doc_canvas() {
 	var c = document.createElement('canvas');
@@ -32,6 +33,89 @@ function luminance(hex) {
 }
 
 class Ps_mask_class {
+
+	constructor() {
+		//Layer Mask Display Options (the \\ overlay)
+		this.overlay_color = '#ff0000';
+		this.overlay_opacity = 50;
+		this.overlay = false;
+		this.alone = false;
+	}
+
+	/**
+	 * the active layer's mask in document coordinates (alpha = reveal)
+	 */
+	doc_mask(layer) {
+		var c = doc_canvas();
+		c.getContext('2d').drawImage(layer.ps_mask, (layer.x || 0) - (layer.ps_mask_x || 0), (layer.y || 0) - (layer.ps_mask_y || 0));
+		return c;
+	}
+
+	/**
+	 * CS6: \\ shows the mask as a colored overlay; Alt+click its thumbnail shows the mask alone
+	 */
+	install() {
+		var sel = this.selection();
+		sel.overlays = sel.overlays || [];
+		sel.overlays.push({
+			active: () => (this.overlay || this.alone) && config.layer && config.layer.ps_mask,
+			draw: (ctx) => {
+				var layer = config.layer, m = this.doc_mask(layer);
+				var c = doc_canvas(), g = c.getContext('2d');
+				if (this.alone) {
+					//grayscale: black hides, white reveals
+					g.fillStyle = '#000';
+					g.fillRect(0, 0, c.width, c.height);
+					g.drawImage(m, 0, 0);
+				}
+				else {
+					g.fillStyle = this.overlay_color;
+					g.fillRect(0, 0, c.width, c.height);
+					g.globalCompositeOperation = 'destination-out';
+					g.drawImage(m, 0, 0);
+					ctx.globalAlpha = this.overlay_opacity / 100;
+				}
+				ctx.drawImage(c, 0, 0);
+				ctx.globalAlpha = 1;
+			},
+		});
+	}
+
+	/**
+	 * \\ (keymap): the mask as a colored overlay
+	 */
+	toggle_overlay() {
+		if (!config.layer || !config.layer.ps_mask) return false;
+		this.overlay = !this.overlay;
+		this.alone = false;
+		this.selection().draw_overlay();
+		return true;
+	}
+
+	toggle_alone() {
+		this.alone = !this.alone;
+		this.overlay = false;
+		this.selection().draw_overlay();
+	}
+
+	/**
+	 * Layer Mask Display Options (double-click the mask thumbnail in CS6's Masks panel)
+	 */
+	options() {
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Layer Mask Display Options',
+			params: [
+				{ name: 'color', title: 'Color:', value: this.overlay_color, type: 'color' },
+				{ name: 'opacity', title: 'Opacity (%):', value: this.overlay_opacity, range: [0, 100], step: 1 },
+			],
+			on_finish: (p) => {
+				this.overlay_color = p.color || this.overlay_color;
+				this.overlay_opacity = Math.max(0, Math.min(100, parseFloat(p.opacity) || 0));
+				this.selection().draw_overlay();
+			},
+		});
+	}
 
 	selection() {
 		return app.GUI.Ps_workspace.Selection;

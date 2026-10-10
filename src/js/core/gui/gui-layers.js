@@ -174,6 +174,12 @@ class GUI_layers_class {
 			else if (action == 'vmask_thumb' && event.shiftKey) {
 				app.GUI.Ps_workspace.Vector_mask.toggle();
 			}
+			else if (action == 'mask_thumb' && event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+				//CS6: Alt+click the mask thumbnail shows the mask alone (again to go back)
+				var alone_layer = _this.Base_layers.get_layer(target.dataset.id);
+				var sel_first = alone_layer.id != config.layer.id ? app.State.do_action(new app.Actions.Select_layer_action(alone_layer.id)) : Promise.resolve();
+				sel_first.then(() => app.GUI.Ps_workspace.Mask.toggle_alone());
+			}
 			else if ((action == 'mask_thumb' || action == 'layer_thumb') && (event.ctrlKey || event.metaKey)) {
 				//CS6: Ctrl+click a thumbnail loads its pixels (or mask) as a selection
 				var src_layer = _this.Base_layers.get_layer(target.dataset.id);

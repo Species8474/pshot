@@ -253,6 +253,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - File > Scripts > Script Events Manager (ps/script-events.js): run an Action on Start Application, New/Open/Save/Close/Print/Export Document or Everything (wraps the commands; bindings saved in the browser). Scripts (JS) are not supported, only Actions.
   - File > Scripts > Layer Comps to WPG: Web Photo Gallery zip (index.html in three styles, images/, thumbnails/), document state restored afterwards.
   - File > Automate > Lens Correction: the same distortion / chromatic aberration / vignette correction (Filter > Lens Correction settings, no lens profiles) on chosen files, each saved as JPEG/PNG/PSD.
+  - Layer masks: \\ shows the mask as a red overlay (keymap -> Mask.toggle_overlay), Alt+click the mask thumbnail shows the mask alone, Mask Options... (overlay color/opacity), Refine Mask... (the Refine Edge dialog on the mask; Select > Refine Edge becomes Refine Mask while the mask is targeted).
+  - File > Scripts > Browse... runs a JavaScript file with (app, config, commands); File > Exit closes all documents (and the tab when the browser allows).
 
 ## Known gaps / next
 

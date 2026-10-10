@@ -215,8 +215,8 @@ function mask_items(layer) {
 		{ name: 'Subtract Mask From Selection', action: load('subtract') },
 		{ name: 'Intersect Mask With Selection', action: load('intersect') },
 		{ divider: true },
-		{ name: 'Refine Mask...' },
-		{ name: 'Mask Options...' },
+		{ name: 'Refine Mask...', action: cmd('refine_mask') },
+		{ name: 'Mask Options...', action: cmd('mask_options') },
 	];
 }
 
