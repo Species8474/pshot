@@ -69,10 +69,31 @@ class Ps_path_select_class extends Base_tools_class {
 		return null;
 	}
 
-	mousedown(e) {
+	/**
+	 * Select: All Layers - a click on another shape layer's shape targets it
+	 */
+	async pick_layer(p) {
+		var Shapes = app.GUI.Ps_workspace.Shapes;
+		var ctx = document.createElement('canvas').getContext('2d');
+		var ordered = app.GUI.Ps_workspace.Groups.ordered();
+		for (var l of ordered) {
+			if (l.type != 'ps_shape' || l.visible === false || l === config.layer) continue;
+			if (!ctx.isPointInPath(Shapes.path2d(Shapes.current_subpaths(l)), p.x, p.y, 'evenodd')) continue;
+			await app.State.do_action(new app.Actions.Select_layer_action(l.id));
+			config.ps_path_active = 'layer';
+			this.paths().changed();
+			return true;
+		}
+		return false;
+	}
+
+	async mousedown(e) {
 		var Paths = this.paths();
 		var p = this.world(e);
 		var direct = (config.TOOL.attributes.mode || 'path') == 'direct';
+		if (config.TOOL.attributes.path_layers == 'All Layers' && !(Paths.active() && this.hit_subpath(p) != null)) {
+			await this.pick_layer(p);
+		}
 		if (!Paths.active()) return;
 		var targets = null;
 		if (direct) {

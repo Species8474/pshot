@@ -154,6 +154,7 @@ config.TOOLS = [
 		on_activate: 'on_activate',
 		attributes: {
 			mode: 'path',
+			path_layers: 'Active Layers',
 		},
 	},
 	{

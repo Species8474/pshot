@@ -739,7 +739,7 @@ const LAYOUTS = {
 		{ type: 'check', label: 'Align Edges', bind: 'align_edges' },
 	],
 	path_selection: [
-		{ type: 'select', label: 'Select:', values: ['Active Layers', 'All Layers'], value: 'Active Layers' },
+		{ type: 'select', label: 'Select:', values: ['Active Layers', 'All Layers'], bind: 'path_layers', map: { 'Active Layers': 'Active Layers', 'All Layers': 'All Layers' } },
 		{ type: 'sep' },
 		{ type: 'label', text: 'Make:' },
 		{ type: 'button', text: 'Selection...', action: () => paths().make_selection_dialog() },
