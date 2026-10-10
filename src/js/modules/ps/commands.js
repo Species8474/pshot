@@ -777,6 +777,7 @@ class Ps_commands_class {
 	auto_align() { app.GUI.Ps_workspace.Auto_align.align_dialog(); }
 	auto_blend() { app.GUI.Ps_workspace.Auto_align.blend_dialog(); }
 	create_style_layers() { app.GUI.Ps_workspace.Styles.create_layers(); }
+	rasterize_layer_style() { app.GUI.Ps_workspace.Styles.rasterize_style(); }
 	scale_effects() { app.GUI.Ps_workspace.Extras.scale_effects(); }
 	global_light() { app.GUI.Ps_workspace.Extras.global_light(); }
 	print_size() { app.GUI.Ps_workspace.Extras.print_size(); }

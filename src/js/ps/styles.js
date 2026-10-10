@@ -511,6 +511,34 @@ class Ps_styles_class {
 		Groups.after_change();
 	}
 
+	/**
+	 * Layer > Rasterize > Layer Style: the effects are merged into the layer's
+	 * pixels (a type, shape or smart object layer becomes a pixel layer; its
+	 * masks are applied)
+	 */
+	async rasterize_style(layer) {
+		layer = layer || config.layer;
+		if (!layer || !this.has(layer)) return;
+		var W = config.WIDTH, H = config.HEIGHT;
+		var content = document.createElement('canvas');
+		content.width = W;
+		content.height = H;
+		var plain = Object.assign(Object.create(Object.getPrototypeOf(layer)), layer, { ps_styles: null, ps_fill: null, opacity: 100, composition: 'source-over', visible: true });
+		app.Layers.render_object(content.getContext('2d'), plain);
+		var out = this.compose(content, layer, 1);
+		var params = {
+			type: 'image', name: layer.name, data: out.toDataURL('image/png'),
+			x: 0, y: 0, width: W, height: H, width_original: W, height_original: H,
+			order: layer.order, ps_parent: layer.ps_parent || null, opacity: layer.opacity, composition: layer.composition,
+			visible: layer.visible, ps_color: layer.ps_color || null,
+		};
+		await app.State.do_action(new app.Actions.Bundle_action('rasterize_layer_style', 'Rasterize Layer Style', [
+			new app.Actions.Insert_layer_action(params, false),
+			new app.Actions.Delete_layer_action(layer.id),
+		]));
+		app.GUI.Ps_workspace.Groups.after_change();
+	}
+
 	enabled_names(layer) {
 		var s = layer.ps_styles || {};
 		return LIST.filter(([k]) => k && k != 'blending' && s[k] && s[k].enabled).map(([k, t]) => [k, t]);

@@ -111,7 +111,7 @@ function row_items(layer) {
 		items.push({ name: 'Rasterize Layer', action: rasterizable ? raster : null });
 	}
 	items.push(
-		{ name: 'Rasterize Layer Style' },
+		{ name: 'Rasterize Layer Style', action: app.GUI.Ps_workspace.Styles.has(layer) ? cmd('rasterize_layer_style') : null },
 		{ divider: true },
 	);
 	if (layer.ps_mask) items.push({ name: (layer.ps_mask_disabled ? 'Enable' : 'Disable') + ' Layer Mask', action: cmd('mask_toggle') });

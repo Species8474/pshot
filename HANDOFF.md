@@ -233,6 +233,8 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 
 ## Known gaps / next
 
+- PRIORITY (Josh, 2026-10-10): 1) Rasterize Layer Style, 2) Combine Slices, 3) Move to New Window (floating document windows), 4) every Filter menu item working. Then continue the rest of this list.
+
 - FOLLOW-UP (Josh, 2026-10-10): Help > About still shows miniPaint branding — rebrand as pshot (CS6-style About box), keep a 'based on miniPaint (MIT)' credit line.
 - Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Refine Mask, Mask Options, Copy CSS, Rasterize Layer Style, Combine Slices, Check Spelling, Edit Smart Filter Blending Options, Move to New Window. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
 
