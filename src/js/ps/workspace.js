@@ -700,6 +700,14 @@ class Ps_workspace_class {
 			var first = group.querySelector('.ps_tab');
 			this.activate_tab(group, first.dataset.panel);
 			group.querySelectorAll('.ps_tab').forEach((tab) => {
+				//CS6: right-click a panel tab
+				tab.addEventListener('contextmenu', (e) => {
+					e.preventDefault();
+					show_popup_menu(tab, [
+						{ name: 'Close', action: () => { this.activate_tab(group, tab.dataset.panel); this.toggle_panel(tab.dataset.panel); } },
+						{ name: 'Close Tab Group', action: () => { group.classList.add('closed'); this.relayout(); } },
+					], { point: { x: e.clientX, y: e.clientY } });
+				});
 				tab.addEventListener('click', () => {
 					if (tab.classList.contains('active') && !group.classList.contains('ps_grow')) {
 						//CS6: clicking the active tab collapses/expands the group
@@ -740,7 +748,8 @@ class Ps_workspace_class {
 				{ divider: true },
 				{ name: 'Create Clipping Mask', shortcut: 'Alt+Ctrl+G', action: () => run_target('ps/commands.toggle_clipping_mask') },
 				{ divider: true },
-				{ name: 'Link Layers' }, { name: 'Select Linked Layers' },
+				{ name: 'Link Layers', action: this.Multi.multiple() ? () => run_target('ps/commands.toggle_link_layers') : null },
+				{ name: 'Select Linked Layers', action: () => run_target('ps/commands.select_linked_layers') },
 				{ divider: true },
 				{ name: 'Merge Down', shortcut: 'Ctrl+E', action: () => run_target('ps/commands.merge_down') },
 				{ name: 'Merge Visible', shortcut: 'Shift+Ctrl+E', action: () => run_target('ps/commands.merge_visible') },

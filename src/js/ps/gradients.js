@@ -6,7 +6,7 @@
 
 import app from './../app.js';
 import config from './../config.js';
-import { show_popup_menu } from './popup-menu.js';
+import { show_popup_menu, prompt_name } from './popup-menu.js';
 
 const S = (pos, color) => ({ pos: pos, color: color });
 const A = (pos, a) => ({ pos: pos, a: a });
@@ -185,12 +185,17 @@ function picker(anchor, on_select, on_edit) {
 		cell.title = g.name;
 		cell.style.background = css(g);
 		cell.addEventListener('click', () => { close(); on_select(clone(g)); });
-		if (i >= PRESETS.length) {
-			cell.addEventListener('contextmenu', (e) => {
-				e.preventDefault();
-				show_popup_menu(cell, [{ name: 'Delete Gradient', action: () => { USER.splice(i - PRESETS.length, 1); save_user(); close(); } }]);
-			});
-		}
+		//CS6: right-click a gradient (built-in ones can't be renamed or deleted)
+		var ui = i - PRESETS.length;
+		cell.addEventListener('contextmenu', (e) => {
+			e.preventDefault();
+			show_popup_menu(cell, [
+				{ name: 'New Gradient...', action: () => prompt_name('Gradient Name', g.name + ' copy', (n) => { USER.push(Object.assign(clone(g), { name: n })); save_user(); close(); }) },
+				{ divider: true },
+				{ name: 'Rename Gradient...', action: ui >= 0 ? () => prompt_name('Gradient Name', g.name, (n) => { USER[ui].name = n; save_user(); close(); }) : null },
+				{ name: 'Delete Gradient', action: ui >= 0 ? () => { USER.splice(ui, 1); save_user(); close(); } : null },
+			], { point: { x: e.clientX, y: e.clientY } });
+		});
 		grid.appendChild(cell);
 	});
 	pop.appendChild(grid);

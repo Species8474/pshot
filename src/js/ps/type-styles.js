@@ -9,6 +9,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
+import { show_popup_menu } from './popup-menu.js';
 import { type_get, type_set } from './type-panels.js';
 
 const CHAR_KEYS = ['font', 'bold', 'italic', 'size', 'leading', 'kerning', 'fill', 'underline', 'strikethrough'];
@@ -143,6 +144,20 @@ class Ps_type_styles_class {
 				this.apply(kind, i);
 			});
 			if (i >= 0) r.addEventListener('dblclick', () => this.options(kind, i));
+			if (i >= 0) r.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				show_popup_menu(r, [
+					{ name: 'Style Options...', action: () => this.options(kind, i) },
+					{ name: 'Redefine Style', action: () => this.redefine(kind, i) },
+					{ divider: true },
+					{ name: 'Duplicate Style', action: () => {
+						var list = JSON.parse(JSON.stringify(this.list(kind)));
+						list.splice(i + 1, 0, Object.assign({}, list[i], { name: list[i].name + ' copy' }));
+						this.commit(kind, list, 'Duplicate Style');
+					} },
+					{ name: 'Delete Style', action: () => this.remove(kind, i) },
+				], { point: { x: e.clientX, y: e.clientY } });
+			});
 		});
 		el.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => {
 			if (b.classList.contains('disabled')) return;

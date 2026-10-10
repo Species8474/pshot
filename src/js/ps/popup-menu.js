@@ -5,6 +5,8 @@
  * An item without an action is shown greyed out.
  */
 
+import Dialog_class from './../libs/popup.js';
+
 var open_menu = null;
 
 function close_popup_menu() {
@@ -120,4 +122,16 @@ function show_popup_menu(anchor, items, opts = {}) {
 	return menu;
 }
 
-export { show_popup_menu, close_popup_menu };
+/**
+ * a one-field Name dialog (Rename Swatch..., Rename Brush..., ...)
+ */
+function prompt_name(title, value, on_ok) {
+	var POP = new Dialog_class();
+	POP.show({
+		title: title,
+		params: [{ name: 'name', title: 'Name:', value: value }],
+		on_finish: (p) => { if (p.name) on_ok(p.name); },
+	});
+}
+
+export { show_popup_menu, close_popup_menu, prompt_name };

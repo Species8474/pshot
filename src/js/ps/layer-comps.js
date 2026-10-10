@@ -7,6 +7,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
+import { show_popup_menu, prompt_name } from './popup-menu.js';
 
 const S = 'fill="none" stroke="currentColor" stroke-width="1.2"';
 
@@ -105,7 +106,29 @@ class Ps_layer_comps_class {
 			+ '<button type="button" data-cmd="new" title="Create new layer comp"><svg viewBox="0 0 18 18" width="16" height="16"><rect x="4" y="3" width="10" height="12" ' + S + '/><path d="M11 3v3h3" ' + S + '/></svg></button>'
 			+ '<button type="button" data-cmd="delete" title="Delete layer comp"><svg viewBox="0 0 18 18" width="16" height="16"><path d="M5 5h8l-.8 10H5.8zM4 5h10M7.5 3h3" ' + S + '/></svg></button></div>';
 		el.innerHTML = html;
-		el.querySelectorAll('[data-comp]').forEach((row) => row.addEventListener('click', () => this.apply(parseInt(row.dataset.comp))));
+		el.querySelectorAll('[data-comp]').forEach((row) => {
+			var i = parseInt(row.dataset.comp);
+			row.addEventListener('click', () => this.apply(i));
+			row.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				var comp = this.list()[i];
+				show_popup_menu(row, [
+					{ name: 'Layer Comp Options...', action: () => prompt_name('Layer Comp Options', comp.name, (n) => {
+						var list = this.list().slice();
+						list[i] = Object.assign({}, comp, { name: n });
+						this.set_list(list, config.ps_comp_active, 'Layer Comp Options');
+					}) },
+					{ name: 'Update Layer Comp', action: () => this.update(i) },
+					{ divider: true },
+					{ name: 'Duplicate Layer Comp', action: () => {
+						var list = this.list().slice();
+						list.splice(i + 1, 0, Object.assign(JSON.parse(JSON.stringify(comp)), { name: comp.name + ' copy' }));
+						this.set_list(list, i + 1, 'Duplicate Layer Comp');
+					} },
+					{ name: 'Delete Layer Comp', action: () => this.remove(i) },
+				], { point: { x: e.clientX, y: e.clientY } });
+			});
+		});
 		el.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => {
 			var n = this.list().length;
 			var cmd = b.dataset.cmd;

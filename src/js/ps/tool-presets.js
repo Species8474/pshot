@@ -8,7 +8,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
-import { show_popup_menu } from './popup-menu.js';
+import { show_popup_menu, prompt_name } from './popup-menu.js';
 
 var USER = [];
 try { USER = JSON.parse(localStorage.getItem('pshot_tool_presets_v1') || '[]'); } catch (e) { USER = []; }
@@ -120,7 +120,10 @@ class Ps_tool_presets_class {
 				]);
 			});
 			pop.querySelector('.ps_tpre_only input').addEventListener('change', (e) => { this.current_only = e.target.checked; draw(); this.render(); });
-			pop.querySelectorAll('.ps_tpre_row').forEach(r => r.addEventListener('click', () => { close(); this.apply(USER[parseInt(r.dataset.i)]); }));
+			pop.querySelectorAll('.ps_tpre_row').forEach(r => {
+				r.addEventListener('click', () => { close(); this.apply(USER[parseInt(r.dataset.i)]); });
+				r.addEventListener('contextmenu', (e) => this.row_menu(e, USER[parseInt(r.dataset.i)], draw));
+			});
 		};
 		draw();
 		document.body.appendChild(pop);
@@ -135,6 +138,30 @@ class Ps_tool_presets_class {
 			if (!pop.contains(e.target) && !anchor.contains(e.target) && !e.target.closest('.ps_popup_menu, #popups')) close();
 		};
 		setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+	}
+
+	/**
+	 * right-click a tool preset (picker or panel)
+	 */
+	row_menu(e, preset, after) {
+		e.preventDefault();
+		show_popup_menu(e.currentTarget, [
+			{ name: 'Rename Tool Preset...', action: () => prompt_name('Rename Tool Preset', preset.name, (n) => { this.rename(preset, n); this.render(); if (after) after(); }) },
+			{ name: 'Delete Tool Preset', action: () => { this.remove(preset); if (after) after(); } },
+		], { point: { x: e.clientX, y: e.clientY } });
+	}
+
+	/**
+	 * Reset Tool: the current tool's options back to the defaults
+	 */
+	reset_tool() {
+		var m = this.member();
+		if (!m || !this.defaults || !this.defaults[config.TOOL.name]) return;
+		var ws = app.GUI.Ps_workspace;
+		ws.restore_attributes(config.TOOL.attributes, this.defaults[config.TOOL.name]);
+		m._opts = null;
+		ws.Extras.select_tool(m.id);
+		ws.Options_bar.render();
 	}
 
 	/**
@@ -161,6 +188,14 @@ class Ps_tool_presets_class {
 		if (el) {
 			el.disabled = false;
 			el.addEventListener('click', () => this.picker(el));
+			//CS6: right-click the tool preset picker for Reset Tool / Reset All Tools
+			el.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				show_popup_menu(el, [
+					{ name: 'Reset Tool', action: () => this.reset_tool() },
+					{ name: 'Reset All Tools', action: () => this.reset_all() },
+				], { point: { x: e.clientX, y: e.clientY } });
+			});
 		}
 	}
 
@@ -173,7 +208,10 @@ class Ps_tool_presets_class {
 			+ '<div class="ps_panel_footer"><label class="ps_tpre_only"><input type="checkbox"' + (this.current_only ? ' checked' : '') + '> Current Tool Only</label>'
 			+ '<button type="button" data-a="new" title="Create new tool preset">&#43;</button>'
 			+ '<button type="button" data-a="delete" title="Delete tool preset"' + (this.current ? '' : ' class="disabled"') + '>&#128465;</button></div>';
-		el.querySelectorAll('.ps_tpre_row').forEach(r => r.addEventListener('click', () => this.apply(USER[parseInt(r.dataset.i)])));
+		el.querySelectorAll('.ps_tpre_row').forEach(r => {
+			r.addEventListener('click', () => this.apply(USER[parseInt(r.dataset.i)]));
+			r.addEventListener('contextmenu', (e) => this.row_menu(e, USER[parseInt(r.dataset.i)]));
+		});
 		el.querySelector('.ps_tpre_only input').addEventListener('change', (e) => { this.current_only = e.target.checked; this.render(); });
 		el.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => {
 			if (b.classList.contains('disabled')) return;

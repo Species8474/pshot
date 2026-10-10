@@ -228,11 +228,12 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Fix: per-tool option memory and tool presets restore only `.value` of { value, values() } attributes (`Ps_workspace.restore_attributes`); before, the Type tool's font list was lost and its options bar threw.
   - Panel right-click menus (ps/panel-context.js): Paths rows (path commands), Channels rows (Duplicate Channel — color channels become alpha channels — Delete, Channel Options), History states/snapshots (Step Forward/Backward, New Document, New Snapshot, Delete = this state and later, Clear History; footer Delete wired), document tabs (Close, Close All, New, Open), rulers (units).
   - Canvas right-click also: Crop (Crop, Cancel, ratio presets, Rotate Crop Box), Slice / Slice Select on a slice (Delete, Options, Promote, Divide, arrange), Note tool (Open/Delete/Delete All), Type tool while editing (Find and Replace, type layer items; the editor stays focused — right mousedown on the canvas and popup-menu mousedown don't take focus).
+  - Right-click also on: brush preset cells (New/Rename/Delete), gradient picker cells (New/Rename/Delete), tool presets in the picker and panel (Rename/Delete), the Tool Preset picker button (Reset Tool / Reset All Tools), Layer Comps rows (Options, Update, Duplicate, Delete), Character/Paragraph Styles rows (Options, Redefine, Duplicate, Delete), panel tabs (Close, Close Tab Group). Layers panel menu Link Layers / Select Linked Layers wired. `prompt_name()` in popup-menu.js is the shared Name dialog.
 
 ## Known gaps / next
 
 - FOLLOW-UP (Josh, 2026-10-10): Help > About still shows miniPaint branding — rebrand as pshot (CS6-style About box), keep a 'based on miniPaint (MIT)' credit line.
-- Right-click audit (2026-10-10) remaining: see the list under 'Right-click audit' below as items get done.
+- Right-click audit (2026-10-10) remaining: Swatches (needs a user swatch store: New/Rename/Delete Swatch), Layers panel empty area (thumbnail size options — needs the setting), Color panel ramp menu (RGB/CMYK spectrum, grayscale, current colors), pattern and custom shape pickers are selects, not CS6 visual pickers (so no right-click), Refine Mask / Mask Options / Copy CSS / Rasterize Layer Style / Combine Slices / Check Spelling greyed.
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
 - Filters: Adaptive Wide Angle, Vanishing Point.

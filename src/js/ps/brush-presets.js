@@ -7,6 +7,7 @@
 import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
+import { show_popup_menu, prompt_name } from './popup-menu.js';
 import { tip_canvas, define_tip } from './brush-tips.js';
 
 //Brush panel settings a preset fully defines (others return to these defaults)
@@ -122,12 +123,17 @@ class Ps_brush_presets_class {
 			cell.appendChild(label);
 			if (this.current === p) cell.classList.add('active');
 			cell.addEventListener('click', () => this.apply(p));
-			if (i >= DEFAULTS.length) {
-				cell.addEventListener('contextmenu', (e) => {
-					e.preventDefault();
-					if (confirm('Delete the brush preset "' + p.name + '"?')) this.remove(p);
-				});
-			}
+			//CS6: right-click a preset (built-in ones can't be renamed or deleted)
+			var user = i >= DEFAULTS.length;
+			cell.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				show_popup_menu(cell, [
+					{ name: 'New Brush Preset...', action: () => this.new_preset() },
+					{ divider: true },
+					{ name: 'Rename Brush...', action: user ? () => prompt_name('Brush Name', p.name, (n) => { this.rename(p, n); this.render(); }) : null },
+					{ name: 'Delete Brush', action: user ? () => this.remove(p) : null },
+				], { point: { x: e.clientX, y: e.clientY } });
+			});
 			host.appendChild(cell);
 		});
 	}

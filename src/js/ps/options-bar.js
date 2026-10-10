@@ -1306,7 +1306,7 @@ class Ps_options_bar_class {
 			this.render();
 		};
 		var outside = (e) => {
-			if (!pop.contains(e.target) && e.target !== anchor && !anchor.contains(e.target)) close();
+			if (!pop.contains(e.target) && e.target !== anchor && !anchor.contains(e.target) && !e.target.closest('.ps_popup_menu, #popups')) close();
 		};
 		setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
 	}
