@@ -69,7 +69,7 @@ function block(id, name, data) {
 /**
  * PSD bytes + pshot paths -> PSD bytes with the path resources
  */
-function inject_paths(buffer, paths, W, H) {
+function inject_paths(buffer, paths, W, H, clip) {
 	if (!paths || !paths.length) return buffer;
 	var src = new Uint8Array(buffer);
 	var dv = new DataView(src.buffer, src.byteOffset, src.byteLength);
@@ -83,6 +83,17 @@ function inject_paths(buffer, paths, W, H) {
 		var data = encode_path(p, W, H);
 		if (p.work) blocks.push(block(1025, '', data));
 		else if (saved < 998) blocks.push(block(2000 + saved++, p.name || 'Path ' + saved, data));
+	}
+	//2999: the clipping path (name, flatness 8.8 fixed, fill rule)
+	if (clip && clip.name && paths.some(p => !p.work && p.name == clip.name)) {
+		var nb = new TextEncoder().encode(clip.name).slice(0, 255);
+		var cdata = new Uint8Array(1 + nb.length + 4);
+		cdata[0] = nb.length;
+		cdata.set(nb, 1);
+		var cdv = new DataView(cdata.buffer);
+		cdv.setUint16(1 + nb.length, Math.round((clip.flatness || 0) * 256));
+		cdv.setUint16(3 + nb.length, 0);
+		blocks.push(block(2999, '', cdata));
 	}
 	var add = blocks.reduce((n, b) => n + b.length, 0);
 	if (!add) return buffer;
@@ -119,6 +130,10 @@ function read_paths(buffer, W, H) {
 			if ((id >= 2000 && id <= 2997) || id == 1025) {
 				var subpaths = decode_path(data, W, H);
 				if (subpaths.length) paths.push({ name: id == 1025 ? 'Work Path' : name, work: id == 1025, subpaths: subpaths });
+			}
+			else if (id == 2999 && data.length > 0) {
+				var cl = data[0];
+				paths.clip = { name: new TextDecoder().decode(data.subarray(1, 1 + cl)), flatness: data.length >= 3 + cl ? ((data[1 + cl] << 8) | data[2 + cl]) / 256 : 0 };
 			}
 			o = p + 4 + size + (size % 2);
 		}

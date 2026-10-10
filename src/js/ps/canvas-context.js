@@ -150,7 +150,7 @@ function pen_items() {
 		{ name: 'Fill Path...', action: on(() => P.paint('fill')) },
 		{ name: 'Stroke Path...', action: on(() => P.paint('stroke')) },
 		{ divider: true },
-		{ name: 'Clipping Path...' },
+		{ name: 'Clipping Path...', action: on(() => P.clipping_path_dialog()) },
 		{ divider: true },
 		{ name: 'Free Transform Path', action: on(cmd('free_transform')) },
 	];

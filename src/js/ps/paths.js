@@ -491,7 +491,7 @@ class Ps_paths_class {
 		paths.forEach((p, i) => {
 			html += '<div class="ps_path_row' + (i == config.ps_path_active ? ' active' : '') + '" data-index="' + i + '">'
 				+ '<canvas class="ps_path_thumb" width="36" height="28" data-index="' + i + '"></canvas>'
-				+ '<span class="ps_path_name' + (p.work ? ' work' : '') + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(p.name) + '</span></div>';
+				+ '<span class="ps_path_name' + (p.work ? ' work' : '') + (config.ps_clip_path && !p.work && config.ps_clip_path.name == p.name ? ' clipping' : '') + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(p.name) + '</span></div>';
 		});
 		html += '</div><div class="ps_panel_footer">';
 		var has = !!this.active();
@@ -630,13 +630,40 @@ class Ps_paths_class {
 			{ name: 'Stroke Path...', action: has ? () => this.paint('stroke') : null },
 			{ divider: true },
 			{ name: 'Save Path...', action: has && path.work ? () => this.rename(config.ps_path_active) : null },
-			{ name: 'Clipping Path...' },
+			{ name: 'Clipping Path...', action: () => this.clipping_path_dialog() },
 			{ divider: true },
 			{ name: 'Panel Options...' },
 			{ divider: true },
 			{ name: 'Close', action: () => app.GUI.Ps_workspace.toggle_panel('paths') },
 			{ name: 'Close Tab Group', action: () => app.GUI.Ps_workspace.toggle_panel('paths') },
 		];
+	}
+
+	/**
+	 * Clipping Path...: the saved path that crops the image when it is placed elsewhere (saved in PSD)
+	 */
+	clipping_path_dialog() {
+		var saved = (config.ps_paths || []).filter(p => !p.work).map(p => p.name);
+		if (!saved.length) {
+			app.GUI.Ps_workspace.status_message('Save the work path first (Save Path...).');
+			return;
+		}
+		var cur = config.ps_clip_path || {};
+		var active = this.active();
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Clipping Path',
+			params: [
+				{ name: 'path', title: 'Path:', values: ['None'].concat(saved), value: cur.name || (active && !active.work ? active.name : saved[0]), type: 'select' },
+				{ name: 'flatness', title: 'Flatness (device pixels):', value: cur.flatness || '' },
+			],
+			on_finish: (p) => {
+				var value = p.path == 'None' ? null : { name: p.path, flatness: parseFloat(p.flatness) || 0 };
+				app.State.do_action(new app.Actions.Bundle_action('clipping_path', 'Clipping Path', [
+					new app.Actions.Update_config_action({ ps_clip_path: value }),
+				])).then(() => this.render_panel());
+			},
+		});
 	}
 
 	async duplicate() {

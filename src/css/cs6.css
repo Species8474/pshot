@@ -1860,3 +1860,4 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_act_row.label_red { background: rgba(200,60,60,0.25); } .ps_act_row.label_orange { background: rgba(220,140,40,0.25); } .ps_act_row.label_yellow { background: rgba(220,200,40,0.25); }
 .ps_act_row.label_green { background: rgba(60,160,70,0.25); } .ps_act_row.label_blue { background: rgba(60,110,210,0.25); } .ps_act_row.label_violet { background: rgba(150,80,200,0.25); } .ps_act_row.label_gray { background: rgba(140,140,140,0.25); }
 .ps_act_check[data-step] { cursor: pointer; }
+.ps_path_name.clipping { font-weight: bold; text-shadow: 0 0 1px #000; }

@@ -271,6 +271,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Actions panel: step check column (unchecked steps are skipped), Insert Menu Item (any menu command, not run now), Insert Stop (message, Allow Continue), Insert Path (the active path as a Set Work Path step), Action Options (name, F2-F12 with Shift/Ctrl, color; double-click an action), Playback Options (Accelerated / Step by Step / Pause For).
   - History Options (History panel menu): Automatically Create First Snapshot (the opened-state row), New Snapshot When Saving, Show New Snapshot Dialog by Default (Alt+click the snapshot button also names it), Make Layer Visibility Changes Undoable (base-state skips the eye otherwise). Allow Non-Linear History greyed.
   - Layers Panel Options dialog (thumbnail size and contents); transform context menu Content-Aware Scale / Puppet Warp; Note tool context menu Export Notes (text file).
+  - Paths > Clipping Path... (panel menu, path context menus): a saved path and flatness (config.ps_clip_path, per document), shown bold in the Paths panel, written to / read from PSD resource 2999.
 
 ## Known gaps / next
 

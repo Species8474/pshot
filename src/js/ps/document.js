@@ -581,6 +581,7 @@ async function open_document(files) {
 	config.ps_slice_selected = null;
 	//saved paths and the Work Path
 	config.ps_paths = doc.paths || [];
+	config.ps_clip_path = doc.paths && doc.paths.clip ? doc.paths.clip : null;
 	config.ps_path_active = -1;
 	app.GUI.Ps_workspace.Paths.render_panel();
 	app.GUI.modules['ps/commands'].purge_histories();
@@ -874,7 +875,7 @@ function build_psd() {
 
 function save_psd(file_name) {
 	try {
-		const buffer = inject_paths(writePsd(build_psd(), { generateThumbnail: true, invalidateTextLayers: true }), config.ps_paths, config.WIDTH, config.HEIGHT);
+		const buffer = inject_paths(writePsd(build_psd(), { generateThumbnail: true, invalidateTextLayers: true }), config.ps_paths, config.WIDTH, config.HEIGHT, config.ps_clip_path);
 		const blob = new Blob([buffer], { type: 'application/octet-stream' });
 		const name = /\.psd$/i.test(file_name) ? file_name : file_name + '.psd';
 		filesaver.saveAs(blob, name);
