@@ -39,6 +39,7 @@ const DEFAULTS = {
 	place_resize: true,
 	place_smart: true,
 	smart_quotes: true,
+	recent_count: 10,
 	channels_in_color: false,
 	screen_color: 'Default',
 	screen_custom: '#646464',
@@ -218,7 +219,7 @@ class Ps_preferences_class {
 				{ type: 'check', label: 'Ignore EXIF Profile Tag', value: false, disabled: true },
 				{ type: 'check', label: 'Ask Before Saving Layered TIFF Files', value: true, disabled: true },
 				{ type: 'row', items: [{ type: 'select', label: 'Maximize PSD and PSB File Compatibility:', values: ['Always'], disabled: true }] },
-				{ type: 'row', items: [{ type: 'num', label: 'Recent File List Contains:', value: 10, unit: 'files', disabled: true }] },
+				{ type: 'row', items: [{ type: 'num', key: 'recent_count', label: 'Recent File List Contains:', min: 0, max: 100, unit: 'files' }] },
 			]],
 			['Performance', [
 				{ type: 'group', label: 'Memory Usage' },
@@ -392,6 +393,9 @@ class Ps_preferences_class {
 		}
 		this.close(true);
 		this.apply();
+		//a shorter Recent File List drops the oldest files
+		var ws = app.GUI.Ps_workspace;
+		if (ws.Recent) ws.Recent.trim().then(() => ws.Recent.load()).catch(() => {});
 	}
 
 	close(keep) {

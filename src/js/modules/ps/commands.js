@@ -3363,6 +3363,18 @@ class Ps_commands_class {
 	}
 
 	/**
+	 * File > Open Recent
+	 */
+	async open_recent(id) {
+		var file = await app.GUI.Ps_workspace.Recent.open(id);
+		if (file) await open_document([file]);
+	}
+
+	clear_recent() {
+		app.GUI.Ps_workspace.Recent.clear();
+	}
+
+	/**
 	 * CS6 Save: a document that came from a PSD (or was saved as one) saves straight
 	 * back to PSD; anything else goes through Save As
 	 */

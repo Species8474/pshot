@@ -529,8 +529,9 @@ async function open_document(files) {
 		console.error(error);
 		return;
 	}
-	//CS6: every opened file gets its own document tab
+	//CS6: every opened file gets its own document tab (and joins File > Open Recent)
 	app.GUI.Ps_workspace.Documents.add(base_name(file), file.name);
+	if (app.GUI.Ps_workspace.Recent) app.GUI.Ps_workspace.Recent.add(file);
 	const actions = [
 		new app.Actions.Prepare_canvas_action('undo'),
 		new app.Actions.Update_config_action({ WIDTH: doc.width, HEIGHT: doc.height }),
