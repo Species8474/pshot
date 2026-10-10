@@ -62,7 +62,7 @@ class Ps_save_for_web_class {
 			+ '<div class="ps_sfw_row"><label class="ps_adj_check"><input type="checkbox" id="sfw_progressive"> Progressive</label><span>Matte:</span><button type="button" class="ps_sfw_matte" id="sfw_matte"></button></div></div>'
 			+ '<div class="ps_sfw_indexed"><div class="ps_sfw_row"><select id="sfw_reduction">' + ['Perceptual', 'Selective', 'Adaptive', 'Restrictive (Web)'].map(r => '<option>' + r + '</option>').join('') + '</select>'
 			+ '<span>Colors:</span><select id="sfw_colors">' + [2, 4, 8, 16, 32, 64, 128, 256].map(c => '<option>' + c + '</option>').join('') + '</select></div>'
-			+ '<div class="ps_sfw_row"><select id="sfw_dither_type"><option>No Dither</option><option>Diffusion</option><option disabled>Pattern</option><option disabled>Noise</option></select>'
+			+ '<div class="ps_sfw_row"><select id="sfw_dither_type"><option>No Dither</option><option>Diffusion</option><option>Pattern</option><option>Noise</option></select>'
 			+ '<span>Dither:</span><input type="number" id="sfw_dither" min="0" max="100"><span>%</span></div></div>'
 			+ '<div class="ps_sfw_png"><label class="ps_adj_check"><input type="checkbox" id="sfw_transparency"> Transparency</label></div>'
 			+ '<div class="ps_sfw_group">Image Size</div>'
@@ -157,7 +157,7 @@ class Ps_save_for_web_class {
 		var c = canvas || this.output();
 		if (s.format == 'GIF' || s.format == 'PNG-8') {
 			var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-			var q = quantize(d, c.width, c.height, { colors: s.colors, reduction: s.reduction, dither: s.dither_type == 'No Dither' ? 0 : s.dither, transparency: s.transparency });
+			var q = quantize(d, c.width, c.height, { colors: s.colors, reduction: s.reduction, dither: s.dither_type == 'No Dither' ? 0 : s.dither, dither_type: s.dither_type, transparency: s.transparency });
 			var bytes = s.format == 'GIF' ? encode_gif(q, c.width, c.height) : encode_png8(q, c.width, c.height);
 			return Promise.resolve({ blob: new Blob([bytes], { type: s.format == 'GIF' ? 'image/gif' : 'image/png' }), canvas: c });
 		}

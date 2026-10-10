@@ -1,8 +1,8 @@
 /*
  * pshot - indexed color output for Save for Web (GIF, PNG-8): palette
  * reduction (Selective / Adaptive / Perceptual by median cut, Restrictive =
- * web-safe colors), diffusion dither, 1-bit transparency, and the GIF (LZW)
- * and PNG-8 encoders.
+ * web-safe colors, or a given palette), forced colors, diffusion / pattern /
+ * noise dither, 1-bit transparency, and the GIF (LZW) and PNG-8 encoders.
  */
 
 import pako from 'pako';
@@ -19,23 +19,38 @@ function quantize(rgba, w, h, opts) {
 	for (var t = 0; t < n; t++) if (!opaque(t)) { has_transparent = true; break; }
 	var slots = has_transparent ? colors - 1 : colors;
 	var palette;
-	if (opts.reduction == 'Restrictive (Web)') {
+	var forced = (opts.forced || []).slice(0, slots);
+	if (opts.palette) {
+		palette = opts.palette.slice(0, Math.max(2, slots));
+	}
+	else if (opts.reduction == 'Restrictive (Web)') {
 		palette = [];
 		for (var r = 0; r < 6; r++) for (var g = 0; g < 6; g++) for (var b = 0; b < 6; b++) palette.push([r * 51, g * 51, b * 51]);
 		palette = palette.slice(0, Math.max(2, slots));
 	}
 	else {
-		palette = median_cut(rgba, n, opaque, slots, opts.reduction == 'Perceptual');
+		palette = median_cut(rgba, n, opaque, slots - forced.length, opts.reduction == 'Perceptual');
+	}
+	//Forced colors are always in the table
+	if (forced.length) {
+		var key = (c) => c.join(',');
+		var have = new Set(palette.map(key));
+		var add = forced.filter(c => !have.has(key(c)));
+		palette = palette.slice(0, Math.max(0, slots - add.length)).concat(add);
 	}
 	var transparent = -1;
 	if (has_transparent) {
 		transparent = palette.length;
 		palette.push([0, 0, 0]);
 	}
-	//map with Floyd-Steinberg error diffusion (Dither amount 0..100)
+	//map with Floyd-Steinberg error diffusion (Dither amount 0..100), or a Pattern (ordered) / Noise dither
 	var amount = (opts.dither || 0) / 100;
+	var type = opts.dither_type || 'Diffusion';
 	var index = new Uint8Array(n);
-	var err = amount > 0 ? new Float32Array(n * 3) : null;
+	var err = amount > 0 && type == 'Diffusion' ? new Float32Array(n * 3) : null;
+	var exact = opts.preserve ? new Set(palette.map(c => (c[0] << 16) | (c[1] << 8) | c[2])) : null;
+	var spread_px = 255 / Math.max(2, Math.cbrt(palette.length));
+	var BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 	var cache = new Map();
 	var nearest = (r, g, b) => {
 		var key = (r << 16) | (g << 8) | b;
@@ -56,14 +71,23 @@ function quantize(rgba, w, h, opts) {
 			var i = y * w + x, o = i * 4;
 			if (!opaque(i)) { index[i] = transparent; continue; }
 			var rr = rgba[o], gg = rgba[o + 1], bb = rgba[o + 2];
-			if (err) {
+			//Preserve Exact Colors: a pixel already in the table is not dithered
+			var keep = exact && exact.has((rr << 16) | (gg << 8) | bb);
+			if (!keep && amount > 0 && type != 'Diffusion') {
+				var off = type == 'Pattern' ? (BAYER[(y % 4) * 4 + (x % 4)] / 16 - 0.47) : (Math.random() - 0.5);
+				off *= spread_px * amount;
+				rr = Math.max(0, Math.min(255, Math.round(rr + off)));
+				gg = Math.max(0, Math.min(255, Math.round(gg + off)));
+				bb = Math.max(0, Math.min(255, Math.round(bb + off)));
+			}
+			if (err && !keep) {
 				rr = Math.max(0, Math.min(255, Math.round(rr + err[i * 3])));
 				gg = Math.max(0, Math.min(255, Math.round(gg + err[i * 3 + 1])));
 				bb = Math.max(0, Math.min(255, Math.round(bb + err[i * 3 + 2])));
 			}
 			var k = nearest(rr, gg, bb);
 			index[i] = k;
-			if (err) {
+			if (err && !keep) {
 				var c2 = palette[k], er = (rr - c2[0]) * amount, eg = (gg - c2[1]) * amount, eb = (bb - c2[2]) * amount;
 				var spread = (dx, dy, f) => {
 					var xx = x + dx, yy = y + dy;
@@ -76,6 +100,35 @@ function quantize(rgba, w, h, opts) {
 		}
 	}
 	return { palette: palette, index: index, transparent: transparent };
+}
+
+/**
+ * the fixed Indexed Color palettes (Uniform, System Mac OS / Windows) and the Forced sets
+ */
+function fixed_palette(name, colors) {
+	var cube = (steps) => { var out = []; for (var r = 0; r < steps.length; r++) for (var g = 0; g < steps.length; g++) for (var b = 0; b < steps.length; b++) out.push([steps[r], steps[g], steps[b]]); return out; };
+	var web = cube([0, 51, 102, 153, 204, 255]);
+	if (name == 'Web') return web;
+	if (name == 'Uniform') {
+		var k = Math.max(2, Math.floor(Math.cbrt(colors || 256)));
+		return cube(Array.from({ length: k }, (_, i) => Math.round(i * 255 / (k - 1))));
+	}
+	if (name == 'System (Mac OS)') {
+		//the 6x6x6 cube, then ramps of red, green, blue and gray (no cube values)
+		var out = web.slice().reverse(), ramp = [238, 221, 187, 170, 136, 119, 85, 68, 34, 17];
+		for (var c = 0; c < 3; c++) for (var v of ramp) { var e = [0, 0, 0]; e[c] = v; out.push(e); }
+		for (var v2 of ramp) out.push([v2, v2, v2]);
+		return out.slice(0, 256);
+	}
+	if (name == 'System (Windows)') {
+		//the 20 static colors around the web cube
+		var stat = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0], [0, 0, 128], [128, 0, 128], [0, 128, 128], [192, 192, 192], [192, 220, 192], [166, 202, 240],
+			[255, 251, 240], [160, 160, 164], [128, 128, 128], [255, 0, 0], [0, 255, 0], [255, 255, 0], [0, 0, 255], [255, 0, 255], [0, 255, 255], [255, 255, 255]];
+		return stat.concat(web).slice(0, 256);
+	}
+	if (name == 'Black and White') return [[0, 0, 0], [255, 255, 255]];
+	if (name == 'Primaries') return [[0, 0, 0], [255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255], [0, 255, 255], [255, 0, 255], [255, 255, 0]];
+	return null;
 }
 
 function median_cut(rgba, n, opaque, slots, perceptual) {
@@ -229,4 +282,4 @@ function encode_png8(q, w, h) {
 	return out;
 }
 
-export { quantize, encode_gif, encode_png8 };
+export { quantize, fixed_palette, encode_gif, encode_png8 };

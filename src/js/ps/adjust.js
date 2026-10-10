@@ -9,7 +9,7 @@ import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import { ensure_pixel_layer } from './pixel-layer.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
-import { quantize } from './indexed.js';
+import { quantize, fixed_palette } from './indexed.js';
 import { PRESETS, lut as gradient_lut, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
 
 function clamp(v, lo, hi) {
@@ -1566,26 +1566,66 @@ class Ps_adjust_class {
 	 */
 	indexed_color() {
 		var palettes = ['Exact', 'System (Mac OS)', 'System (Windows)', 'Web', 'Uniform', 'Local (Perceptual)', 'Local (Selective)', 'Local (Adaptive)', 'Master (Perceptual)', 'Master (Selective)', 'Master (Adaptive)', 'Custom...', 'Previous'];
-		var enabled = ['Web', 'Local (Perceptual)', 'Local (Selective)', 'Local (Adaptive)'];
-		var html = '<div class="ps_adj_row"><span>Palette:</span><select id="ix_palette">' + palettes.map(p => '<option' + (enabled.includes(p) ? '' : ' disabled') + (p == 'Local (Selective)' ? ' selected' : '') + '>' + p + '</option>').join('') + '</select></div>'
+		var mattes = { 'None': null, 'Foreground Color': () => config.COLOR, 'Background Color': () => config.BG_COLOR, 'White': '#ffffff', 'Black': '#000000', '50% Gray': '#808080', 'Netscape Gray': '#bfbfbf' };
+		var html = '<div class="ps_adj_row"><span>Palette:</span><select id="ix_palette">' + palettes.map(p => '<option' + (p == 'Custom...' || (p == 'Previous' && !this.last_table) ? ' disabled' : '') + (p == 'Local (Selective)' ? ' selected' : '') + '>' + p + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_row"><span>Colors:</span><input type="number" id="ix_colors" min="2" max="256" value="256" style="width:60px"></div>'
-			+ '<div class="ps_adj_row"><span>Forced:</span><select disabled><option>Black and White</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Forced:</span><select id="ix_forced"><option>None</option><option selected>Black and White</option><option>Primaries</option><option>Web</option><option disabled>Custom...</option></select></div>'
 			+ '<label class="ps_adj_check"><input type="checkbox" id="ix_transparency" checked> Transparency</label>'
 			+ '<div class="ps_adj_label">Options</div>'
-			+ '<div class="ps_adj_row"><span>Matte:</span><select disabled><option>None</option></select></div>'
-			+ '<div class="ps_adj_row"><span>Dither:</span><select id="ix_dither"><option>None</option><option selected>Diffusion</option><option disabled>Pattern</option><option disabled>Noise</option></select></div>'
+			+ '<div class="ps_adj_row"><span>Matte:</span><select id="ix_matte">' + Object.keys(mattes).map(m => '<option>' + m + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><span>Dither:</span><select id="ix_dither"><option>None</option><option selected>Diffusion</option><option>Pattern</option><option>Noise</option></select></div>'
 			+ '<div class="ps_adj_row"><span>Amount:</span><input type="number" id="ix_amount" min="0" max="100" value="75" style="width:60px"><span>%</span></div>'
-			+ '<label class="ps_adj_check disabled"><input type="checkbox" disabled> Preserve Exact Colors</label>';
-		var open = () => this.show('Indexed Color', html, (root, state, update) => {
-			Object.assign(state, { palette: 'Local (Selective)', colors: 256, transparency: true, dither: 'Diffusion', amount: 75 });
-			root.querySelector('#ix_palette').addEventListener('change', (e) => { state.palette = e.target.value; if (state.palette == 'Web') { state.colors = 216; root.querySelector('#ix_colors').value = 216; } update(); });
+			+ '<label class="ps_adj_check"><input type="checkbox" id="ix_preserve"> Preserve Exact Colors</label>';
+		var open = () => this.show('Indexed Color', html, (root, state, update, job) => {
+			Object.assign(state, { palette: 'Local (Selective)', colors: 256, forced: 'Black and White', transparency: true, matte: 'None', dither: 'Diffusion', amount: 75, preserve: false });
+			//Exact: only when the image has 256 colors or fewer
+			var seen = new Set(), d = job && job.original ? job.original.data : [];
+			for (var i = 0; i < d.length && seen.size <= 256; i += 4) seen.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]);
+			root.querySelector('#ix_palette option').disabled = seen.size > 256;
+			var fixed = (p) => ['Exact', 'System (Mac OS)', 'System (Windows)', 'Web', 'Previous'].includes(p);
+			var sync = () => {
+				root.querySelector('#ix_colors').disabled = fixed(state.palette);
+				root.querySelector('#ix_amount').disabled = state.dither == 'None';
+				root.querySelector('#ix_preserve').disabled = state.dither != 'Diffusion';
+			};
+			root.querySelector('#ix_palette').addEventListener('change', (e) => {
+				state.palette = e.target.value;
+				var count = { 'Exact': seen.size, 'Web': 216, 'System (Mac OS)': 256, 'System (Windows)': 256, 'Previous': this.last_table ? this.last_table.length : 256 }[state.palette];
+				if (count) { state.colors = Math.min(256, count); root.querySelector('#ix_colors').value = state.colors; }
+				sync();
+				update();
+			});
 			root.querySelector('#ix_colors').addEventListener('change', (e) => { state.colors = Math.max(2, Math.min(256, parseInt(e.target.value) || 256)); e.target.value = state.colors; update(); });
+			root.querySelector('#ix_forced').addEventListener('change', (e) => { state.forced = e.target.value; update(); });
 			root.querySelector('#ix_transparency').addEventListener('change', (e) => { state.transparency = e.target.checked; update(); });
-			root.querySelector('#ix_dither').addEventListener('change', (e) => { state.dither = e.target.value; root.querySelector('#ix_amount').disabled = state.dither == 'None'; update(); });
+			root.querySelector('#ix_matte').addEventListener('change', (e) => { state.matte = e.target.value; update(); });
+			root.querySelector('#ix_dither').addEventListener('change', (e) => { state.dither = e.target.value; sync(); update(); });
 			root.querySelector('#ix_amount').addEventListener('change', (e) => { state.amount = Math.max(0, Math.min(100, parseInt(e.target.value) || 0)); update(); });
+			root.querySelector('#ix_preserve').addEventListener('change', (e) => { state.preserve = e.target.checked; update(); });
+			sync();
 		}, (state) => (src, dst, w, h) => {
-			var q = quantize(src, w, h, { colors: state.colors, transparency: state.transparency, dither: state.dither == 'None' ? 0 : state.amount,
-				reduction: state.palette == 'Web' ? 'Restrictive (Web)' : (state.palette == 'Local (Perceptual)' ? 'Perceptual' : 'Selective') });
+			//Matte: partly transparent pixels are blended with the matte color (all of them without Transparency)
+			var mv = mattes[state.matte], matte = typeof mv == 'function' ? mv() : mv;
+			if (matte || !state.transparency) {
+				var mr = parseInt((matte || '#ffffff').substr(1, 2), 16), mg = parseInt((matte || '#ffffff').substr(3, 2), 16), mb = parseInt((matte || '#ffffff').substr(5, 2), 16);
+				src = new Uint8ClampedArray(src);
+				for (var p = 0; p < src.length; p += 4) {
+					var a = src[p + 3] / 255;
+					if (a >= 1 || (state.transparency && a < 0.5)) continue;
+					src[p] = src[p] * a + mr * (1 - a); src[p + 1] = src[p + 1] * a + mg * (1 - a); src[p + 2] = src[p + 2] * a + mb * (1 - a);
+					src[p + 3] = 255;
+				}
+			}
+			var exact_palette = null;
+			if (state.palette == 'Exact') {
+				var uniq = new Map();
+				for (var e = 0; e < src.length && uniq.size <= 256; e += 4) if (src[e + 3] >= 128 || !state.transparency) uniq.set((src[e] << 16) | (src[e + 1] << 8) | src[e + 2], [src[e], src[e + 1], src[e + 2]]);
+				if (uniq.size <= 256) exact_palette = [...uniq.values()];
+			}
+			var given = exact_palette || (state.palette == 'Previous' ? this.last_table : fixed_palette(state.palette, state.colors));
+			var q = quantize(src, w, h, { colors: given ? Math.min(256, given.length) : state.colors, transparency: state.transparency, dither: state.dither == 'None' ? 0 : state.amount,
+				dither_type: state.dither, preserve: state.preserve, palette: given || null, forced: given ? null : fixed_palette(state.forced),
+				reduction: /Perceptual/.test(state.palette) ? 'Perceptual' : 'Selective' });
 			this.last_table = q.palette.filter((c, i) => i != q.transparent);
 			for (var i = 0; i < w * h; i++) {
 				var o = i * 4, k = q.index[i];
