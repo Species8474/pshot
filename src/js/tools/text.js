@@ -1433,6 +1433,10 @@ class Text_editor_class {
 		let totalTextDirectionSize = 0;
 		let totalWrapDirectionSize = 0;
 		let textDirectionMaxSize = isHorizontalTextDirection ? layer.width : layer.height;
+		//pshot: Paragraph panel indents (horizontal type)
+		const indentLeft = isHorizontalTextDirection ? (parseFloat(layer.params.indent_left) || 0) : 0;
+		const indentRight = isHorizontalTextDirection ? (parseFloat(layer.params.indent_right) || 0) : 0;
+		textDirectionMaxSize = Math.max(1, textDirectionMaxSize - indentLeft - indentRight);
 
 		// Determine new lines based on text wrapping, if applicable
 		let lineRenderInfo = {
@@ -1590,18 +1594,45 @@ class Text_editor_class {
 		}
 
 		// Adjust offsets for alignment along the text direction
-		if ((isHorizontalTextDirection && halign !== 'left') || (!isHorizontalTextDirection && valign !== 'top')) {
-			const maxTextDirectionSize = boundary === 'dynamic' ? totalTextDirectionSize : (isHorizontalTextDirection ? layer.width : layer.height);
+		//pshot: Justify last left / centered / right, Justify all, and the indents
+		const justify = isHorizontalTextDirection && typeof halign == 'string' && halign.indexOf('justify') === 0;
+		if ((isHorizontalTextDirection && (halign !== 'left' || indentLeft)) || (!isHorizontalTextDirection && valign !== 'top')) {
+			const maxTextDirectionSize = (boundary === 'dynamic' ? totalTextDirectionSize : (isHorizontalTextDirection ? layer.width : layer.height)) - indentLeft - indentRight;
 			for (let line of lineRenderInfo.lines) {
-				for (let wrap of line.wraps) {
-					const isCentered = (isHorizontalTextDirection && halign == 'center') || (!isHorizontalTextDirection && valign === 'middle');
+				for (let [wi, wrap] of line.wraps.entries()) {
+					let mode = isHorizontalTextDirection ? halign : (valign === 'middle' ? 'center' : 'right');
+					if (justify) {
+						const last = wi === line.wraps.length - 1;
+						mode = (!last || halign === 'justify_all') && boundary !== 'dynamic' ? 'fill' : ({ justify: 'left', justify_center: 'center', justify_right: 'right' }[halign] || 'left');
+					}
 					const lastSpan = wrap.spans[wrap.spans.length - 1];
-					const wrapSize = wrap.characterOffsets[wrap.characterOffsets.length - 1 - (lastSpan.text[lastSpan.text.length - 1] === ' ' ? 1 : 0)];
-					const startOffset = (isCentered ? maxTextDirectionSize / 2 : maxTextDirectionSize) - (isCentered ? wrapSize / 2 : wrapSize);
-					if (startOffset > 0) {
-						for (let oi = 0; oi < wrap.characterOffsets.length; oi++) {
-							wrap.characterOffsets[oi] += startOffset;
+					const trailing = lastSpan.text[lastSpan.text.length - 1] === ' ' ? 1 : 0;
+					const wrapSize = wrap.characterOffsets[wrap.characterOffsets.length - 1 - trailing];
+					if (mode === 'fill') {
+						//spread the extra space over the word gaps
+						const text = this.get_wrap_text(wrap);
+						const gaps = [];
+						for (let ti = 0; ti < text.length - trailing; ti++) if (text[ti] === ' ') gaps.push(ti);
+						const extra = maxTextDirectionSize - wrapSize;
+						if (gaps.length && extra > 0) {
+							let g = 0;
+							for (let oi = 0; oi < wrap.characterOffsets.length; oi++) {
+								while (g < gaps.length && gaps[g] < oi) g++;
+								wrap.characterOffsets[oi] += extra * g / gaps.length;
+							}
 						}
+					}
+					else if (mode === 'center' || mode === 'right') {
+						const isCentered = mode === 'center';
+						const startOffset = (isCentered ? maxTextDirectionSize / 2 : maxTextDirectionSize) - (isCentered ? wrapSize / 2 : wrapSize);
+						if (startOffset > 0) {
+							for (let oi = 0; oi < wrap.characterOffsets.length; oi++) {
+								wrap.characterOffsets[oi] += startOffset;
+							}
+						}
+					}
+					if (indentLeft) {
+						for (let oi = 0; oi < wrap.characterOffsets.length; oi++) wrap.characterOffsets[oi] += indentLeft;
 					}
 				}
 			}
@@ -1610,7 +1641,11 @@ class Text_editor_class {
 		// Determine the size of each line (e.g. line height if horizontal typing direction)
 		let wrapSizeAccumulator = 0;
 		let wrapCounter = 0;
-		for (let line of lineRenderInfo.lines) {
+		//pshot: Paragraph panel Space Before / Space After (between paragraphs)
+		const spaceBefore = isHorizontalTextDirection ? (parseFloat(layer.params.space_before) || 0) : 0;
+		const spaceAfter = isHorizontalTextDirection ? (parseFloat(layer.params.space_after) || 0) : 0;
+		for (let [lineNumber, line] of lineRenderInfo.lines.entries()) {
+			if (lineNumber > 0) wrapSizeAccumulator += spaceBefore + spaceAfter;
 			line.firstWrapIndex = wrapCounter;
 			for (let wrap of line.wraps) {
 				let ascenderSize = 0;

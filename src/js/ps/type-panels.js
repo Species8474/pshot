@@ -112,15 +112,23 @@ function render_paragraph(host) {
 	host.innerHTML = '<div class="ps_typ">'
 		+ '<div class="ps_typ_row ps_typ_align">'
 		+ ['left', 'center', 'right'].map(a => '<button type="button" data-align="' + a + '" class="' + (a == align ? 'pressed' : '') + (layer ? '' : ' disabled') + '" title="' + a[0].toUpperCase() + a.slice(1) + ' align text">' + ICONS[a] + '</button>').join('')
-		+ '<button type="button" class="disabled" title="Justify last left">≡</button><button type="button" class="disabled" title="Justify all">≣</button>'
+		+ [['justify', 'Justify last left', '≡'], ['justify_center', 'Justify last centered', '≡'], ['justify_right', 'Justify last right', '≡'], ['justify_all', 'Justify all', '≣']].map(([a, t, ic]) => '<button type="button" data-align="' + a + '" class="' + (a == align ? 'pressed' : '') + (layer ? '' : ' disabled') + '" title="' + t + '">' + ic + '</button>').join('')
 		+ '</div>'
-		+ '<div class="ps_typ_row"><span>Indent left:</span><input type="number" value="0" disabled><span>pt</span></div>'
-		+ '<div class="ps_typ_row"><span>Indent right:</span><input type="number" value="0" disabled><span>pt</span></div>'
-		+ '<div class="ps_typ_row"><span>Space before:</span><input type="number" value="0" disabled><span>pt</span></div>'
-		+ '<div class="ps_typ_row"><span>Space after:</span><input type="number" value="0" disabled><span>pt</span></div>'
+		+ [['indent_left', 'Indent left:'], ['indent_right', 'Indent right:'], ['space_before', 'Space before:'], ['space_after', 'Space after:']].map(([k, t]) => '<div class="ps_typ_row"><span>' + t + '</span><input type="number" data-para="' + k + '" value="' + (layer && layer.params[k] ? layer.params[k] : 0) + '"' + (layer ? '' : ' disabled') + '><span>pt</span></div>').join('')
 		+ '<label class="ps_typ_row"><input type="checkbox" checked disabled> Hyphenate</label>'
 		+ (layer ? '' : '<div class="ps_typ_hint">Select a type layer to set its alignment.</div>')
 		+ '</div>';
+	host.querySelectorAll('[data-para]').forEach((input) => {
+		input.addEventListener('keydown', (e) => e.stopPropagation());
+		input.addEventListener('change', () => {
+			if (!layer) return;
+			var v = parseFloat(input.value) || 0;
+			var params = Object.assign({}, layer.params, { [input.dataset.para]: v });
+			app.State.do_action(new app.Actions.Bundle_action('paragraph', 'Paragraph', [
+				new app.Actions.Update_layer_action(layer.id, { params: params }),
+			])).then(() => render_paragraph(host));
+		});
+	});
 	host.querySelectorAll('[data-align]').forEach((b) => b.addEventListener('click', () => {
 		if (!layer) return;
 		var params = Object.assign({}, layer.params, { halign: b.dataset.align });

@@ -267,6 +267,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Options bar Pattern and Custom Shape pickers (ps/thumb-picker.js): a swatch button opening a thumbnail grid (small/large via the gear), right-click Rename/Delete (user items).
   - Font family menu (options bar and Character panel; ps/font-menu.js): each font with a "Sample" at Type > Font Preview Size (None to Huge, saved in the browser), typing filters, Enter picks the first. Web fonts not yet loaded preview in a fallback face.
   - Character panel All Caps / Small Caps and Superscript / Subscript (span meta caps / position, text.js span_glyph: measured and drawn as shown). Ligatures and the other OpenType features stay greyed: the type engine draws letter by letter.
+  - Paragraph panel: Justify last left / centered / right and Justify all (paragraph type: extra space spread over the word gaps), Indent left / right, Space before / after (horizontal type; layer.params indent_left, indent_right, space_before, space_after). First-line indent and Hyphenate stay greyed.
 
 ## Known gaps / next
 
