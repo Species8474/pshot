@@ -49,7 +49,7 @@ const DEFAULTS = {
 	bevel: { enabled: false, style: 'Inner Bevel', technique: 'Smooth', depth: 100, direction: 'Up', size: 5, soften: 0, angle: 120, altitude: 30,
 		highlight_blend: 'Screen', highlight_color: '#ffffff', highlight_opacity: 75, shadow_blend: 'Multiply', shadow_color: '#000000', shadow_opacity: 75,
 		contour_on: false, contour: 'Linear', contour_range: 50, texture_on: false, texture_pattern: 'Checkerboard', texture_scale: 100, texture_depth: 100, texture_invert: false },
-	satin: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 50, angle: 19, distance: 11, size: 14, invert: true },
+	satin: { enabled: false, blend: 'Multiply', color: '#000000', opacity: 50, angle: 19, distance: 11, size: 14, invert: true, contour: 'Gaussian' },
 	color_overlay: { enabled: false, blend: 'Normal', color: '#ff0000', opacity: 100 },
 	gradient_overlay: { enabled: false, blend: 'Normal', opacity: 100, gradient: null, style: 'Linear', align: true, scale: 100, color_1: '#000000', color_2: '#ffffff', angle: 90, reverse: false, dither: false },
 	pattern_overlay: { enabled: false, blend: 'Normal', opacity: 100, pattern: 'Checkerboard', scale: 100 },
@@ -380,8 +380,9 @@ class Ps_styles_class {
 		var a1 = this.alpha_of(this.shadow_only(content, '#000000', 100, dx, dy, blur));
 		var a2 = this.alpha_of(this.shadow_only(content, '#000000', 100, -dx, -dy, blur));
 		var out = new Float32Array(w * h);
+		var f = CONTOURS[e.contour] || CONTOURS['Linear'];
 		for (var i = 0; i < out.length; i++) {
-			var v = Math.abs(a1[i] - a2[i]);
+			var v = Math.max(0, Math.min(1, f(Math.abs(a1[i] - a2[i]))));
 			out[i] = e.invert ? 1 - v : v;
 		}
 		return this.from_alpha(w, h, out, e.color, e.opacity / 100);
@@ -807,7 +808,7 @@ class Ps_styles_class {
 					+ row('Angle:', num('angle', e.angle, '°', -180, 180))
 					+ row('Distance:', num('distance', e.distance, 'px', 0, 250))
 					+ row('Size:', num('size', e.size, 'px', 0, 250))
-					+ row('', '<label class="ps_fx_check"><input type="checkbox" data-field="invert"' + (e.invert ? ' checked' : '') + '> Invert</label>');
+					+ row('Contour:', select('contour', CONTOUR_NAMES, e.contour || 'Linear') + '<label class="ps_fx_check"><input type="checkbox" data-field="invert"' + (e.invert ? ' checked' : '') + '> Invert</label>');
 			}
 			else if (key == 'gradient_overlay') {
 				html += row('Blend Mode:', select('blend', BLEND_NAMES, e.blend) + '<label class="ps_fx_check"><input type="checkbox" data-field="dither"' + (e.dither ? ' checked' : '') + '> Dither</label>')
@@ -898,4 +899,4 @@ class Ps_styles_class {
 }
 
 export default Ps_styles_class;
-export { DEFAULTS as STYLE_DEFAULTS };
+export { DEFAULTS as STYLE_DEFAULTS, CONTOURS };

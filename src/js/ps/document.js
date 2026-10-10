@@ -11,6 +11,7 @@ import { readPsd, writePsd } from 'ag-psd';
 import { inject_paths, read_paths } from './psd-paths.js';
 import Patterns from './patterns.js';
 import { resolve as resolve_gradient, two_color } from './gradients.js';
+import { CONTOURS } from './styles.js';
 import filesaver from './../../../node_modules/file-saver/dist/FileSaver.min.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
@@ -175,12 +176,27 @@ function pattern_info(name) {
 	return { name: name, id: pattern_id(name), x: 0, y: 0, bounds: { x: 0, y: 0, w: c.width, h: c.height }, data: new Uint8Array(data.buffer.slice(0)) };
 }
 
+/**
+ * a contour preset as a PSD curve (points 0..255) and back (by name)
+ */
+function contour_to_psd(name) {
+	var f = CONTOURS[name] || CONTOURS['Linear'], curve = [];
+	var n = name == 'Linear' || !CONTOURS[name] ? 1 : 16;
+	for (var i = 0; i <= n; i++) curve.push({ x: Math.round(i / n * 255), y: Math.round(Math.max(0, Math.min(1, f(i / n))) * 255) });
+	return { name: CONTOURS[name] ? name : 'Linear', curve: curve };
+}
+
+function contour_from_psd(c) {
+	var name = c && c.name ? c.name.replace(/\0+$/, '') : 'Linear';
+	return CONTOURS[name] ? name : 'Linear';
+}
+
 function styles_to_effects(styles) {
 	if (!styles) return undefined;
 	var fx = {};
 	var any = false;
-	var shadow = (e) => ({ enabled: true, size: px(e.size), angle: e.angle, distance: px(e.distance), color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 });
-	var glow = (e) => ({ enabled: true, size: px(e.size), color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100 });
+	var shadow = (e) => ({ enabled: true, size: px(e.size), angle: e.angle, distance: px(e.distance), color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, contour: contour_to_psd(e.contour || 'Linear') });
+	var glow = (e) => ({ enabled: true, size: px(e.size), color: hex_to_rgb(e.color), blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, contour: contour_to_psd(e.contour || 'Linear') });
 	for (var key in styles) {
 		var e = styles[key];
 		if (!e || !e.enabled) continue;
@@ -195,8 +211,10 @@ function styles_to_effects(styles) {
 			size: px(e.size), soften: px(e.soften), angle: e.angle, altitude: e.altitude, useGlobalLight: false,
 			highlightBlendMode: blend_to_psd(e.highlight_blend), highlightColor: hex_to_rgb(e.highlight_color), highlightOpacity: e.highlight_opacity / 100,
 			shadowBlendMode: blend_to_psd(e.shadow_blend), shadowColor: hex_to_rgb(e.shadow_color), shadowOpacity: e.shadow_opacity / 100,
+			//the Contour and Texture sections (on / off)
+			useShape: !!e.contour_on, useTexture: !!e.texture_on,
 		};
-		if (key == 'satin') fx.satin = { enabled: true, blendMode: blend_to_psd(e.blend), color: hex_to_rgb(e.color), opacity: e.opacity / 100, angle: e.angle, distance: px(e.distance), size: px(e.size), invert: !!e.invert };
+		if (key == 'satin') fx.satin = { enabled: true, blendMode: blend_to_psd(e.blend), color: hex_to_rgb(e.color), opacity: e.opacity / 100, angle: e.angle, distance: px(e.distance), size: px(e.size), invert: !!e.invert, contour: contour_to_psd(e.contour || 'Gaussian') };
 		if (key == 'pattern_overlay') {
 			if (!used_patterns.includes(e.pattern)) used_patterns.push(e.pattern);
 			fx.patternOverlay = { enabled: true, blendMode: blend_to_psd(e.blend), opacity: e.opacity / 100, scale: e.scale || 100, pattern: { name: e.pattern, id: pattern_id(e.pattern) } };
@@ -221,8 +239,8 @@ function effects_to_styles(fx) {
 	var styles = {};
 	var val = (u) => (u && u.value !== undefined ? u.value : (typeof u == 'number' ? u : 0));
 	var first = (x) => Array.isArray(x) ? x[0] : x;
-	var shadow = (e) => ({ enabled: e.enabled !== false, blend: blend_from_psd(e.blendMode), color: rgb_to_hex(e.color), opacity: Math.round((e.opacity === undefined ? 0.75 : e.opacity) * 100), angle: e.angle === undefined ? 120 : e.angle, distance: val(e.distance), size: val(e.size) });
-	var glow = (e) => ({ enabled: e.enabled !== false, blend: blend_from_psd(e.blendMode), color: rgb_to_hex(e.color), opacity: Math.round((e.opacity === undefined ? 0.75 : e.opacity) * 100), size: val(e.size) });
+	var shadow = (e) => ({ enabled: e.enabled !== false, blend: blend_from_psd(e.blendMode), color: rgb_to_hex(e.color), opacity: Math.round((e.opacity === undefined ? 0.75 : e.opacity) * 100), angle: e.angle === undefined ? 120 : e.angle, distance: val(e.distance), size: val(e.size), contour: contour_from_psd(e.contour) });
+	var glow = (e) => ({ enabled: e.enabled !== false, blend: blend_from_psd(e.blendMode), color: rgb_to_hex(e.color), opacity: Math.round((e.opacity === undefined ? 0.75 : e.opacity) * 100), size: val(e.size), contour: contour_from_psd(e.contour) });
 	if (first(fx.dropShadow)) styles.drop_shadow = shadow(first(fx.dropShadow));
 	if (first(fx.innerShadow)) styles.inner_shadow = shadow(first(fx.innerShadow));
 	if (fx.outerGlow) styles.outer_glow = glow(fx.outerGlow);
@@ -237,11 +255,12 @@ function effects_to_styles(fx) {
 			direction: b.direction == 'down' ? 'Down' : 'Up', size: val(b.size), soften: val(b.soften), angle: b.angle == null ? 120 : b.angle, altitude: b.altitude == null ? 30 : b.altitude,
 			highlight_blend: blend_from_psd(b.highlightBlendMode || 'screen'), highlight_color: b.highlightColor ? rgb_to_hex(b.highlightColor) : '#ffffff', highlight_opacity: Math.round((b.highlightOpacity == null ? 0.75 : b.highlightOpacity) * 100),
 			shadow_blend: blend_from_psd(b.shadowBlendMode || 'multiply'), shadow_color: rgb_to_hex(b.shadowColor), shadow_opacity: Math.round((b.shadowOpacity == null ? 0.75 : b.shadowOpacity) * 100),
+			contour_on: !!b.useShape, texture_on: !!b.useTexture,
 		};
 	}
 	if (fx.satin) {
 		var sa = fx.satin;
-		styles.satin = { enabled: sa.enabled !== false, blend: blend_from_psd(sa.blendMode || 'multiply'), color: rgb_to_hex(sa.color), opacity: Math.round((sa.opacity == null ? 0.5 : sa.opacity) * 100), angle: sa.angle == null ? 19 : sa.angle, distance: val(sa.distance), size: val(sa.size), invert: !!sa.invert };
+		styles.satin = { enabled: sa.enabled !== false, blend: blend_from_psd(sa.blendMode || 'multiply'), color: rgb_to_hex(sa.color), opacity: Math.round((sa.opacity == null ? 0.5 : sa.opacity) * 100), angle: sa.angle == null ? 19 : sa.angle, distance: val(sa.distance), size: val(sa.size), invert: !!sa.invert, contour: contour_from_psd(sa.contour) };
 	}
 	if (fx.patternOverlay) {
 		var po = fx.patternOverlay, pname = po.pattern && po.pattern.name ? po.pattern.name.replace(/\0+$/, '') : 'Checkerboard';
