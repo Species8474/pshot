@@ -281,6 +281,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Pen gear: Rubber Band (the next segment previews to the pointer). Options popups share options_popup() in options-bar.js (data-k inputs write config.TOOL.attributes).
   - Sample All Layers for Smudge, Mixer Brush and Spot Healing Brush (retouch.js below_canvas / over_below: the other visible layers in the layer's pixel grid; results are written into the active layer, so an empty layer works).
   - Content-aware synthesis (ps/inpaint.js content_aware): multi-scale PatchMatch (7x7 patches, propagation + random search, similarity-weighted voting, coarse-to-fine NNF upsampling) on the hole's neighbourhood; used by Edit > Fill > Content-Aware, Spot Healing (Content-Aware), Patch (Content-Aware seam) and Content-Aware Move. A 180 px hole in stripes fills exactly in ~0.7 s. Spot Healing Type: Proximity Match (best nearby offset by edge ring, tone-matched) and Create Texture (smooth fill plus grain from random nearby pieces).
+  - Type options bar orientation toggle (type layer: Horizontal/Vertical; otherwise swaps the Horizontal / Vertical Type tools). Art History Brush Mode (Normal, Darken, Lighten, Hue, Saturation, Color, Luminosity). Color Replacement Anti-alias (brush rim and the matched area's edge blended).
 
 ## Known gaps / next
 

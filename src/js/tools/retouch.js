@@ -484,7 +484,14 @@ class Retouch_class extends Base_tools_class {
 			else if (mode == 'Saturation') { ss = fh[1]; }
 			else if (mode == 'Luminosity') { ll = fh[2]; }
 			var rgb = this.rgb(hh, ss, ll);
-			D[di] = rgb[0]; D[di + 1] = rgb[1]; D[di + 2] = rgb[2];
+			//Anti-alias: the brush rim and the edge of the matched area are blended
+			var amt = 1;
+			if (params.replace_aa !== false) {
+				amt = Math.max(0, Math.min(1, r - Math.hypot(px + 0.5 - p.x, py + 0.5 - p.y) + 0.5));
+				var jx = j % bw, jy = (j / bw) | 0;
+				if ((jx > 0 && !match[j - 1]) || (jx < bw - 1 && !match[j + 1]) || (jy > 0 && !match[j - bw]) || (jy < bh - 1 && !match[j + bw])) amt *= 0.5;
+			}
+			for (var cc = 0; cc < 3; cc++) D[di + cc] = O[oi + cc] + (rgb[cc] - O[oi + cc]) * amt;
 		}
 		ctx.putImageData(img, x0, y0);
 	}
@@ -777,6 +784,8 @@ class Retouch_class extends Base_tools_class {
 		ctx.lineJoin = 'round';
 		ctx.lineWidth = r * 2;
 		ctx.globalAlpha = opacity;
+		//options bar Mode
+		ctx.globalCompositeOperation = { Darken: 'darken', Lighten: 'lighten', Hue: 'hue', Saturation: 'saturation', Color: 'color', Luminosity: 'luminosity' }[params.art_mode] || 'source-over';
 		var count = Math.max(2, Math.min(12, Math.round(area / Math.max(2, r))));
 		for (var n = 0; n < count; n++) {
 			var a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * area;

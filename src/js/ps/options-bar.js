@@ -105,6 +105,21 @@ function crop_options(anchor) {
 	});
 }
 
+/**
+ * Type tool: the selected type layer changes orientation, otherwise the
+ * Horizontal / Vertical Type tools swap
+ */
+function toggle_orientation() {
+	var l = config.layer;
+	if (l && l.type == 'text') {
+		app.GUI.modules['ps/commands'].text_orientation(!(l.params && l.params.text_direction == 'ttb'));
+		return;
+	}
+	var ws = app.GUI.Ps_workspace, cur = ws.active_member ? ws.active_member.id : 'type';
+	var swap = { type: 'vertical_type', vertical_type: 'type', type_mask: 'vertical_type_mask', vertical_type_mask: 'type_mask' }[cur];
+	ws.groups.forEach((g, gi) => g.members.forEach((m, mi) => { if (m.id == swap) ws.select_member(gi, mi); }));
+}
+
 function pcrop() {
 	return app.GUI.GUI_tools.tools_modules.ps_pcrop.object;
 }
@@ -226,6 +241,7 @@ const LASSO_LAYOUT = [
 	{ type: 'button', text: 'Refine Edge...', action: () => app.GUI.modules['ps/commands'].refine_edge() },
 ];
 //every CS6 mode paints (the ones canvas lacks are blended per pixel when the stroke is committed)
+const ART_MODES = ['Normal', 'Darken', 'Lighten', 'Hue', 'Saturation', 'Color', 'Luminosity'];
 const MODE_MAP = {};
 for (const m of MODES) MODE_MAP[m] = m;
 const BRUSH_COMMON = [
@@ -580,7 +596,7 @@ const LAYOUTS = {
 		] },
 		{ type: 'select', label: 'Limits:', values: ['Discontiguous', 'Contiguous', 'Find Edges'], bind: 'limits', map: { Discontiguous: 'Discontiguous', Contiguous: 'Contiguous', 'Find Edges': 'Contiguous' } },
 		{ type: 'pct', label: 'Tolerance:', bind: 'tolerance' },
-		{ type: 'check', label: 'Anti-alias', value: true },
+		{ type: 'check', label: 'Anti-alias', bind: 'replace_aa' },
 		{ type: 'icon', icon: IC.pressure_size, title: 'Always use Pressure for Size' },
 	],
 	history_brush: [
@@ -614,7 +630,7 @@ const LAYOUTS = {
 		{ type: 'brush', bind: 'size' },
 		{ type: 'icon', icon: IC.brush_panel, title: 'Toggle the Brush panel', action: () => app.GUI.Ps_workspace.toggle_panel('brush') },
 		{ type: 'sep' },
-		{ type: 'select', label: 'Mode:', values: MODES },
+		{ type: 'select', label: 'Mode:', values: ART_MODES, bind: 'art_mode', map: Object.fromEntries(ART_MODES.map(v => [v, v])) },
 		{ type: 'pct', label: 'Opacity:', value: 100, bind: 'opacity' },
 		{ type: 'icon', icon: IC.pressure_op, title: 'Always use Pressure for Opacity' },
 		{ type: 'select', label: 'Style:', values: ART_STYLES, bind: 'art_style', map: Object.fromEntries(ART_STYLES.map(v => [v, v])) },
@@ -738,7 +754,7 @@ const LAYOUTS = {
 	polygon: SHAPE_COMMON([{ type: 'num', label: 'Sides:', bind: 'sides', width: 36 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	line: SHAPE_COMMON([{ type: 'num', label: 'Weight:', bind: 'size', unit: 'px', width: 40 }, { type: 'check', label: 'Align Edges', bind: 'align_edges' }]),
 	type: [
-		{ type: 'icon', icon: IC.type_orient, title: 'Toggle text orientation' },
+		{ type: 'icon', icon: IC.type_orient, title: 'Toggle text orientation', action: () => toggle_orientation() },
 		{ type: 'sep' },
 		{ type: 'font' },
 		{ type: 'font_style' },
