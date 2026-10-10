@@ -498,7 +498,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: TONE_MODES, bind: 'focus_mode', map: Object.fromEntries(TONE_MODES.map(v => [v, v])) },
 		{ type: 'pct', label: 'Strength:', bind: 'strength' },
-		{ type: 'check', label: 'Sample All Layers', value: false, always_disabled: true },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 		{ type: 'check', label: 'Finger Painting', bind: 'finger_painting' },
 	],
 	perspective_crop: [
@@ -608,7 +608,7 @@ const LAYOUTS = {
 		{ type: 'pct', label: 'Mix:', bind: 'mix' },
 		{ type: 'pct', label: 'Flow:', bind: 'flow' },
 		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
-		{ type: 'check', label: 'Sample All Layers', value: false },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 	],
 	art_history_brush: [
 		{ type: 'brush', bind: 'size' },
@@ -627,7 +627,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: HEAL_MODES, bind: 'heal_mode', map: Object.fromEntries(HEAL_MODES.map(v => [v, v])) },
 		{ type: 'select', label: 'Type:', values: ['Proximity Match', 'Create Texture', 'Content-Aware'], value: 'Content-Aware', disabled_values: ['Proximity Match', 'Create Texture'] },
-		{ type: 'check', label: 'Sample All Layers', value: false },
+		{ type: 'check', label: 'Sample All Layers', bind: 'sample_all' },
 	],
 	healing: [
 		{ type: 'brush', bind: 'size' },

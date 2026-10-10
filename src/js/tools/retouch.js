@@ -214,6 +214,9 @@ class Retouch_class extends Base_tools_class {
 			}
 			this.focus_dab(this.last, mode == 'sharpen');
 		}
+		//Sample All Layers (smudge, mixer, spot healing): the other visible layers count as the paint below
+		this.below = (mode == 'smudge' || mode == 'mixer' || mode == 'spot_healing') && this.getParams().sample_all ? this.below_canvas() : null;
+		this.below_data = this.below ? this.below.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, this.below.width, this.below.height).data : null;
 		if (mode == 'smudge' && this.getParams().finger_painting) {
 			//Finger Painting: the stroke starts with the foreground color
 			var fctx = this.canvas.getContext('2d');
@@ -822,9 +825,14 @@ class Retouch_class extends Base_tools_class {
 		if (x1 <= x0 || y1 <= y0) return;
 		var ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 		var img = ctx.getImageData(x0, y0, x1 - x0, y1 - y0), d = img.data;
-		//canvas color under the brush
+		//canvas color under the brush (Sample All Layers: as seen, with the layers below)
+		var seen = d;
+		if (this.below_data) {
+			seen = new Uint8ClampedArray(d);
+			this.over_below(seen, x0, y0, x1 - x0, y1 - y0);
+		}
 		var cr = 0, cg = 0, cb = 0, ca = 0;
-		for (var i = 0; i < d.length; i += 4) { var a = d[i + 3]; cr += d[i] * a; cg += d[i + 1] * a; cb += d[i + 2] * a; ca += a; }
+		for (var i = 0; i < seen.length; i += 4) { var a = seen[i + 3]; cr += seen[i] * a; cg += seen[i + 1] * a; cb += seen[i + 2] * a; ca += a; }
 		var wet = (params.wet == null ? 50 : params.wet) / 100, mix = (params.mix == null ? 50 : params.mix) / 100;
 		var load = Math.max(1, params.load == null ? 50 : params.load), flow = (params.flow == null ? 100 : params.flow) / 100;
 		var res = this.reservoir || [0, 0, 0];
@@ -873,6 +881,10 @@ class Retouch_class extends Base_tools_class {
 		var tx = Math.round(to.x - r), ty = Math.round(to.y - r);
 		var src = ctx.getImageData(sx, sy, size, size);
 		var dst = ctx.getImageData(tx, ty, size, size);
+		if (this.below_data) {
+			this.over_below(src.data, sx, sy, size);
+			this.over_below(dst.data, tx, ty, size);
+		}
 		for (var y = 0; y < size; y++) {
 			for (var x = 0; x < size; x++) {
 				var d = Math.hypot(x + 0.5 - r, y + 0.5 - r) / r;
@@ -888,6 +900,46 @@ class Retouch_class extends Base_tools_class {
 			}
 		}
 		ctx.putImageData(dst, tx, ty);
+	}
+
+	/**
+	 * Sample All Layers: the visible layers except this one, in this layer's pixel grid
+	 */
+	below_canvas() {
+		var layer = config.layer, s = layer.width_original / layer.width;
+		var doc = document.createElement('canvas');
+		doc.width = config.WIDTH;
+		doc.height = config.HEIGHT;
+		var was = layer.visible;
+		layer.visible = false;
+		try { app.Layers.convert_layers_to_canvas(doc.getContext('2d'), null, false); }
+		finally { layer.visible = was; }
+		var c = document.createElement('canvas');
+		c.width = this.canvas.width;
+		c.height = this.canvas.height;
+		c.getContext('2d').drawImage(doc, -layer.x * s, -layer.y * s, config.WIDTH * s, config.HEIGHT * s);
+		return c;
+	}
+
+	/**
+	 * a patch of this layer (size x size at x0, y0) composited over the layers below
+	 */
+	over_below(d, x0, y0, size, h) {
+		var B = this.below_data, W = this.canvas.width, H = this.canvas.height;
+		h = h || size;
+		for (var y = 0; y < h; y++) {
+			var yy = y0 + y;
+			if (yy < 0 || yy >= H) continue;
+			for (var x = 0; x < size; x++) {
+				var xx = x0 + x;
+				if (xx < 0 || xx >= W) continue;
+				var i = (y * size + x) * 4, j = (yy * W + xx) * 4;
+				var ca = d[i + 3] / 255, ba = B[j + 3] / 255, a = ca + ba * (1 - ca);
+				if (a <= 0) continue;
+				for (var c = 0; c < 3; c++) d[i + c] = (d[i + c] * ca + B[j + c] * ba * (1 - ca)) / a;
+				d[i + 3] = a * 255;
+			}
+		}
 	}
 
 	/**
@@ -996,7 +1048,25 @@ class Retouch_class extends Base_tools_class {
 		ctx.drawImage(config.layer.link, 0, 0);
 		var mode = this.getParams().heal_mode || 'Normal';
 		var before = mode != 'Normal' && mode != 'Replace' ? ctx.getImageData(0, 0, this.canvas.width, this.canvas.height) : null;
-		inpaint(this.canvas, this.spot);
+		if (this.below) {
+			//Sample All Layers: heal what is seen (this layer over the others), keep only the spot
+			var seen = document.createElement('canvas');
+			seen.width = this.canvas.width;
+			seen.height = this.canvas.height;
+			var sctx = seen.getContext('2d', { willReadFrequently: true });
+			sctx.drawImage(this.below, 0, 0);
+			sctx.drawImage(config.layer.link, 0, 0);
+			if (before) before = sctx.getImageData(0, 0, seen.width, seen.height);
+			inpaint(seen, this.spot);
+			var healed = sctx.getImageData(0, 0, seen.width, seen.height).data;
+			var own = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+			for (var q = 0; q < this.spot.length; q++) {
+				if (!this.spot[q]) continue;
+				for (var cc = 0; cc < 4; cc++) own.data[q * 4 + cc] = healed[q * 4 + cc];
+			}
+			ctx.putImageData(own, 0, 0);
+		}
+		else inpaint(this.canvas, this.spot);
 		if (before) {
 			//Mode: the healed pixels blended with the original ones
 			var img = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height), d = img.data, o = before.data;
