@@ -1898,3 +1898,7 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_ge_chan { min-width: 24px; }
 .ps_ge_rough { width: 52px; }
 .ps_prefs_color { width: 34px; height: 22px; padding: 0; border: 1px solid var(--ps-border); vertical-align: middle; }
+/* Preferences > Cursors: crosshair in the brush tip */
+#mouse.ps_cross::before, #mouse.ps_cross::after { content: ''; position: absolute; background: rgba(0,0,0,0.6); }
+#mouse.ps_cross::before { left: 50%; top: 50%; width: 9px; height: 1px; margin-left: -4px; }
+#mouse.ps_cross::after { left: 50%; top: 50%; width: 1px; height: 9px; margin-top: -4px; }

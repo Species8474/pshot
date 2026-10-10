@@ -433,6 +433,8 @@ class Ps_workspace_class {
 			}
 		}
 		this.sync_shape_colors(tool_config);
+		//a painting cursor preference must not stay on the next tool
+		document.getElementById('main_wrapper').style.cursor = '';
 		app.GUI.GUI_tools.activate_tool(member.tool).then(() => {
 			//re-render options when only the preset changed
 			app.GUI.GUI_tools.show_action_attributes();

@@ -12,6 +12,10 @@ import Helper_class from "../libs/helpers";
 /**
  * Base tools class, can be used for extending on tools like brush, provides various helping methods.
  */
+//Caps Lock: precise painting cursors (CS6)
+var caps_lock = false;
+['keydown', 'keyup', 'mousemove'].forEach(t => document.addEventListener(t, (e) => { if (e.getModifierState) caps_lock = e.getModifierState('CapsLock'); }, true));
+
 class Base_tools_class {
 
 	constructor(save_mouse) {
@@ -258,6 +262,25 @@ class Base_tools_class {
 		y = y - start_pos.y;
 
 		var element = document.getElementById('mouse');
+		//pshot: Preferences > Cursors > Painting Cursors (Caps Lock shows the precise cursor, CS6)
+		var prefs = this.Base_gui.Ps_workspace && this.Base_gui.Ps_workspace.Preferences;
+		var wrapper = document.getElementById('main_wrapper');
+		var cross = false;
+		if (prefs && type == 'circle') {
+			var pv = prefs.values, mode = pv.painting_cursor || 'Normal Brush Tip';
+			var painting = config.mouse && config.mouse.is_drag && config.mouse.click_valid !== false;
+			if (caps_lock) mode = 'Precise';
+			if (mode == 'Standard' || mode == 'Precise' || (painting && pv.crosshair_only)) {
+				element.className = '';
+				wrapper.style.cursor = mode == 'Standard' ? 'default' : 'crosshair';
+				return;
+			}
+			wrapper.style.cursor = '';
+			//Normal Brush Tip: the outline at 50% of a soft brush's falloff
+			var hardness = this.getParams().hardness;
+			if (mode == 'Normal Brush Tip' && hardness != null && hardness < 100) size = size * (0.5 + hardness / 200);
+			cross = !!pv.crosshair_in_tip;
+		}
 		size = size * config.ZOOM;
 		x = x * config.ZOOM;
 		y = y * config.ZOOM;
@@ -265,6 +288,7 @@ class Base_tools_class {
 		if (size < 5) {
 			//too small
 			element.className = '';
+			if (prefs && type == 'circle') wrapper.style.cursor = 'crosshair';
 			return;
 		}
 
@@ -277,6 +301,7 @@ class Base_tools_class {
 		//add style
 		element.className = '';
 		element.classList.add(type);
+		if (cross) element.classList.add('ps_cross');
 	}
 
 	getParams() {

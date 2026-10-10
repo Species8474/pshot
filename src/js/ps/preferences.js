@@ -30,6 +30,9 @@ const DEFAULTS = {
 	slice_color: 'Light Blue',
 	slice_custom: '#2196f3',
 	slice_numbers: true,
+	painting_cursor: 'Normal Brush Tip',
+	crosshair_in_tip: false,
+	crosshair_only: false,
 };
 
 //CS6 guide / grid / slice colors
@@ -189,9 +192,9 @@ class Ps_preferences_class {
 			]],
 			['Cursors', [
 				{ type: 'group', label: 'Painting Cursors' },
-				{ type: 'row', items: [{ type: 'select', label: '', values: ['Normal Brush Tip'], disabled: true }] },
-				{ type: 'check', label: 'Show Crosshair in Brush Tip', value: false, disabled: true },
-				{ type: 'check', label: 'Show Only Crosshair While Painting', value: false, disabled: true },
+				{ type: 'row', items: [{ type: 'select', key: 'painting_cursor', label: '', values: ['Standard', 'Precise', 'Normal Brush Tip', 'Full Size Brush Tip'] }] },
+				{ type: 'check', key: 'crosshair_in_tip', label: 'Show Crosshair in Brush Tip' },
+				{ type: 'check', key: 'crosshair_only', label: 'Show Only Crosshair While Painting' },
 				{ type: 'group', label: 'Other Cursors' },
 				{ type: 'row', items: [{ type: 'select', label: '', values: ['Standard'], disabled: true }] },
 			]],
