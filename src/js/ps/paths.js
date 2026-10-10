@@ -15,6 +15,7 @@ import config from './../config.js';
 import zoomView from './../libs/zoomView.js';
 import Dialog_class from './../libs/popup.js';
 import { show_popup_menu } from './popup-menu.js';
+import { fit_loop } from './curve-fit.js';
 import { ensure_pixel_layer, alert_box } from './pixel-layer.js';
 
 const S = 'fill="none" stroke="currentColor" stroke-width="1.2"';
@@ -466,7 +467,12 @@ class Ps_paths_class {
 			dp(pts.concat([pts[0]]), mid, pts.length, out);
 			return out;
 		};
-		return loops.map(l => ({ closed: true, pts: simplify(l).map(p => point(p.x, p.y)) }));
+		//CS6: smooth outlines become curves, straight runs keep their corners
+		return loops.map(l => {
+			var simple = simplify(l);
+			var straight = simple.length <= 8 && simple.every((p, i) => { var q = simple[(i + 1) % simple.length]; return p.x == q.x || p.y == q.y; });
+			return { closed: true, pts: straight ? simple.map(p => point(p.x, p.y)) : fit_loop(l, Math.max(0.5, tol)) };
+		});
 	}
 
 	// ---------- panel ----------

@@ -257,6 +257,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - File > Scripts > Browse... runs a JavaScript file with (app, config, commands); File > Exit closes all documents (and the tab when the browser allows).
   - Copy CSS (layer context menu; ps/copy-css.js): CSS for shape / type / pixel layers (position, size, fill, gradient overlay, border, radius, shadows, opacity, blend mode) to the clipboard. Smart filter Blending Options (mode and opacity per filter, applied over the pixels below it).
   - Brush panel: Texture (pattern anchored to the document, scale, depth, invert, Multiply/Subtract), Dual Brush (second tip with size/spacing/scatter/count, paint where both are), Brush Pose (rotation, roundness, pressure), Build-up (airbrush button: paint keeps coming while the pointer rests), Smoothing (on by default), Protect Texture (texture kept across presets). brush.js render_dabs wraps render_dabs_raw.
+  - Make Work Path (and paths traced from masks): Schneider curve fitting (ps/curve-fit.js) with corner detection; tolerance = max error in px; axis-aligned outlines stay corner points.
 
 ## Known gaps / next
 
@@ -265,7 +266,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling. Pattern and custom shape choosers are plain selects, not CS6 visual pickers (no right-click there yet).
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
-- Actions: droplets and recording of tool strokes, Freeform Pen's Magnetic option, Slice tools, 3D.  Make Work Path traces corner points only (no curve fitting).
+- Actions: droplets and recording of tool strokes, Freeform Pen's Magnetic option, Slice tools, 3D.
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning has no Toning Curve (presets are approximations). Match Color has no selection-based statistics or Save/Load Statistics.
 - Styles: Contour/Texture/quality contours are not written to PSD; bevel techniques other than Smooth (Pillow and Stroke Emboss render as Emboss). PSD placed layers (smart objects and their smart filters save as pixels).
 - Brush panel: Texture Each Tip off / the other Texture modes (Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height) render as Multiply; Dual Brush modes other than Multiply; tilt.
