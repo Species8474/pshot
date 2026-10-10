@@ -13,6 +13,7 @@ import { tool_icons } from './tools-def.js';
 import { show_popup_menu } from './popup-menu.js';
 import Dialog_class from './../libs/popup.js';
 import { picker_button } from './thumb-picker.js';
+import { font_button } from './font-menu.js';
 import { css as gradient_css, picker as gradient_picker, editor as gradient_editor } from './gradients.js';
 
 function measure_tool() {
@@ -1189,22 +1190,9 @@ class Ps_options_bar_class {
 			return wrap;
 		}
 		if (c.type == 'font') {
-			var fsel = document.createElement('select');
-			fsel.className = 'ps_opt_font';
 			var attr = this.attrs().font;
-			var fonts = typeof attr.values == 'function' ? attr.values() : attr.values;
-			for (var f of fonts) {
-				if (f === '') continue;
-				var fo = document.createElement('option');
-				fo.textContent = f;
-				fo.selected = f == attr.value;
-				fsel.appendChild(fo);
-			}
-			fsel.addEventListener('change', () => {
-				this.set('font', fsel.value);
-				this.render();
-			});
-			wrap.appendChild(fsel);
+			var fonts = (typeof attr.values == 'function' ? attr.values() : attr.values).filter(f => f !== '');
+			wrap.appendChild(font_button(fonts, attr.value, (f) => { this.set('font', f); this.render(); }, 'ps_opt_font'));
 			return wrap;
 		}
 		if (c.type == 'font_style') {

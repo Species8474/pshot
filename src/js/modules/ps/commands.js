@@ -24,6 +24,7 @@ import { STACK_MODES, combine_stack } from './../../ps/stack-modes.js';
 import Ps_zoomify_class from './../../ps/zoomify.js';
 import { copy_css } from './../../ps/copy-css.js';
 import zoomView from './../../libs/zoomView.js';
+import { preview_size, set_preview_size } from './../../ps/font-menu.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2178,6 +2179,12 @@ class Ps_commands_class {
 		fire('mouseup', p.points[p.points.length - 1]);
 		await new Promise(r => setTimeout(r, 200));
 	}
+
+	/**
+	 * Type > Font Preview Size: the samples in the font menus
+	 */
+	font_preview_size(v) { set_preview_size(v); }
+	font_preview_is(v) { return preview_size() == v; }
 
 	refine_edge_or_mask() {
 		return app.GUI.Ps_workspace.Mask.is_editing(config.layer) ? this.refine_mask() : this.refine_edge();

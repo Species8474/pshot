@@ -1187,6 +1187,9 @@ class Ps_workspace_class {
 		if (key.indexOf('workspace:') === 0) {
 			return this.workspace_name == key.substr(10);
 		}
+		if (key.indexOf('fontprev:') === 0) {
+			return app.GUI.modules['ps/commands'].font_preview_is(key.substr(9));
+		}
 		if (key.indexOf('stack:') === 0) {
 			return app.GUI.modules['ps/commands'].stack_mode_label(key.substr(6));
 		}

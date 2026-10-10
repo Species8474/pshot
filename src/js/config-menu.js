@@ -212,7 +212,7 @@ const M = [
 		{ name: 'Convert to Paragraph Text', target: 'ps/commands.toggle_paragraph', dynamic_name: 'paragraph_label' },
 		'Warp Text...|ps/commands.warp_text',
 		'-',
-		['Font Preview Size', ['None', 'Small', 'Medium', 'Large', 'Extra Large', 'Huge']],
+		['Font Preview Size', ['None', 'Small', 'Medium', 'Large', 'Extra Large', 'Huge'].map(n => ({ name: n, target: 'ps/commands.font_preview_size', parameter: n, checked: 'fontprev:' + n }))],
 		['Language Options', ['Latin and CJK Features', 'Middle Eastern Features']],
 		'-',
 		'Update All Text Layers|ps/commands.update_text_layers',

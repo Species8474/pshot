@@ -1845,3 +1845,13 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_thumbpick_cell { border: 1px solid #333; background: #fff; line-height: 0; cursor: default; }
 .ps_thumbpick_cell canvas { display: block; }
 .ps_thumbpick_cell.active { outline: 2px solid #9cc2f0; }
+/* font family menu with samples (Type > Font Preview Size) */
+.ps_font_button { display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; height: 22px; min-width: 130px; max-width: 180px; padding: 0 4px 0 6px; background: var(--ps-control); color: var(--ps-text); border: 1px solid var(--ps-border); font-size: 11px; }
+.ps_font_button .ps_font_name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps_typ_font { width: 100%; max-width: none; }
+.ps_font_menu { position: fixed; z-index: 2050; width: 300px; max-height: 380px; display: flex; flex-direction: column; background: #f0f0f0; color: #111; border: 1px solid #979797; box-shadow: 3px 3px 4px rgba(0,0,0,0.45); }
+.ps_font_filter { margin: 3px; height: 20px; border: 1px solid #aaa; padding: 0 4px; font-size: 12px; }
+.ps_font_list { overflow-y: auto; }
+.ps_font_row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 8px; font-size: 12px; cursor: default; white-space: nowrap; }
+.ps_font_row:hover, .ps_font_row.active { background: #91c9f7; }
+.ps_font_sample { color: #333; overflow: hidden; }

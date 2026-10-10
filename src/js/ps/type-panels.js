@@ -4,6 +4,7 @@
  */
 
 import app from './../app.js';
+import { font_button } from './font-menu.js';
 import config from './../config.js';
 
 function text_tool() {
@@ -57,7 +58,7 @@ function render_character(host) {
 	var bold = !!get('bold'), italic = !!get('italic');
 	var style = bold ? (italic ? 'Bold Italic' : 'Bold') : (italic ? 'Italic' : 'Regular');
 	host.innerHTML = '<div class="ps_typ">'
-		+ '<div class="ps_typ_row"><select id="ch_font" class="ps_typ_wide">' + fonts.map(f => '<option' + (f == get('font') ? ' selected' : '') + '>' + f + '</option>').join('') + '</select>'
+		+ '<div class="ps_typ_row"><span id="ch_font_host" class="ps_typ_wide"></span>'
 		+ '<select id="ch_style">' + ['Regular', 'Italic', 'Bold', 'Bold Italic'].map(v => '<option' + (v == style ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>'
 		+ '<div class="ps_typ_row"><span class="ps_typ_icon">T</span><input type="number" id="ch_size" value="' + get('size') + '" min="1"><span>pt</span>'
 		+ '<span class="ps_typ_icon">A</span><input type="number" id="ch_leading" value="' + (get('leading') || 0) + '"><span>pt</span></div>'
@@ -76,7 +77,7 @@ function render_character(host) {
 		+ ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth'].map(v => '<option' + (v.toLowerCase() == app.GUI.Ps_workspace.Text_aa.current() ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>'
 		+ '</div>';
 	var $ = (id) => host.querySelector('#' + id);
-	$('ch_font').addEventListener('change', (e) => set('font', e.target.value));
+	$('ch_font_host').appendChild(font_button(fonts, get('font'), (f) => { set('font', f); render_character(host); }, 'ps_typ_font'));
 	$('ch_aa').addEventListener('change', (e) => app.GUI.Ps_workspace.Text_aa.set(e.target.value.toLowerCase()));
 	$('ch_style').addEventListener('change', (e) => {
 		set('bold', e.target.value.indexOf('Bold') >= 0);
