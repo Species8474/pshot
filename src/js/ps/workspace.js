@@ -11,7 +11,7 @@ import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 import GUI_colors_class from './../core/gui/gui-colors.js';
 import { groups } from './tools-def.js';
 import { ADJUSTMENTS, run_target } from './adjustments-def.js';
-import { show_popup_menu, close_popup_menu } from './popup-menu.js';
+import { show_popup_menu, close_popup_menu, prompt_name } from './popup-menu.js';
 import menuDefinition from './../config-menu.js';
 import Ps_keymap_class from './keymap.js';
 import Ps_options_bar_class from './options-bar.js';
@@ -1833,24 +1833,77 @@ class Ps_workspace_class {
 		ctx.fillRect(0, 0, w, h);
 	}
 
+	/**
+	 * Swatches panel: the CS6 default set, editable (saved in the browser)
+	 */
+	swatch_list() {
+		if (!this.swatches) {
+			try { this.swatches = JSON.parse(localStorage.getItem('pshot_swatches_v1') || 'null'); } catch (e) { this.swatches = null; }
+			if (!Array.isArray(this.swatches)) this.swatches = SWATCHES.map(hex => ({ hex: hex, name: hex }));
+		}
+		return this.swatches;
+	}
+
+	save_swatches() {
+		try { localStorage.setItem('pshot_swatches_v1', JSON.stringify(this.swatches)); } catch (e) { /* storage blocked */ }
+		this.render_swatches();
+	}
+
+	new_swatch() {
+		var hex = config.COLOR;
+		prompt_name('Color Swatch Name', 'Swatch ' + (this.swatch_list().length + 1), (name) => {
+			this.swatch_list().push({ hex: hex, name: name });
+			this.save_swatches();
+		});
+	}
+
 	render_swatches() {
 		var el = document.getElementById('ps_swatches');
 		var html = '<div class="ps_swatch_grid">';
-		for (var hex of SWATCHES) {
-			html += '<button type="button" class="ps_swatch" style="background:' + hex + '" data-hex="' + hex + '" title="' + hex + '"></button>';
-		}
-		html += '</div>';
+		this.swatch_list().forEach((sw, i) => {
+			html += '<button type="button" class="ps_swatch" style="background:' + sw.hex + '" data-hex="' + sw.hex + '" data-i="' + i + '" title="' + this.Helper.escapeHtml(sw.name) + '"></button>';
+		});
+		html += '</div><div class="ps_panel_footer">'
+			+ '<button type="button" data-sw="new" title="Create new swatch of foreground color"><svg viewBox="0 0 18 18" width="16" height="16"><rect x="4" y="3" width="10" height="12" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M11 3v3h3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>'
+			+ '<button type="button" data-sw="delete" title="Delete swatch (Alt+click a swatch)"><svg viewBox="0 0 18 18" width="16" height="16"><path d="M5 5h8l-.8 10H5.8zM4 5h10M7.5 3h3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button></div>';
 		el.innerHTML = html;
+		if (el.dataset.events) return;
+		el.dataset.events = '1';
+		var remove = (i) => { this.swatch_list().splice(i, 1); this.save_swatches(); };
 		el.addEventListener('click', (event) => {
+			var b = event.target.closest('[data-sw]');
+			if (b) {
+				if (b.dataset.sw == 'new') this.new_swatch();
+				else this.status_message('Alt+click a swatch, or right-click it, to delete it.');
+				return;
+			}
 			var swatch = event.target.closest('.ps_swatch');
-			if (!swatch) return;
-			if (event.ctrlKey || event.metaKey) {
+			if (!swatch) {
+				//CS6: clicking the empty area adds the foreground color
+				if (event.target.closest('.ps_swatch_grid')) this.new_swatch();
+				return;
+			}
+			if (event.altKey) {
+				remove(parseInt(swatch.dataset.i));
+			}
+			else if (event.ctrlKey || event.metaKey) {
 				config.BG_COLOR = swatch.dataset.hex;
 				this.render_fg_bg();
 			}
 			else {
 				this.set_fg(swatch.dataset.hex);
 			}
+		});
+		el.addEventListener('contextmenu', (event) => {
+			var swatch = event.target.closest('.ps_swatch');
+			if (!swatch) return;
+			event.preventDefault();
+			var i = parseInt(swatch.dataset.i), sw = this.swatch_list()[i];
+			show_popup_menu(swatch, [
+				{ name: 'New Swatch...', action: () => this.new_swatch() },
+				{ name: 'Rename Swatch...', action: () => prompt_name('Color Swatch Name', sw.name, (n) => { sw.name = n; this.save_swatches(); }) },
+				{ name: 'Delete Swatch', action: () => remove(i) },
+			], { point: { x: event.clientX, y: event.clientY } });
 		});
 	}
 
