@@ -230,6 +230,7 @@ config.TOOLS = [
 			sponge_mode: 'Desaturate',
 			flow: 50,
 			vibrance: true,
+			airbrush: false,
 		},
 	},
 	{

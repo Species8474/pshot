@@ -688,7 +688,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'select', label: 'Range:', values: ['Shadows', 'Midtones', 'Highlights'], bind: 'range', map: { Shadows: 'Shadows', Midtones: 'Midtones', Highlights: 'Highlights' } },
 		{ type: 'pct', label: 'Exposure:', bind: 'exposure' },
-		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects', bind: 'airbrush' },
 		{ type: 'check', label: 'Protect Tones', bind: 'protect_tones' },
 	],
 	burn: [
@@ -697,7 +697,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'select', label: 'Range:', values: ['Shadows', 'Midtones', 'Highlights'], bind: 'range', map: { Shadows: 'Shadows', Midtones: 'Midtones', Highlights: 'Highlights' } },
 		{ type: 'pct', label: 'Exposure:', bind: 'exposure' },
-		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects', bind: 'airbrush' },
 		{ type: 'check', label: 'Protect Tones', bind: 'protect_tones' },
 	],
 	sponge: [
@@ -706,7 +706,7 @@ const LAYOUTS = {
 		{ type: 'sep' },
 		{ type: 'select', label: 'Mode:', values: ['Desaturate', 'Saturate'], bind: 'sponge_mode', map: { 'Desaturate': 'Desaturate', 'Saturate': 'Saturate' } },
 		{ type: 'pct', label: 'Flow:', bind: 'flow' },
-		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects' },
+		{ type: 'icon', icon: IC.airbrush, title: 'Enable airbrush-style build-up effects', bind: 'airbrush' },
 		{ type: 'check', label: 'Vibrance', bind: 'vibrance' },
 	],
 	pen: [
