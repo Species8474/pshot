@@ -166,6 +166,8 @@ class Retouch_class extends Base_tools_class {
 			}
 		}
 		this.started = true;
+		//Actions > Allow Tool Recording: the stroke in document coordinates
+		this.rec = [[mouse.x, mouse.y]];
 		this.canvas = document.createElement('canvas');
 		this.canvas.width = config.layer.width_original;
 		this.canvas.height = config.layer.height_original;
@@ -300,6 +302,7 @@ class Retouch_class extends Base_tools_class {
 			return;
 		}
 		var p = this.to_layer(mouse);
+		if (this.rec) this.rec.push([mouse.x, mouse.y]);
 		var size = this.getParams().size * p.s;
 		var dx = p.x - this.last.x, dy = p.y - this.last.y;
 		var dist = Math.hypot(dx, dy);
@@ -410,6 +413,8 @@ class Retouch_class extends Base_tools_class {
 		}
 		this.started = false;
 		clearInterval(this.buildup);
+		if (this.rec) app.GUI.Ps_workspace.Actions.record_stroke(this.name, this.rec);
+		this.rec = null;
 		var mode = this.effective_mode();
 		if (mode == 'clone') {
 			app.GUI.Ps_workspace.Clone_source.painting = false;

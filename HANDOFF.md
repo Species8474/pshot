@@ -285,7 +285,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Brush: Always use Pressure for Opacity (pen pressure stored per point as [4]; each dab adds 1-(1-p)^(spacing/100) so a stroke settles at the pressure's opacity; a mouse paints at full opacity). Retouch-engine tools (Clone / Pattern Stamp, Eraser, History / Art History, Mixer, Background Eraser, Color Replacement): pressure icons scale Size / Opacity from a pen (Retouch getParams), Airbrush builds up while the pointer rests (start_buildup), Pattern Stamp Impressionist (daubs of the pattern's local average color). Dodge / Burn / Sponge Airbrush build-up.
   - Path Selection Select: All Layers (a click on another visible shape layer's shape targets that layer and selects the subpath). Constrain Path Dragging stays greyed.
   - Brush panel Texture modes: Multiply, Subtract, Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height (stroke coverage vs texture tone and Depth; Hard Mix / Height use the pattern's own tone range). Dual Brush modes: Multiply, Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix.
-
+  - Actions panel: dialog toggle column (filter steps with settings open their dialog during playback), Record Again (plays with every filter dialog and keeps the new settings), Insert Conditional (CS6 If Current conditions -> Then / Else Play Action of the same set; step target ps/commands.action_conditional, run_steps recursion), Button Mode (actions as colored buttons). Allow Tool Recording also records retouch-engine and Dodge/Burn/Sponge strokes.
 ## Known gaps / next
 
 - PRIORITY (Josh, 2026-10-10): 1) Rasterize Layer Style DONE, 2) Combine Slices DONE, 3) Move to New Window DONE, 4) every Filter menu item working DONE. Then continue the rest of this list.
@@ -293,7 +293,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Right-click audit (2026-10-10) done: Swatches (user store, New/Rename/Delete), Layers panel empty area (thumbnail sizes / clip bounds), Color ramp (RGB/CMYK/Grayscale/Current Colors, Web Safe) all added. Still greyed: Check Spelling.
 
 - Scope (Josh, 2026-10-09): image editing only. Video-only CS6 features (Timeline, Layer > Video Layers, Render Video, Filter > Video, frame animation) are not needed; leave them greyed.
-- Actions: droplets, Record Again, Insert Conditional, Button Mode; eraser and retouch strokes are not recorded. 3D.
+- Actions: droplets (no OS integration). 3D.
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning presets are approximations.
 - Styles: Contour/Texture/quality contours are not written to PSD; Smart filters are not written to PSD (the placed layer's pixels include them).
 - Brush panel: Texture Each Tip off (texture is applied to the whole stroke); tilt.

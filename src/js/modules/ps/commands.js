@@ -2194,6 +2194,7 @@ class Ps_commands_class {
 	 * Actions: a Stop step (shown by the Actions panel during playback) and Insert Path
 	 */
 	action_stop() {}
+	action_conditional() {}
 
 	async action_path(subpaths) {
 		if (!Array.isArray(subpaths)) return;

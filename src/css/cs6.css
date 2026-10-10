@@ -1880,3 +1880,11 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_opts_popup .disabled { opacity: 0.45; }
 .ps_opts_title { font-weight: bold; margin-bottom: 2px; }
 .ps_geo_opts .ps_crop_opts_row span { min-width: 90px; }
+/* Actions: dialog toggle column, Button Mode */
+.ps_act_dialog { width: 14px; flex: none; text-align: center; color: var(--ps-icon); font-size: 11px; opacity: 0.35; cursor: pointer; }
+.ps_act_dialog.on { opacity: 1; }
+.ps_act_buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 4px; }
+.ps_act_button { display: flex; align-items: center; min-height: 22px; padding: 0 6px; background: var(--ps-control); color: var(--ps-text); border: 1px solid var(--ps-border); font-size: 11px; text-align: left; overflow: hidden; white-space: nowrap; cursor: pointer; }
+.ps_act_button:hover { filter: brightness(1.15); }
+.ps_act_button.label_red { background: #8c4442; } .ps_act_button.label_orange { background: #94633a; } .ps_act_button.label_yellow { background: #8f843a; }
+.ps_act_button.label_green { background: #4a7f4b; } .ps_act_button.label_blue { background: #46628f; } .ps_act_button.label_violet { background: #6e4d8a; } .ps_act_button.label_gray { background: #666; }

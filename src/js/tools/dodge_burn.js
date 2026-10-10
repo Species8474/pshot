@@ -74,6 +74,7 @@ class Dodge_burn_class extends Base_tools_class {
 		this.canvas.height = config.layer.height_original;
 		this.canvas.getContext('2d', { willReadFrequently: true }).drawImage(config.layer.link, 0, 0);
 		this.last = null;
+		this.rec = [[mouse.x, mouse.y]];
 		this.dab(mouse);
 		config.layer.link_canvas = this.canvas;
 		config.need_render = true;
@@ -106,6 +107,7 @@ class Dodge_burn_class extends Base_tools_class {
 			}
 		}
 		this.dab(mouse);
+		if (this.rec) this.rec.push([mouse.x, mouse.y]);
 		this.moved = true;
 		config.need_render = true;
 	}
@@ -116,6 +118,8 @@ class Dodge_burn_class extends Base_tools_class {
 		}
 		this.started = false;
 		clearInterval(this.buildup);
+		if (this.rec) app.GUI.Ps_workspace.Actions.record_stroke(this.name, this.rec);
+		this.rec = null;
 		delete config.layer.link_canvas;
 		var label = { burn: 'Burn Tool', sponge: 'Sponge Tool' }[this.getParams().mode] || 'Dodge Tool';
 		app.State.do_action(new app.Actions.Bundle_action('dodge_burn', label, [

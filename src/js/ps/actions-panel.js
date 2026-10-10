@@ -58,6 +58,8 @@ class Ps_actions_panel_class {
 			}
 		};
 		walk(menuDefinition);
+		//shortcuts without a menu item of their own: the CS6 step names
+		found = found || { 'ps/commands.new_layer_silent': 'Make Layer' }[target];
 		return (found || target.split('.').pop().replace(/_/g, ' ')).replace(/\.\.\.$/, '').replace(/^\w/, c => c.toUpperCase());
 	}
 
@@ -233,6 +235,22 @@ class Ps_actions_panel_class {
 		});
 	}
 
+	/**
+	 * Button Mode: every action as a button (its color); a click plays it
+	 */
+	render_buttons(el) {
+		var html = '<div class="ps_act_buttons">';
+		this.sets.forEach((set, si) => set.actions.forEach((a, ai) => {
+			html += '<button type="button" class="ps_act_button' + (a.color && a.color != 'None' ? ' label_' + a.color.toLowerCase() : '') + '" data-set="' + si + '" data-action="' + ai + '">'
+				+ app.GUI.Ps_workspace.Helper.escapeHtml(a.name) + (a.key ? '<span class="ps_act_key">' + (a.key_shift ? 'Shift+' : '') + (a.key_ctrl ? 'Ctrl+' : '') + a.key + '</span>' : '') + '</button>';
+		}));
+		el.innerHTML = html + '</div>';
+		el.querySelectorAll('.ps_act_button').forEach((b) => b.addEventListener('click', () => {
+			this.selected = { set: parseInt(b.dataset.set), action: parseInt(b.dataset.action) };
+			this.play();
+		}));
+	}
+
 	insert_step(step) {
 		var a = this.current_action();
 		if (!a) return;
@@ -351,7 +369,7 @@ class Ps_actions_panel_class {
 	panel_menu_items() {
 		var has = !!this.current_action(), sel = !!this.selected;
 		return [
-			{ name: 'Button Mode' },
+			{ name: 'Button Mode', checked: !!this.button_mode, action: () => { this.button_mode = !this.button_mode; this.render(); } },
 			{ divider: true },
 			{ name: 'New Action...', action: () => this.new_action(true) },
 			{ name: 'New Set...', action: () => this.new_set() },
@@ -360,10 +378,10 @@ class Ps_actions_panel_class {
 			{ name: 'Play', action: has ? () => this.play() : null },
 			{ divider: true },
 			{ name: 'Start Recording', action: has && !this.recording ? () => this.start_recording() : null },
-			{ name: 'Record Again...' },
+			{ name: 'Record Again...', action: has && !this.recording ? () => this.play(true) : null },
 			{ name: 'Insert Menu Item...', action: has ? () => this.insert_menu_item() : null },
 			{ name: 'Insert Stop...', action: has ? () => this.insert_stop() : null },
-			{ name: 'Insert Conditional...' },
+			{ name: 'Insert Conditional...', action: has ? () => this.insert_conditional() : null },
 			{ name: 'Insert Path', action: has ? () => this.insert_path() : null },
 			{ divider: true },
 			{ name: 'Allow Tool Recording', checked: !!this.allow_tools, action: () => { this.allow_tools = !this.allow_tools; } },
@@ -392,7 +410,10 @@ class Ps_actions_panel_class {
 	/**
 	 * play the selected action, step by step (each waits for its dialog)
 	 */
-	async play() {
+	/**
+	 * Play; Record Again (`again`) shows every filter's dialog and keeps the new settings
+	 */
+	async play(again) {
 		var a = this.current_action();
 		if (!a || this.playing) return;
 		this.playing = true;
@@ -400,38 +421,115 @@ class Ps_actions_panel_class {
 		//commands' confirmation prompts don't stop an action (CS6)
 		var confirm = window.confirm;
 		window.confirm = () => true;
-		var opts = this.playback || { mode: 'Accelerated', pause: 0 };
 		try {
-			for (var step of a.steps) {
-				//unchecked steps are skipped (CS6 check column)
-				if (step.off) continue;
-				if (step.target == 'ps/commands.action_stop') {
-					var go_on = await this.show_stop(step.parameter || {});
-					if (!go_on) break;
-					continue;
-				}
-				if (opts.mode == 'Step by Step') await new Promise(r => setTimeout(r, 400));
-				else if (opts.mode == 'Pause For') await new Promise(r => setTimeout(r, Math.max(0, opts.pause || 0) * 1000));
-				if (step.target.indexOf('ps/filters.') === 0 && step.settings) {
-					var key = step.target.split('.')[1];
-					if (!app.GUI.modules['ps/filters'].apply_settings(key, step.settings)) {
-						app.GUI.modules['ps/filters'][key]();
-					}
-				}
-				else {
-					var parts = step.target.split('.');
-					var module = app.GUI.modules[parts[0]];
-					if (!module || typeof module[parts[1]] != 'function') continue;
-					var res = module[parts[1]](step.parameter);
-					if (res && res.then) await res;
-				}
-				await this.idle();
-			}
+			await this.run_steps(a, again === true, 0);
 		} finally {
 			window.confirm = confirm;
 			this.playing = false;
+			this.save();
 			this.render();
 		}
+	}
+
+	async run_steps(a, again, depth) {
+		var opts = this.playback || { mode: 'Accelerated', pause: 0 };
+		for (var step of a.steps) {
+			//unchecked steps are skipped (CS6 check column)
+			if (step.off) continue;
+			if (step.target == 'ps/commands.action_stop') {
+				var go_on = await this.show_stop(step.parameter || {});
+				if (!go_on) return false;
+				continue;
+			}
+			if (step.target == 'ps/commands.action_conditional') {
+				//If Current ... Then Play Action / Else Play Action (actions of the same set)
+				var p = step.parameter || {};
+				var name = this.condition(p.cond) ? p.then : p.else;
+				var set = this.sets.find(s => s.actions.includes(a));
+				var other = name && set ? set.actions.find(x => x.name == name) : null;
+				if (other && other !== a && depth < 8 && await this.run_steps(other, again, depth + 1) === false) return false;
+				continue;
+			}
+			if (opts.mode == 'Step by Step') await new Promise(r => setTimeout(r, 400));
+			else if (opts.mode == 'Pause For') await new Promise(r => setTimeout(r, Math.max(0, opts.pause || 0) * 1000));
+			var filters = app.GUI.modules['ps/filters'];
+			if (step.target.indexOf('ps/filters.') === 0 && step.settings) {
+				var key = step.target.split('.')[1];
+				if (again || step.dialog) {
+					//the dialog toggle: the filter's dialog opens with the recorded settings
+					filters.saved = filters.saved || {};
+					filters.saved[key] = Object.assign({}, step.settings);
+					filters[key]();
+					await this.idle();
+					if (again && filters.saved[key]) step.settings = Object.assign({}, filters.saved[key]);
+					continue;
+				}
+				if (!filters.apply_settings(key, step.settings)) filters[key]();
+			}
+			else {
+				var parts = step.target.split('.');
+				var module = app.GUI.modules[parts[0]];
+				if (!module || typeof module[parts[1]] != 'function') continue;
+				var res = module[parts[1]](step.parameter);
+				if (res && res.then) await res;
+			}
+			await this.idle();
+		}
+		return true;
+	}
+
+	/**
+	 * Insert Conditional: the CS6 If Current conditions
+	 */
+	condition(c) {
+		var sel = app.GUI.Ps_workspace.Selection, l = config.layer;
+		var pixel_layers = config.layers.filter(x => x.type != null && x.type != 'ps_group');
+		switch (c) {
+			case 'Document Is Landscape Mode': return config.WIDTH > config.HEIGHT;
+			case 'Document Is Portrait Mode': return config.HEIGHT > config.WIDTH;
+			case 'Document Is Square': return config.WIDTH == config.HEIGHT;
+			case 'Document Is in RGB Mode': return !config.ps_mode || config.ps_mode == 'RGB';
+			case 'Document Is in CMYK Mode': return config.ps_mode == 'CMYK';
+			case 'Document Is in Grayscale Mode': return config.ps_mode == 'Grayscale';
+			case 'Document Has Layers': return pixel_layers.length > 1 || (pixel_layers.length == 1 && pixel_layers[0].name != 'Background');
+			case 'Document Has Selection': return !!(sel && sel.has());
+			case 'Document Has Layer Comps': return !!(config.ps_comps && config.ps_comps.length);
+			case 'Layer Is Visible': return !!l && l.visible !== false;
+			case 'Layer Has Layer Mask': return !!(l && l.ps_mask);
+			case 'Layer Has Vector Mask': return !!(l && l.ps_vmask);
+			case 'Layer Has Effects': return !!(l && l.ps_styles && Object.keys(l.ps_styles).length);
+			case 'Layer Is Type': return !!l && l.type == 'text';
+			case 'Layer Is Shape': return !!l && l.type == 'ps_shape';
+			case 'Layer Is Smart Object': return !!(l && l.ps_smart);
+			case 'Layer Is Adjustment': return !!l && l.type == 'ps_adjust';
+			case 'Layer Is Group': return !!l && l.type == 'ps_group';
+			case 'Quick Mask Is On': return !!(sel && sel.quick_mask);
+			default: return false;
+		}
+	}
+
+	insert_conditional() {
+		var a = this.current_action();
+		if (!a) return;
+		var set = this.sets[this.selected.set];
+		var names = ['None'].concat(set.actions.filter(x => x !== a).map(x => x.name));
+		var conds = ['Document Is Landscape Mode', 'Document Is Portrait Mode', 'Document Is Square', 'Document Is in RGB Mode', 'Document Is in CMYK Mode', 'Document Is in Grayscale Mode',
+			'Document Has Layers', 'Document Has Selection', 'Document Has Layer Comps', 'Layer Is Visible', 'Layer Has Layer Mask', 'Layer Has Vector Mask', 'Layer Has Effects',
+			'Layer Is Type', 'Layer Is Shape', 'Layer Is Smart Object', 'Layer Is Adjustment', 'Layer Is Group', 'Quick Mask Is On'];
+		var POP = new Dialog_class();
+		POP.show({
+			title: 'Conditional Action',
+			params: [
+				{ name: 'cond', title: 'If Current:', values: conds, value: conds[0], type: 'select' },
+				{ name: 'then', title: 'Then Play Action:', values: names, value: names[1] || 'None', type: 'select' },
+				{ name: 'else', title: 'Else Play Action:', values: names, value: 'None', type: 'select' },
+			],
+			on_finish: (p) => {
+				var then = p.then == 'None' ? '' : p.then, other = p.else == 'None' ? '' : p.else;
+				this.insert_step({ target: 'ps/commands.action_conditional', parameter: { cond: p.cond, then: then, else: other },
+					name: 'If ' + p.cond.replace(/^(Document|Layer) /, '') + (then ? ' Then Play Action "' + then + '"' : '') + (other ? ' Else Play Action "' + other + '"' : '') });
+			},
+		});
 	}
 
 	/**
@@ -451,20 +549,23 @@ class Ps_actions_panel_class {
 	render() {
 		var el = document.getElementById('ps_actions');
 		if (!el) return;
+		if (this.button_mode) return this.render_buttons(el);
 		var html = '<div class="ps_actions_list">';
 		this.sets.forEach((set, si) => {
 			var ssel = this.selected && this.selected.set == si && this.selected.action == null;
-			html += '<div class="ps_act_row ps_act_set' + (ssel ? ' active' : '') + '" data-set="' + si + '"><span class="ps_act_check">&#10003;</span><span class="ps_act_toggle" data-toggle="' + si + '">' + (set.open ? '&#9662;' : '&#9656;') + '</span>'
+			html += '<div class="ps_act_row ps_act_set' + (ssel ? ' active' : '') + '" data-set="' + si + '"><span class="ps_act_check">&#10003;</span><span class="ps_act_dialog"></span><span class="ps_act_toggle" data-toggle="' + si + '">' + (set.open ? '&#9662;' : '&#9656;') + '</span>'
 				+ '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M1.5 4h5l1 1.5h7v8h-13z" fill="currentColor" opacity=".8"/></svg> ' + app.GUI.Ps_workspace.Helper.escapeHtml(set.name) + '</div>';
 			if (!set.open) return;
 			set.actions.forEach((a, ai) => {
 				var asel = this.selected && this.selected.set == si && this.selected.action == ai;
 				var rec = this.recording === a;
-				html += '<div class="ps_act_row ps_act_action' + (asel ? ' active' : '') + (a.color ? ' label_' + a.color.toLowerCase() : '') + '" data-set="' + si + '" data-action="' + ai + '"><span class="ps_act_check">&#10003;</span><span class="ps_act_indent"></span>'
+				html += '<div class="ps_act_row ps_act_action' + (asel ? ' active' : '') + (a.color ? ' label_' + a.color.toLowerCase() : '') + '" data-set="' + si + '" data-action="' + ai + '"><span class="ps_act_check">&#10003;</span><span class="ps_act_dialog' + (a.steps.some(x => x.dialog) ? ' on' : '') + '">' + (a.steps.some(x => x.dialog) ? '&#9633;' : '') + '</span><span class="ps_act_indent"></span>'
 					+ (rec ? '<span class="ps_act_rec">&#9679;</span> ' : '') + app.GUI.Ps_workspace.Helper.escapeHtml(a.name) + (a.key ? '<span class="ps_act_key">' + (a.key_shift ? 'Shift+' : '') + (a.key_ctrl ? 'Ctrl+' : '') + a.key + '</span>' : '') + '</div>';
 				if (asel) {
 					a.steps.forEach((st, sti) => {
-						html += '<div class="ps_act_row ps_act_step' + (st.off ? ' off' : '') + '"><span class="ps_act_check" data-step="' + sti + '" title="Toggle item on/off">' + (st.off ? '' : '&#10003;') + '</span><span class="ps_act_indent2"></span>' + app.GUI.Ps_workspace.Helper.escapeHtml(st.name) + '</div>';
+						//the dialog column: steps with settings can show their dialog during playback
+						var dlg = st.settings ? '<span class="ps_act_dialog' + (st.dialog ? ' on' : '') + '" data-dialog="' + sti + '" title="Toggle dialog on/off">&#9633;</span>' : '<span class="ps_act_dialog"></span>';
+						html += '<div class="ps_act_row ps_act_step' + (st.off ? ' off' : '') + '"><span class="ps_act_check" data-step="' + sti + '" title="Toggle item on/off">' + (st.off ? '' : '&#10003;') + '</span>' + dlg + '<span class="ps_act_indent2"></span>' + app.GUI.Ps_workspace.Helper.escapeHtml(st.name) + '</div>';
 					});
 				}
 			});
@@ -489,6 +590,14 @@ class Ps_actions_panel_class {
 			var a = this.current_action(), st = a && a.steps[parseInt(c.dataset.step)];
 			if (!st) return;
 			st.off = !st.off;
+			this.save();
+			this.render();
+		}));
+		el.querySelectorAll('[data-dialog]').forEach((c) => c.addEventListener('click', (e) => {
+			e.stopPropagation();
+			var a = this.current_action(), st = a && a.steps[parseInt(c.dataset.dialog)];
+			if (!st) return;
+			st.dialog = !st.dialog;
 			this.save();
 			this.render();
 		}));
