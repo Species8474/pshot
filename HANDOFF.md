@@ -292,6 +292,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Image Size: Scale Styles (with Constrain Proportions; layer style sizes follow the resample, styles.js scale_styles shared with Scale Effects), Resolution in pixels/inch or pixels/cm, linked Width/Height unit menus. New dialog: Pixels/Inch or Pixels/Centimeter.
   - Blur Gallery: Blur Effects Light Bokeh / Bokeh Color / Light Range (highlights in the range bloom in blurred areas, float box-blur so they stay bright without banding), Focus per Iris / Tilt-Shift pin, High Quality (more blur steps), Save Mask to Channels (alpha 'Blur Mask', white = sharp). Selection Bleed and Tilt-Shift Distortion stay greyed.
   - Indexed Color: Exact (only with 256 colors or fewer), System (Mac OS) / System (Windows), Uniform, Master palettes (= Local for one document), Previous; Forced (None, Black and White, Primaries, Web); Matte (None, Foreground, Background, White, Black, 50% Gray, Netscape Gray); Dither Pattern (ordered) and Noise; Preserve Exact Colors. Save for Web: Pattern / Noise dither. Custom palette / forced colors stay greyed.
+  - Image > Mode > Color Table: Table presets (Custom, Black Body, Grayscale, Spectrum, System Mac OS / Windows), click a swatch to change it; OK remaps every pixel by its table index (CS6) and stores the new table.
 
 ## Known gaps / next
 

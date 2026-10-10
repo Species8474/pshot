@@ -1750,11 +1750,60 @@ class Ps_adjust_class {
 	 * Image > Mode > Color Table (Indexed Color mode)
 	 */
 	color_table() {
-		var table = config.ps_color_table || [];
-		var html = '<div class="ps_adj_row"><span>Table:</span><select disabled><option>Custom</option></select></div><div class="ps_ctable">'
-			+ table.map(c => '<span style="background:rgb(' + c.join(',') + ')" title="' + c.join(', ') + '"></span>').join('') + '</div>';
+		var table = (config.ps_color_table || []).map(c => c.slice());
+		var cur = table.map(c => c.slice());
+		var presets = ['Custom', 'Black Body', 'Grayscale', 'Spectrum', 'System (Mac OS)', 'System (Windows)'];
+		var html = '<div class="ps_adj_row"><span>Table:</span><select id="ct_table">' + presets.map(p => '<option>' + p + '</option>').join('') + '</select></div><div class="ps_ctable" id="ct_grid"></div>'
+			+ '<div class="ps_adj_hint">Click a color to change it.</div>';
+		var job = null;
 		var POP = new Dialog_class();
-		POP.show({ title: 'Color Table', className: 'ps_adjust_dialog', params: [{ function() { return '<div class="ps_adj">' + html + '</div>'; } }] });
+		POP.show({
+			title: 'Color Table', className: 'ps_adjust_dialog', params: [{ function() { return '<div class="ps_adj">' + html + '</div>'; } }],
+			on_finish: () => {
+				if (!job) return;
+				//each pixel keeps its table index; the index now has the new color
+				var map = new Map();
+				table.forEach((c, i) => map.set((c[0] << 16) | (c[1] << 8) | c[2], cur[i % cur.length]));
+				this.finish(job, (src, dst) => {
+					for (var i = 0; i < src.length; i += 4) {
+						var c = map.get((src[i] << 16) | (src[i + 1] << 8) | src[i + 2]);
+						if (!c) continue;
+						dst[i] = c[0]; dst[i + 1] = c[1]; dst[i + 2] = c[2];
+					}
+				}, 'Color Table', [new app.Actions.Update_config_action({ ps_color_table: cur.map(c => c.slice()) })]);
+			},
+			on_cancel: () => { if (job) this.cancel(job); },
+		});
+		job = this.begin('Color Table');
+		var root = document.querySelector('#popups .popup .ps_adj');
+		var grid = root.querySelector('#ct_grid');
+		var draw = () => {
+			grid.innerHTML = cur.map((c, i) => '<span data-i="' + i + '" style="background:rgb(' + c.join(',') + ')" title="' + c.join(', ') + '"></span>').join('');
+		};
+		root.querySelector('#ct_table').addEventListener('change', (e) => {
+			var name = e.target.value, n = 256, gen = null;
+			if (name == 'Black Body') gen = (t) => [Math.min(255, t * 3 * 255), Math.max(0, Math.min(255, (t * 3 - 1) * 255)), Math.max(0, Math.min(255, (t * 3 - 2) * 255))];
+			else if (name == 'Grayscale') gen = (t) => [t * 255, t * 255, t * 255];
+			else if (name == 'Spectrum') gen = (t) => { var h = t * 300 / 360; return [0, 1, 2].map(k => { var x = (h * 6 + [0, 4, 2][k]) % 6; return 255 * Math.max(0, Math.min(1, Math.abs(x - 3) - 1)); }); };
+			if (gen) cur = Array.from({ length: n }, (_, i) => gen(i / (n - 1)).map(Math.round));
+			else if (name != 'Custom') cur = fixed_palette(name).map(c => c.slice());
+			draw();
+		});
+		grid.addEventListener('click', (e) => {
+			var i = e.target.dataset && e.target.dataset.i;
+			if (i == null) return;
+			var input = document.createElement('input');
+			input.type = 'color';
+			input.value = '#' + cur[i].map(v => v.toString(16).padStart(2, '0')).join('');
+			input.addEventListener('change', () => {
+				var h = input.value;
+				cur[i] = [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)];
+				root.querySelector('#ct_table').value = 'Custom';
+				draw();
+			});
+			input.click();
+		});
+		draw();
 	}
 
 	/**
