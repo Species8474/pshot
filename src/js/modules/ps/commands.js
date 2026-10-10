@@ -1879,6 +1879,7 @@ class Ps_commands_class {
 	 */
 	match_color() {
 		var docs = app.GUI.Ps_workspace.Documents;
+		var Sel = app.GUI.Ps_workspace.Selection, has_sel = Sel.has();
 		var sources = [['None', null]];
 		docs.docs.forEach((d, i) => {
 			if (i == docs.active) sources.push([d.name + ' (Merged)', 'self']);
@@ -1887,19 +1888,20 @@ class Ps_commands_class {
 		var slider = (id, label, min, max, value) => '<div class="ps_adj_slider"><span>' + label + '</span><input type="number" id="mc_' + id + '_n" min="' + min + '" max="' + max + '" value="' + value + '"><span class="ps_adj_unit"></span><input type="range" id="mc_' + id + '" min="' + min + '" max="' + max + '" value="' + value + '"></div>';
 		var html = '<div class="ps_adj_label">Destination Image</div>'
 			+ '<div class="ps_adj_row"><span>Target:</span><span>' + app.GUI.Ps_workspace.Helper.escapeHtml(docs.current().name + ' (' + (config.layer ? config.layer.name : '') + ', RGB/8)') + '</span></div>'
-			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Ignore Selection when Applying Adjustment</label>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="mc_ignore"' + (has_sel ? '' : ' disabled') + '> Ignore Selection when Applying Adjustment</label>'
 			+ '<div class="ps_adj_label">Image Options</div>'
 			+ slider('lum', 'Luminance:', 1, 200, 100) + slider('int', 'Color Intensity:', 1, 200, 100) + slider('fade', 'Fade:', 0, 100, 0)
 			+ '<label class="ps_adj_check"><input type="checkbox" id="mc_neutral"> Neutralize</label>'
 			+ '<div class="ps_adj_label">Image Statistics</div>'
-			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Use Selection in Source to Calculate Colors</label>'
-			+ '<label class="ps_adj_check"><input type="checkbox" disabled> Use Selection in Target to Calculate Adjustment</label>'
-			+ '<div class="ps_adj_row"><span>Source:</span><select id="mc_source">' + sources.map((s, i) => '<option value="' + i + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(s[0]) + '</option>').join('') + '</select></div>';
-		//Y Cb Cr mean and standard deviation of the opaque pixels
-		var stats = (d) => {
+			+ '<label class="ps_adj_check"><input type="checkbox" id="mc_src_sel"' + (has_sel ? '' : ' disabled') + '> Use Selection in Source to Calculate Colors</label>'
+			+ '<label class="ps_adj_check"><input type="checkbox" id="mc_tgt_sel"' + (has_sel ? '' : ' disabled') + '> Use Selection in Target to Calculate Adjustment</label>'
+			+ '<div class="ps_adj_row"><span>Source:</span><select id="mc_source">' + sources.map((s, i) => '<option value="' + i + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(s[0]) + '</option>').join('') + '</select></div>'
+			+ '<div class="ps_adj_row"><button type="button" class="button" id="mc_load">Load Statistics...</button><button type="button" class="button" id="mc_save">Save Statistics...</button></div>';
+		//Y Cb Cr mean and standard deviation of the opaque (and selected, with a mask) pixels
+		var stats = (d, m) => {
 			var n = 0, sum = [0, 0, 0], sq = [0, 0, 0], step = Math.max(1, Math.floor(d.length / 4 / 250000)) * 4;
 			for (var i = 0; i < d.length; i += step) {
-				if (d[i + 3] < 128) continue;
+				if (d[i + 3] < 128 || (m && m[i + 3] < 128)) continue;
 				var v = ycc(d[i], d[i + 1], d[i + 2]);
 				for (var c = 0; c < 3; c++) { sum[c] += v[c]; sq[c] += v[c] * v[c]; }
 				n++;
@@ -1909,11 +1911,14 @@ class Ps_commands_class {
 			return { mean: mean, std: sq.map((s, c) => Math.max(1, Math.sqrt(Math.max(0, s / n - mean[c] * mean[c])))) };
 		};
 		var ycc = (r, g, b) => [0.299 * r + 0.587 * g + 0.114 * b, -0.168736 * r - 0.331264 * g + 0.5 * b, 0.5 * r - 0.418688 * g - 0.081312 * b];
-		var source_stats = {};
+		var source_stats = {}, mc_state = null;
 		var get_source = (index) => {
 			if (index == 0) return null;
-			if (!source_stats[index]) {
-				var s = sources[index][1];
+			var s = sources[index][1];
+			if (s && s.mean) return s;
+			var use_sel = s == 'self' && mc_state && mc_state.src_sel && has_sel;
+			var key = index + (use_sel ? ':sel' : '');
+			if (!source_stats[key]) {
 				var c = s;
 				if (s == 'self') {
 					c = document.createElement('canvas');
@@ -1921,13 +1926,15 @@ class Ps_commands_class {
 					c.height = config.HEIGHT;
 					this.Base_layers.convert_layers_to_canvas(c.getContext('2d'), null, false);
 				}
-				source_stats[index] = stats(c.getContext('2d').getImageData(0, 0, c.width, c.height).data);
+				var mdata = use_sel ? Sel.mask.getContext('2d').getImageData(0, 0, c.width, c.height).data : null;
+				source_stats[key] = stats(c.getContext('2d').getImageData(0, 0, c.width, c.height).data, mdata);
 			}
-			return source_stats[index];
+			return source_stats[key];
 		};
-		var target_stats = null;
-		this.Adjust.show('Match Color', html, (root, state, update) => {
-			Object.assign(state, { lum: 100, int: 100, fade: 0, neutral: false, source: 0 });
+		var target_stats = {}, mc_job = null;
+		this.Adjust.show('Match Color', html, (root, state, update, job) => {
+			Object.assign(state, { lum: 100, int: 100, fade: 0, neutral: false, source: 0, ignore: false, src_sel: false, tgt_sel: false });
+			mc_state = state;
 			['lum', 'int', 'fade'].forEach((k) => {
 				var r = root.querySelector('#mc_' + k), n = root.querySelector('#mc_' + k + '_n');
 				var set = (v) => { if (isNaN(v)) return; state[k] = Math.max(parseFloat(r.min), Math.min(parseFloat(r.max), v)); r.value = n.value = state[k]; update(); };
@@ -1936,9 +1943,56 @@ class Ps_commands_class {
 			});
 			root.querySelector('#mc_neutral').addEventListener('change', (e) => { state.neutral = e.target.checked; update(); });
 			root.querySelector('#mc_source').addEventListener('change', (e) => { state.source = parseInt(e.target.value); update(); });
+			root.querySelector('#mc_src_sel').addEventListener('change', (e) => { state.src_sel = e.target.checked; update(); });
+			root.querySelector('#mc_tgt_sel').addEventListener('change', (e) => { state.tgt_sel = e.target.checked; update(); });
+			root.querySelector('#mc_ignore').addEventListener('change', (e) => {
+				//apply to the whole layer even with a selection
+				state.ignore = e.target.checked;
+				if (job) {
+					if (state.ignore) { job.saved_mask = job.saved_mask || job.mask; job.mask = null; }
+					else if (job.saved_mask) job.mask = job.saved_mask;
+				}
+				update();
+			});
+			mc_job = job;
+			root.querySelector('#mc_save').addEventListener('click', () => {
+				var st = get_source(state.source) || target_stats.all;
+				if (!st) return;
+				var a = document.createElement('a');
+				a.href = URL.createObjectURL(new Blob([JSON.stringify({ pshot_match_color: 1, mean: st.mean, std: st.std })], { type: 'application/json' }));
+				a.download = 'Match Color Statistics.json';
+				a.click();
+				setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+			});
+			root.querySelector('#mc_load').addEventListener('click', () => {
+				var input = document.createElement('input');
+				input.type = 'file';
+				input.accept = '.json,application/json';
+				input.addEventListener('change', async () => {
+					var f = input.files && input.files[0];
+					if (!f) return;
+					try {
+						var data = JSON.parse(await f.text());
+						if (!data.mean || !data.std) throw new Error('not statistics');
+						sources.push([f.name.replace(/\.json$/i, '') + ' (Statistics)', { mean: data.mean, std: data.std }]);
+						var sel = root.querySelector('#mc_source');
+						sel.insertAdjacentHTML('beforeend', '<option value="' + (sources.length - 1) + '">' + app.GUI.Ps_workspace.Helper.escapeHtml(sources[sources.length - 1][0]) + '</option>');
+						sel.value = String(sources.length - 1);
+						state.source = sources.length - 1;
+						update();
+					}
+					catch (e) {
+						alertify.error('Could not load the statistics: ' + e.message);
+					}
+				});
+				input.click();
+			});
 		}, (state) => (src, dst) => {
-			if (!target_stats) target_stats = stats(src);
-			var T = target_stats;
+			//target statistics: the whole layer, or the selected part of it
+			var tmask = state.tgt_sel && mc_job ? (mc_job.saved_mask || mc_job.mask) : null;
+			var tkey = tmask ? 'sel' : 'all';
+			if (!target_stats[tkey]) target_stats[tkey] = stats(src, tmask ? tmask.getContext('2d').getImageData(0, 0, tmask.width, tmask.height).data : null);
+			var T = target_stats[tkey];
 			if (!T) return;
 			var S = get_source(state.source);
 			var lum = state.lum / 100, inten = state.int / 100, fade = state.fade / 100;
