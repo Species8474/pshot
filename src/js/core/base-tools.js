@@ -551,6 +551,23 @@ class Base_tools_class {
 	}
 
 	render_overlay_parent(ctx){
+		//pshot: View > Show > Smart Guides - magenta alignment lines while moving (none when off)
+		var ws = this.Base_gui.Ps_workspace;
+		if (ws) {
+			if (ws.smart_guides === false) return;
+			ctx.save();
+			ctx.lineWidth = 1 / config.ZOOM;
+			ctx.strokeStyle = '#ff00ff';
+			for (var info of [this.snap_line_info.x, this.snap_line_info.y]) {
+				if (!info) continue;
+				ctx.beginPath();
+				ctx.moveTo(info.start_x, info.start_y);
+				ctx.lineTo(info.end_x, info.end_y);
+				ctx.stroke();
+			}
+			ctx.restore();
+			return;
+		}
 		//x
 		if(this.snap_line_info.x !== null) {
 			this.Helper.draw_special_line(

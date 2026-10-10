@@ -1152,6 +1152,7 @@ class Ps_workspace_class {
 			case 'pixel_grid': return this.pixel_grid !== false;
 			case 'layer_edges': return this.layer_edges === true;
 			case 'show_slices': return this.Slices.show;
+			case 'smart_guides': return this.smart_guides !== false;
 			case 'lock_slices': return this.Slices.locked;
 			case 'proof_colors': return this.Proof.colors;
 			case 'gamut_warning': return this.Proof.gamut;

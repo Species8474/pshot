@@ -339,7 +339,7 @@ const M = [
 			{ name: 'Target Path', shortcut: 'Shift+Ctrl+H', target: 'ps/commands.toggle_target_path', checked: 'target_path' },
 			{ name: 'Grid', shortcut: "Ctrl+'", target: 'view/grid.grid', checked: 'grid' },
 			{ name: 'Guides', shortcut: 'Ctrl+;', target: 'ps/commands.toggle_guides', checked: 'guides' },
-			'Count', 'Smart Guides', { name: 'Slices', target: 'ps/commands.toggle_show_slices', checked: 'show_slices' }, { name: 'Notes', target: 'ps/commands.toggle_show_notes', checked: 'show_notes' }, { name: 'Pixel Grid', target: 'ps/commands.toggle_pixel_grid', checked: 'pixel_grid' }, '3D Secondary View', '3D Ground Plane', '3D Lights', '3D Selection', 'UV Overlay', 'Mesh', 'Edit Pins', '-',
+			'Count', { name: 'Smart Guides', target: 'ps/commands.toggle_smart_guides', checked: 'smart_guides' }, { name: 'Slices', target: 'ps/commands.toggle_show_slices', checked: 'show_slices' }, { name: 'Notes', target: 'ps/commands.toggle_show_notes', checked: 'show_notes' }, { name: 'Pixel Grid', target: 'ps/commands.toggle_pixel_grid', checked: 'pixel_grid' }, '3D Secondary View', '3D Ground Plane', '3D Lights', '3D Selection', 'UV Overlay', 'Mesh', 'Edit Pins', '-',
 			{ name: 'All', target: 'ps/commands.show_extras', parameter: true }, { name: 'None', target: 'ps/commands.show_extras', parameter: false }, '-', 'Show Extra Options...',
 		]],
 		'-',
