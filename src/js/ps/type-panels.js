@@ -11,6 +11,17 @@ function text_tool() {
 	return config.TOOLS.find(t => t.name == 'text');
 }
 
+function text_layer() {
+	return config.layer && config.layer.type == 'text' ? config.layer : null;
+}
+
+//kerning of the type layer: Metrics (the font's pairs), Optical (pshot: the same pairs), 0 (none)
+function kern_mode() {
+	var l = text_layer();
+	var k = l && l.params ? l.params.kerning : 'metrics';
+	return k == 'optical' || k == 'none' ? k : 'metrics';
+}
+
 function get(key) {
 	var a = text_tool().attributes[key];
 	return a !== null && typeof a == 'object' && 'value' in a ? a.value : a;
@@ -62,7 +73,8 @@ function render_character(host) {
 		+ '<select id="ch_style">' + ['Regular', 'Italic', 'Bold', 'Bold Italic'].map(v => '<option' + (v == style ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>'
 		+ '<div class="ps_typ_row"><span class="ps_typ_icon">T</span><input type="number" id="ch_size" value="' + get('size') + '" min="1"><span>pt</span>'
 		+ '<span class="ps_typ_icon">A</span><input type="number" id="ch_leading" value="' + (get('leading') || 0) + '"><span>pt</span></div>'
-		+ '<div class="ps_typ_row"><span class="ps_typ_icon">V/A</span><select disabled><option>Metrics</option></select>'
+		+ '<div class="ps_typ_row"><span class="ps_typ_icon">V/A</span><select id="ch_kern" title="Set the kerning between two characters"' + (text_layer() ? '' : ' disabled') + '>'
+		+ [['metrics', 'Metrics'], ['optical', 'Optical'], ['none', '0']].map(([v, n]) => '<option value="' + v + '"' + (kern_mode() == v ? ' selected' : '') + '>' + n + '</option>').join('') + '</select>'
 		+ '<span class="ps_typ_icon">VA</span><input type="number" id="ch_tracking" value="' + (get('kerning') || 0) + '"></div>'
 		+ '<div class="ps_typ_row"><span>Color:</span><button type="button" class="ps_typ_color" id="ch_color" style="background:' + get('fill') + '"></button></div>'
 		+ '<div class="ps_typ_row ps_typ_faux">'
@@ -96,6 +108,14 @@ function render_character(host) {
 		});
 	});
 	//All Caps / Small Caps and Superscript / Subscript: each pair is one choice (or none)
+	var kern = host.querySelector('#ch_kern');
+	if (kern) kern.addEventListener('change', () => {
+		var l = text_layer();
+		if (!l) return;
+		app.State.do_action(new app.Actions.Bundle_action('character', 'Kerning', [
+			new app.Actions.Update_layer_action(l.id, { params: Object.assign({}, l.params, { kerning: kern.value }) }),
+		]));
+	});
 	host.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => {
 		set(b.dataset.opt, get(b.dataset.opt) == b.dataset.v ? '' : b.dataset.v);
 		render_character(host);

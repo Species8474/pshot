@@ -1546,7 +1546,7 @@ class Text_editor_class {
 				}
 				for (let c = 0; c < span.text.length; c++) {
 					character = span.text[c];
-					if (layer.params.kerning === 'metrics') {
+					if (layer.params.kerning === 'metrics' || layer.params.kerning === 'optical') {
 						nextCharacter = span.text[c + 1];
 						if (!nextCharacter && c === span.text.length - 1 && currentWrapSpans[s + 1]) {
 							const nextSpan = currentWrapSpans[s + 1];
