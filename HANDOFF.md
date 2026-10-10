@@ -223,6 +223,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Number keys set brush opacity; [ and ] change brush size; Shift+[ and Shift+] change hardness (brush picker has Size and Hardness).
   - Edit > Presets > Preset Manager (Brushes, Gradients, Patterns, Custom Shapes, Tools; rename/delete user presets) and Export/Import Presets (one JSON file).
   - Layers panel right-click menus (ps/layer-context.js): layer row (Layer Properties / Layer From Background, Blending Options, Duplicate/Delete, Smart Object, Rasterize, mask enable/disable, Clipping Mask, Link, layer styles, Merge, Flatten, color labels), thumbnail (Select Pixels / transparency ops), layer mask and vector mask thumbnails. The clicked layer is selected first; popup menu items ignore the right-button release.
+  - Canvas right-click (ps/canvas-context.js), by tool: Free Transform menu (modes, Rotate 180/90, Flip — Transform.orient), selection tools (Deselect/Select All, Inverse, Feather, Refine Edge, Save Selection, Make Work Path, Layer via Copy/Cut, Free Transform, Fill/Stroke, Last Filter, Fade), painting tools open the brush picker at the pointer, Move lists the layers under the pointer, Hand/Zoom views, Eyedropper sample sizes + copy color, pen tools path commands.
 
 ## Known gaps / next
 

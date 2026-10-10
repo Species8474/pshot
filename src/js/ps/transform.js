@@ -1069,6 +1069,37 @@ class Ps_transform_class {
 	/**
 	 * Edit > Transform > Skew / Distort / Perspective
 	 */
+	/**
+	 * the transform's context menu: Rotate 180° / 90° CW / 90° CCW, Flip
+	 * Horizontal / Vertical of the box (and its distort or warp points)
+	 */
+	orient(kind, angle) {
+		var job = this.job;
+		if (!job) return;
+		var b = job.box;
+		var cos0 = Math.cos(b.angle), sin0 = Math.sin(b.angle);
+		var f;
+		if (kind == 'rotate') {
+			var cos = Math.cos(angle), sin = Math.sin(angle);
+			f = (p) => { var dx = p.x - b.cx, dy = p.y - b.cy; return { x: b.cx + dx * cos - dy * sin, y: b.cy + dx * sin + dy * cos }; };
+			b.angle += angle;
+		}
+		else {
+			//mirror across the box's own vertical (flip_h) or horizontal axis
+			f = (p) => {
+				var dx = p.x - b.cx, dy = p.y - b.cy;
+				var lx = dx * cos0 + dy * sin0, ly = -dx * sin0 + dy * cos0;
+				if (kind == 'flip_h') lx = -lx; else ly = -ly;
+				return { x: b.cx + lx * cos0 - ly * sin0, y: b.cy + lx * sin0 + ly * cos0 };
+			};
+			if (kind == 'flip_h') b.w = -b.w; else b.h = -b.h;
+		}
+		if (job.quad) job.quad = job.quad.map(f);
+		if (job.warp) job.warp = job.warp.map(f);
+		this.preview();
+		app.GUI.Ps_workspace.Options_bar.render_transform();
+	}
+
 	start_mode(mode) {
 		var layer = config.layer;
 		if (mode == 'warp') {

@@ -1241,6 +1241,16 @@ class Ps_options_bar_class {
 	/**
 	 * small Brush Preset picker: Size (and greyed Hardness)
 	 */
+	/**
+	 * the active tool's brush size option (painting tools), or null
+	 */
+	brush_key() {
+		var member = this.workspace.active_member;
+		var layout = member && member.tool == config.TOOL.name ? LAYOUTS[member.id] : null;
+		var brush = layout && typeof layout.find == 'function' ? layout.find(c => c.type == 'brush') : null;
+		return brush ? brush.bind : null;
+	}
+
 	brush_picker(anchor, key) {
 		var existing = document.querySelector('.ps_brush_picker');
 		if (existing) {
@@ -1303,4 +1313,4 @@ class Ps_options_bar_class {
 }
 
 export default Ps_options_bar_class;
-export { tool_icons };
+export { tool_icons, SAMPLE_SIZES, fill_screen };

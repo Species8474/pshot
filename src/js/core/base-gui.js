@@ -17,6 +17,7 @@ import Tools_translate_class from './../modules/tools/translate.js';
 import Tools_settings_class from './../modules/tools/settings.js';
 import Helper_class from './../libs/helpers.js';
 import Ps_workspace_class from './../ps/workspace.js';
+import { canvas_context_menu } from './../ps/canvas-context.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -230,8 +231,10 @@ class Base_gui_class {
 			return undefined;
 		});
 
+		//pshot: CS6 right-click on the image (menu depends on the tool)
 		document.getElementById('canvas_minipaint').addEventListener('contextmenu', function (e) {
 			e.preventDefault();
+			if (app.GUI && app.GUI.Ps_workspace) canvas_context_menu(e);
 		}, false);
 	}
 
