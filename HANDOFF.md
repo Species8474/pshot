@@ -299,6 +299,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Shadows/Highlights Save As Defaults (browser storage). Brush panel Brush Tip Shape Spacing checkbox (off: a dab per pointer sample, spacing_off).
   - Calculations: Source document menus (open documents of the same size, by their merged image; Documents doc.flat), Mask (a channel limits the blend, Invert). Apply Image: Source document and Channel (RGB / Red / Green / Blue).
   - Batch: Source Folder (folder picker, images only) / Files / Opened Files; Destination None / Save and Close (own name and type) / Folder; Errors Stop For Errors / Log Errors To File (downloaded text). Override Action "Open" Commands stays greyed.
+  - Bitmap mode: Custom Pattern (the pattern's tones are the thresholds; pattern picker). Output resolution stays greyed (same as input).
 
 ## Known gaps / next
 

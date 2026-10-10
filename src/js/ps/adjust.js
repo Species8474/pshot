@@ -11,6 +11,8 @@ import { ensure_pixel_layer } from './pixel-layer.js';
 import alertify from './../../../node_modules/alertifyjs/build/alertify.min.js';
 import { quantize, fixed_palette } from './indexed.js';
 import { PRESETS, lut as gradient_lut, css as gradient_css, picker as gradient_picker, editor as gradient_editor, resolve, two_color } from './gradients.js';
+import Patterns from './patterns.js';
+import { enhance_pattern_select } from './thumb-picker.js';
 
 function clamp(v, lo, hi) {
 	return v < lo ? lo : (v > hi ? hi : v);
@@ -1652,12 +1654,15 @@ class Ps_adjust_class {
 			return;
 		}
 		var html = '<div class="ps_adj_label">Resolution</div><div class="ps_adj_row"><span>Output:</span><input type="number" value="72" disabled style="width:60px"><span>Pixels/Inch</span></div>'
-			+ '<div class="ps_adj_label">Method</div><div class="ps_adj_row"><span>Use:</span><select id="bm_method"><option>50% Threshold</option><option>Pattern Dither</option><option selected>Diffusion Dither</option><option>Halftone Screen</option><option disabled>Custom Pattern</option></select></div>'
+			+ '<div class="ps_adj_label">Method</div><div class="ps_adj_row"><span>Use:</span><select id="bm_method"><option>50% Threshold</option><option>Pattern Dither</option><option selected>Diffusion Dither</option><option>Halftone Screen</option><option>Custom Pattern</option></select></div>'
+			+ '<div class="ps_adj_row" id="bm_pattern_row"><span>Custom Pattern:</span><select id="bm_pattern">' + Patterns.names().map(n => '<option>' + n + '</option>').join('') + '</select></div>'
 			+ '<div class="ps_adj_row" id="bm_screen"><span>Frequency:</span><input type="number" id="bm_freq" value="12" min="2" max="64" style="width:60px"><span>px cells</span><span>Angle:</span><input type="number" id="bm_angle" value="45" style="width:50px"><span>°</span></div>';
 		var open = () => this.show('Bitmap', html, (root, state, update) => {
-			Object.assign(state, { method: 'Diffusion Dither', cell: 12, angle: 45 });
-			var screen = root.querySelector('#bm_screen');
-			var sync = () => { screen.style.display = state.method == 'Halftone Screen' ? '' : 'none'; };
+			Object.assign(state, { method: 'Diffusion Dither', cell: 12, angle: 45, pattern: Patterns.names()[0] });
+			var screen = root.querySelector('#bm_screen'), prow = root.querySelector('#bm_pattern_row');
+			var sync = () => { screen.style.display = state.method == 'Halftone Screen' ? '' : 'none'; prow.style.display = state.method == 'Custom Pattern' ? '' : 'none'; };
+			root.querySelector('#bm_pattern').addEventListener('change', (e) => { state.pattern = e.target.value; update(); });
+			enhance_pattern_select(root.querySelector('#bm_pattern'));
 			root.querySelector('#bm_method').addEventListener('change', (e) => { state.method = e.target.value; sync(); update(); });
 			root.querySelector('#bm_freq').addEventListener('change', (e) => { state.cell = Math.max(2, Math.min(64, parseInt(e.target.value) || 12)); update(); });
 			root.querySelector('#bm_angle').addEventListener('change', (e) => { state.angle = parseFloat(e.target.value) || 0; update(); });
@@ -1667,10 +1672,18 @@ class Ps_adjust_class {
 			for (var i = 0; i < n; i++) g[i] = src[i * 4] * 0.299 + src[i * 4 + 1] * 0.587 + src[i * 4 + 2] * 0.114;
 			var BAYER = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22, 3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21];
 			var a = state.angle * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), cell = state.cell;
+			//Custom Pattern: the pattern's tones are the thresholds
+			var pt = null;
+			if (state.method == 'Custom Pattern') {
+				var pd = Patterns.tiled(state.pattern, w, h, 100).getContext('2d').getImageData(0, 0, w, h).data;
+				pt = new Float32Array(w * h);
+				for (var pi = 0; pi < pt.length; pi++) pt[pi] = pd[pi * 4] * 0.299 + pd[pi * 4 + 1] * 0.587 + pd[pi * 4 + 2] * 0.114;
+			}
 			for (var y = 0; y < h; y++) {
 				for (var x = 0; x < w; x++) {
 					var k = y * w + x, v = g[k], on;
 					if (state.method == '50% Threshold') on = v >= 128;
+					else if (pt) on = v > pt[k];
 					else if (state.method == 'Pattern Dither') on = v > (BAYER[(y % 8) * 8 + (x % 8)] + 0.5) * 4;
 					else if (state.method == 'Halftone Screen') {
 						//round dots on a rotated grid; dot size follows the darkness
