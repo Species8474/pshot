@@ -93,7 +93,7 @@ class Ps_puppet_warp_class {
 			layer: layer, full: full, alpha: alpha,
 			geometry: { x: layer.x, y: layer.y, width: layer.width, height: layer.height, width_original: layer.width_original, height_original: layer.height_original },
 			pins: [], selected: null,
-			mode: 'Normal', density: 'Normal', expansion: 2, show_mesh: true,
+			mode: 'Normal', density: 'Normal', expansion: 2, show_mesh: app.GUI.Ps_workspace.show_mesh !== false,
 		};
 		this.build_mesh();
 		if (!this.job.tris.length) {
@@ -269,7 +269,8 @@ class Ps_puppet_warp_class {
 			ctx.lineWidth = 1 / s;
 			ctx.stroke();
 		}
-		for (var pin of j.pins) {
+		//View > Show > Edit Pins
+		if (app.GUI.Ps_workspace.show_pins !== false) for (var pin of j.pins) {
 			var sel = pin === j.selected;
 			ctx.beginPath();
 			ctx.arc(pin.q.x, pin.q.y, (sel ? 6 : 5) / s, 0, Math.PI * 2);

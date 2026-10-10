@@ -799,6 +799,106 @@ class Ps_commands_class {
 	replace_missing_fonts() { app.GUI.Ps_workspace.Extras.replace_missing_fonts(); }
 	find_replace_text() { app.GUI.Ps_workspace.Extras.find_replace_text(); }
 	system_info() { app.GUI.Ps_workspace.Extras.system_info(); }
+	/**
+	 * View > Show > Mesh / Edit Pins (Puppet Warp)
+	 */
+	toggle_show_mesh() {
+		var ws = app.GUI.Ps_workspace;
+		ws.show_mesh = ws.show_mesh === false;
+		if (ws.Puppet.job) ws.Puppet.set_option('show_mesh', ws.show_mesh);
+	}
+
+	toggle_show_pins() {
+		var ws = app.GUI.Ps_workspace;
+		ws.show_pins = ws.show_pins === false;
+		if (ws.Puppet.job) ws.Puppet.preview();
+	}
+
+	/**
+	 * View > Show > Show Extra Options...: which extras View > Extras shows
+	 */
+	show_extra_options() {
+		var ws = app.GUI.Ps_workspace;
+		var items = [
+			['Layer Edges', 'layer_edges', 'ps/commands.toggle_layer_edges'], ['Selection Edges', null, null], ['Target Path', 'target_path', 'ps/commands.toggle_target_path'],
+			['Grid', 'grid', 'view/grid.grid'], ['Guides', 'guides', 'ps/commands.toggle_guides'], ['Count', 'show_count', 'ps/commands.toggle_show_count'],
+			['Smart Guides', 'smart_guides', 'ps/commands.toggle_smart_guides'], ['Slices', 'show_slices', 'ps/commands.toggle_show_slices'], ['Notes', 'show_notes', 'ps/commands.toggle_show_notes'],
+			['Pixel Grid', 'pixel_grid', 'ps/commands.toggle_pixel_grid'], ['Mesh', 'show_mesh', 'ps/commands.toggle_show_mesh'], ['Edit Pins', 'show_pins', 'ps/commands.toggle_show_pins'],
+		];
+		this.POP.show({
+			title: 'Show Extra Options',
+			params: items.map(([name, key]) => ({ name: 'x_' + (key || 'sel'), title: name, value: key ? !!ws.is_checked(key) : true })),
+			on_finish: (p) => {
+				for (var [, key, target] of items) {
+					if (!key || !!p['x_' + key] == !!ws.is_checked(key)) continue;
+					var [mod, fn] = target.split('.');
+					app.GUI.modules[mod][fn]();
+				}
+				config.need_render = true;
+			},
+		});
+	}
+
+	/**
+	 * Image > Trap (CMYK documents): lighter inks spread under darker ones by the trap width
+	 */
+	trap() {
+		if (config.ps_mode != 'CMYK') {
+			app.GUI.Ps_workspace.status_message('Trap is available for CMYK documents (Image > Mode > CMYK Color).');
+			return;
+		}
+		var layer = config.layer;
+		if (!layer || layer.type != 'image' || !layer.link) return;
+		this.POP.show({
+			title: 'Trap',
+			params: [
+				{ name: 'width', title: 'Width:', value: 1, range: [1, 10], step: 1 },
+				{ name: 'units', title: 'Units:', values: ['Pixels', 'Points', 'Millimeters'], value: 'Pixels', type: 'select' },
+			],
+			on_finish: (p) => {
+				var ppi = (app.GUI.Ps_workspace.Documents.current() || {}).ppi || 72;
+				var w = parseFloat(p.width) || 1;
+				if (p.units == 'Points') w = w * ppi / 72;
+				if (p.units == 'Millimeters') w = w * ppi / 25.4;
+				var r = Math.max(1, Math.round(w));
+				var c = this.layer_canvas(), ctx = c.getContext('2d', { willReadFrequently: true });
+				var img = ctx.getImageData(0, 0, c.width, c.height), d = img.data, W = c.width, H = c.height;
+				//ink amounts per pixel (C, M, Y, K)
+				var ink = [new Float32Array(W * H), new Float32Array(W * H), new Float32Array(W * H)], K = new Float32Array(W * H);
+				for (var i = 0; i < W * H; i++) {
+					var k = 1 - Math.max(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]) / 255, den = 1 - k || 1;
+					K[i] = k;
+					for (var ch = 0; ch < 3; ch++) ink[ch][i] = (1 - d[i * 4 + ch] / 255 - k) / den;
+				}
+				//lighter colors spread under darker neighbours (their inks are added there)
+				var lum = new Float32Array(W * H);
+				for (i = 0; i < W * H; i++) lum[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+				var out = ink.map(a => new Float32Array(a));
+				for (var y = 0; y < H; y++) {
+					for (var x = 0; x < W; x++) {
+						var pi = y * W + x;
+						for (var dy = -r; dy <= r; dy++) {
+							var yy = y + dy;
+							if (yy < 0 || yy >= H) continue;
+							for (var dx = -r; dx <= r; dx++) {
+								var xx = x + dx;
+								if (xx < 0 || xx >= W || (!dx && !dy)) continue;
+								var ni = yy * W + xx;
+								if (lum[ni] <= lum[pi] + 1) continue;
+								for (ch = 0; ch < 3; ch++) if (ink[ch][ni] > out[ch][pi]) out[ch][pi] = ink[ch][ni];
+							}
+						}
+					}
+				}
+				for (i = 0; i < W * H; i++) {
+					for (ch = 0; ch < 3; ch++) d[i * 4 + ch] = Math.round(255 * (1 - out[ch][i]) * (1 - K[i]));
+				}
+				ctx.putImageData(img, 0, 0);
+				app.State.do_action(new app.Actions.Bundle_action('trap', 'Trap', [new app.Actions.Update_layer_image_action(c, layer.id)]));
+			},
+		});
+	}
+
 	show_extras(on) { app.GUI.Ps_workspace.Extras.show_extras(on !== false); }
 	record_measurements() { app.GUI.Ps_workspace.Measure_log.record(); }
 	measurement_scale(kind) { app.GUI.Ps_workspace.Measure_log.set_scale(kind); }

@@ -1222,6 +1222,8 @@ class Ps_workspace_class {
 			case 'target_path': return this.target_path !== false;
 			case 'show_notes': return this.show_notes !== false;
 			case 'show_count': return this.show_count !== false;
+			case 'show_mesh': return this.show_mesh !== false;
+			case 'show_pins': return this.show_pins !== false;
 			case 'guides': return config.guides_enabled == true;
 			case 'rulers': return config.ruler_active == true;
 			case 'snap': return config.SNAP == true;

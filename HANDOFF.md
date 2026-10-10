@@ -248,6 +248,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Convert to Smart Object with several layers selected keeps them as a stack (smart.stack); Layer > Smart Objects > Stack Mode (None, Entropy, Kurtosis, Maximum, Mean, Median, Minimum, Range, Skewness, Standard Deviation, Summation, Variance) via ps/stack-modes.js.
   - File > Export > Zoomify (ps/zoomify.js): Zoomify tile pyramid (ImageProperties.xml, TileGroupN/z-x-y.jpg) + an HTML pan/zoom viewer, as a zip.
   - Edit > Menus (Alt+Shift+Ctrl+M): the Menus tab of Keyboard Shortcuts and Menus — per item / submenu Visibility and Color (saved in the browser as pshot_menu_custom_v1, flags ps_hidden / ps_color on the menu definitions); menus with hidden items end with Show All Menu Items.
+  - View > Show > Mesh / Edit Pins (Puppet Warp mesh and pins), View > Show > Show Extra Options... (which extras show); Image > Trap (CMYK only: lighter inks spread under darker neighbours by the width).
 
 ## Known gaps / next
 
