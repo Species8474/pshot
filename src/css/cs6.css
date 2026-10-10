@@ -1834,3 +1834,4 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_sem_row.active { background: var(--ps-select); color: #fff; }
 .ps_sem_empty { padding: 6px; color: var(--ps-text-dim, #999); }
 .ps_sem .ps_ge_row { display: flex; align-items: center; gap: 6px; }
+.ps_hdr_curve { display: block; width: 200px; height: 200px; border: 1px solid #555; margin: 4px 0; cursor: crosshair; }

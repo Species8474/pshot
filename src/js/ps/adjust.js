@@ -1073,17 +1073,77 @@ class Ps_adjust_class {
 		var group = (key, title) => '<div class="ps_hdr_group" data-group="' + key + '"><div class="ps_adj_label">' + title + '</div>' + F.filter(f => f[6] == key).map(row).join('') + '</div>';
 		var html = '<div class="ps_adj_row"><span>Preset:</span><select id="hdr_preset">' + Object.keys(P).map(k => '<option>' + k + '</option>').join('') + '<option>Custom</option></select></div>'
 			+ '<div class="ps_adj_row"><span>Method:</span><select id="hdr_method"><option>Local Adaptation</option><option>Equalize Histogram</option><option>Exposure and Gamma</option><option>Highlight Compression</option></select></div>'
-			+ group('edge', 'Edge Glow') + group('tone', 'Tone and Detail') + group('adv', 'Advanced');
+			+ group('edge', 'Edge Glow') + group('tone', 'Tone and Detail') + group('adv', 'Advanced')
+			+ '<div class="ps_hdr_group" data-group="curve"><div class="ps_adj_label">Toning Curve and Histogram</div>'
+			+ '<canvas id="hdr_curve" class="ps_hdr_curve" width="200" height="200"></canvas>'
+			+ '<div class="ps_adj_row"><button type="button" class="button" id="hdr_curve_reset">Reset Curve</button></div></div>';
 		var open = () => this.show('HDR Toning', html, (root, state, update) => {
-			Object.assign(state, P.Default, { method: 'Local Adaptation' });
+			Object.assign(state, P.Default, { method: 'Local Adaptation', curve: [{ x: 0, y: 0 }, { x: 255, y: 255 }] });
+			//Toning Curve: points over the luminance histogram; click adds, drag moves, drag off removes
+			var cv = root.querySelector('#hdr_curve'), cctx = cv.getContext('2d');
+			var hist = new Float64Array(256);
+			var lyr = config.layer;
+			if (lyr && lyr.link) {
+				var hc = document.createElement('canvas');
+				hc.width = Math.min(400, lyr.width_original);
+				hc.height = Math.max(1, Math.round(lyr.height_original * hc.width / lyr.width_original));
+				var hctx = hc.getContext('2d', { willReadFrequently: true });
+				hctx.drawImage(lyr.link, 0, 0, hc.width, hc.height);
+				var hd = hctx.getImageData(0, 0, hc.width, hc.height).data;
+				for (var hi = 0; hi < hd.length; hi += 4) if (hd[hi + 3] > 0) hist[Math.round(hd[hi] * 0.299 + hd[hi + 1] * 0.587 + hd[hi + 2] * 0.114)]++;
+			}
+			var hmax = Math.max(1, ...hist);
+			var draw_curve = () => {
+				var W = cv.width, H = cv.height;
+				cctx.fillStyle = '#fff';
+				cctx.fillRect(0, 0, W, H);
+				cctx.fillStyle = '#bbb';
+				for (var x = 0; x < 256; x++) { var hh = Math.sqrt(hist[x] / hmax) * H; cctx.fillRect(x * W / 256, H - hh, W / 256 + 0.5, hh); }
+				cctx.strokeStyle = '#ddd';
+				cctx.beginPath();
+				for (var g = 1; g < 4; g++) { cctx.moveTo(g * W / 4, 0); cctx.lineTo(g * W / 4, H); cctx.moveTo(0, g * H / 4); cctx.lineTo(W, g * H / 4); }
+				cctx.stroke();
+				var lut = curve_lut(state.curve);
+				cctx.strokeStyle = '#000';
+				cctx.beginPath();
+				for (x = 0; x < 256; x++) { var px = x * W / 255, py = H - lut[x] * H / 255; x ? cctx.lineTo(px, py) : cctx.moveTo(px, py); }
+				cctx.stroke();
+				cctx.fillStyle = '#000';
+				state.curve.forEach(q => cctx.fillRect(q.x * W / 255 - 3, H - q.y * H / 255 - 3, 6, 6));
+			};
+			var at = (e) => { var r = cv.getBoundingClientRect(); return { x: Math.max(0, Math.min(255, (e.clientX - r.left) / r.width * 255)), y: Math.max(0, Math.min(255, (1 - (e.clientY - r.top) / r.height) * 255)) }; };
+			var dragging = null;
+			cv.addEventListener('mousedown', (e) => {
+				var p = at(e);
+				var hit = state.curve.findIndex(q => Math.abs(q.x - p.x) < 8 && Math.abs(q.y - p.y) < 8);
+				if (hit < 0) { state.curve.push(p); state.curve.sort((a, b) => a.x - b.x); hit = state.curve.indexOf(p); }
+				dragging = state.curve[hit];
+				preset.value = 'Custom';
+				draw_curve(); update();
+			});
+			var move = (e) => {
+				if (!cv.isConnected) { window.removeEventListener('mousemove', move); return; }
+				if (!dragging) return;
+				var r = cv.getBoundingClientRect(), p = at(e);
+				var outside = e.clientX < r.left - 20 || e.clientX > r.right + 20 || e.clientY < r.top - 20 || e.clientY > r.bottom + 20;
+				var ends = dragging === state.curve[0] || dragging === state.curve[state.curve.length - 1];
+				if (outside && !ends && state.curve.length > 2) { state.curve.splice(state.curve.indexOf(dragging), 1); dragging = null; }
+				else { dragging.x = ends ? dragging.x : p.x; dragging.y = p.y; state.curve.sort((a, b) => a.x - b.x); }
+				draw_curve(); update();
+			};
+			window.addEventListener('mousemove', move);
+			window.addEventListener('mouseup', () => { dragging = null; });
+			root.querySelector('#hdr_curve_reset').addEventListener('click', () => { state.curve = [{ x: 0, y: 0 }, { x: 255, y: 255 }]; draw_curve(); update(); });
+			draw_curve();
 			var refresh = () => {
 				for (var f of F) {
 					root.querySelector('#hdr_' + f[0]).value = root.querySelector('#hdr_' + f[0] + '_n').value = state[f[0]];
 					var show = state.method == 'Local Adaptation' || (state.method == 'Exposure and Gamma' && (f[0] == 'gamma' || f[0] == 'exposure'));
 					root.querySelector('[data-hdr="' + f[0] + '"]').style.display = show ? '' : 'none';
 				}
+				root.querySelector('[data-group="curve"]').dataset.show = state.method == 'Local Adaptation' ? '1' : '';
 				root.querySelectorAll('.ps_hdr_group').forEach((g) => {
-					var any = [...g.querySelectorAll('[data-hdr]')].some(r => r.style.display != 'none');
+					var any = g.dataset.group == 'curve' ? !!g.dataset.show : [...g.querySelectorAll('[data-hdr]')].some(r => r.style.display != 'none');
 					g.style.display = any ? '' : 'none';
 				});
 			};
@@ -1155,6 +1215,11 @@ class Ps_adjust_class {
 					if (hi) v += hi * 0.5 * Math.pow(Math.max(0, v * 2 - 1), 2);
 					out[g] = v;
 				}
+			}
+			if (method == 'Local Adaptation' && state.curve && (state.curve.length > 2 || state.curve.some(q => q.x != q.y))) {
+				//Toning Curve on the toned luminance
+				var tl = curve_lut(state.curve);
+				for (var ci = 0; ci < n; ci++) { var tv = Math.max(0, Math.min(255, out[ci] * 255)), t0 = Math.floor(tv), t1 = Math.min(255, t0 + 1); out[ci] = (tl[t0] + (tl[t1] - tl[t0]) * (tv - t0)) / 255; }
 			}
 			var vib = method == 'Local Adaptation' ? state.vibrance / 100 : 0, sat = method == 'Local Adaptation' ? state.saturation / 100 : 0;
 			for (var k = 0; k < n; k++) {
