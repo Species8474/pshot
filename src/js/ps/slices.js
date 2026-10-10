@@ -121,6 +121,49 @@ class Ps_slices_class {
 		return this.commit(this.list().concat([s]), s.id, description || 'Slice Tool');
 	}
 
+	/**
+	 * the selected slices: the current one plus any Shift+clicked ones
+	 */
+	selected_all() {
+		var ids = [config.ps_slice_selected].concat(this.extra || []);
+		return this.list().filter(s => ids.includes(s.id));
+	}
+
+	toggle_extra(id) {
+		this.extra = this.extra || [];
+		if (id == config.ps_slice_selected) return;
+		var i = this.extra.indexOf(id);
+		if (i >= 0) this.extra.splice(i, 1);
+		else this.extra.push(id);
+		this.refresh();
+	}
+
+	/**
+	 * Combine Slices: the selected slices become one user slice over their bounds
+	 */
+	combine() {
+		var chosen = this.selected_all();
+		if (chosen.length < 2) return;
+		var rects = chosen.map(s => this.rect(s));
+		var x0 = Math.min(...rects.map(r => r.x)), y0 = Math.min(...rects.map(r => r.y));
+		var x1 = Math.max(...rects.map(r => r.x + r.w)), y1 = Math.max(...rects.map(r => r.y + r.h));
+		var ids = chosen.map(s => s.id);
+		var keep = clone(this.list().filter(s => !ids.includes(s.id)));
+		var n = { id: this.next_id(), type: 'user', x: x0, y: y0, w: x1 - x0, h: y1 - y0, name: '', url: '', target: '', alt: '' };
+		this.extra = [];
+		return this.commit(keep.concat([n]), n.id, 'Combine Slices');
+	}
+
+	/**
+	 * Delete Slice: every selected slice
+	 */
+	remove_selected() {
+		var ids = this.selected_all().map(s => s.id);
+		this.extra = [];
+		if (!ids.length) return;
+		return this.commit(this.list().filter(s => !ids.includes(s.id)), null, 'Delete Slice');
+	}
+
 	selected() {
 		var id = config.ps_slice_selected;
 		return id == null ? null : this.list().find(s => s.id == id) || null;
@@ -283,7 +326,7 @@ class Ps_slices_class {
 		ctx.textBaseline = 'top';
 		for (var e of this.numbered()) {
 			if (e.type == 'auto' && this.hide_auto) continue;
-			var r = e.rect, user = e.type != 'auto', chosen = e.slice && e.slice.id == sel;
+			var r = e.rect, user = e.type != 'auto', chosen = e.slice && (e.slice.id == sel || (this.extra || []).includes(e.slice.id));
 			ctx.setLineDash(user ? [] : [3 / scale, 3 / scale]);
 			ctx.strokeStyle = chosen ? '#d6a000' : (user ? '#2196f3' : '#9a9a9a');
 			ctx.strokeRect(r.x + 0.5 / scale, r.y + 0.5 / scale, r.w - 1 / scale, r.h - 1 / scale);
@@ -295,7 +338,7 @@ class Ps_slices_class {
 			ctx.fillRect(r.x + 1 / scale, r.y + 1 / scale, bw, bh);
 			ctx.fillStyle = '#ffffff';
 			ctx.fillText(label, r.x + 4 / scale, r.y + 2.5 / scale);
-			if (chosen && tool && e.type == 'user') {
+			if (chosen && e.slice.id == sel && tool && e.type == 'user') {
 				//resize handles
 				ctx.fillStyle = '#d6a000';
 				var hs = 6 / scale;

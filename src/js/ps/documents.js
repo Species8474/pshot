@@ -201,6 +201,7 @@ class Ps_documents_class {
 		config.ps_char_styles = state.ps_char_styles || [];
 		config.ps_para_styles = state.ps_para_styles || [];
 		config.ps_slice_selected = state.ps_slice_selected == null ? null : state.ps_slice_selected;
+		if (app.GUI.Ps_workspace && app.GUI.Ps_workspace.Slices) app.GUI.Ps_workspace.Slices.extra = [];
 		config.ps_comp_active = state.ps_comp_active == null ? -1 : state.ps_comp_active;
 		config.ps_alpha = state.ps_alpha || [];
 		config.ps_alpha_active = state.ps_alpha_active == null ? -1 : state.ps_alpha_active;

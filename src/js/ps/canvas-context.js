@@ -177,16 +177,18 @@ function slice_items(event) {
 	var hit = S.hit(app.Layers.get_world_coords(event.clientX - rect.left, event.clientY - rect.top));
 	if (!hit) return null;
 	var user = hit.slice && hit.type == 'user';
-	if (hit.slice && config.ps_slice_selected != hit.slice.id) {
+	var many = S.selected_all().length > 1 && hit.slice && S.selected_all().some(s => s.id == hit.slice.id);
+	if (hit.slice && !many && config.ps_slice_selected != hit.slice.id) {
 		config.ps_slice_selected = hit.slice.id;
+		S.extra = [];
 		S.refresh();
 	}
 	return [
-		{ name: 'Delete Slice', action: hit.slice ? () => S.remove(hit.slice.id) : null },
+		{ name: many ? 'Delete Slices' : 'Delete Slice', action: hit.slice ? () => S.remove_selected() : null },
 		{ name: 'Edit Slice Options...', action: () => S.options(hit) },
 		{ name: 'Promote to User Slice', action: user ? null : () => S.promote(hit) },
 		{ name: 'Divide Slice...', action: user ? () => S.divide() : null },
-		{ name: 'Combine Slices' },
+		{ name: 'Combine Slices', action: many ? () => S.combine() : null },
 		{ divider: true },
 		{ name: 'Bring to Front', action: user ? () => S.arrange('front') : null },
 		{ name: 'Bring Forward', action: user ? () => S.arrange('forward') : null },

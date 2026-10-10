@@ -120,6 +120,12 @@ class Ps_slice_class extends Base_tools_class {
 			}
 		}
 		var hit = S.hit(p);
+		//CS6: Shift+click adds slices to (or takes them from) the selection
+		if (e.shiftKey && hit && hit.slice && config.ps_slice_selected != null) {
+			S.toggle_extra(hit.slice.id);
+			return;
+		}
+		S.extra = [];
 		config.ps_slice_selected = hit && hit.slice ? hit.slice.id : null;
 		this.entry = hit;
 		S.refresh();
