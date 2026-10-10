@@ -41,7 +41,7 @@ class Ps_tool_presets_class {
 	apply(preset) {
 		var ws = app.GUI.Ps_workspace;
 		ws.Extras.select_tool(preset.member);
-		Object.assign(config.TOOL.attributes, JSON.parse(JSON.stringify(preset.attributes)));
+		ws.restore_attributes(config.TOOL.attributes, preset.attributes);
 		this.current = preset;
 		ws.Options_bar.render();
 		this.render();
@@ -143,7 +143,7 @@ class Ps_tool_presets_class {
 	reset_all() {
 		if (!this.defaults) return;
 		for (var t of config.TOOLS) {
-			if (this.defaults[t.name]) t.attributes = JSON.parse(JSON.stringify(this.defaults[t.name]));
+			if (this.defaults[t.name]) app.GUI.Ps_workspace.restore_attributes(t.attributes, this.defaults[t.name]);
 		}
 		var ws = app.GUI.Ps_workspace;
 		var m = this.member();

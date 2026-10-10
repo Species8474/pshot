@@ -404,7 +404,7 @@ class Ps_workspace_class {
 		if (tool_config && prev !== member && this.shared_tool(member.tool)) {
 			this.tool_defaults = this.tool_defaults || {};
 			var base = member._opts || this.tool_defaults[member.tool];
-			if (base) Object.assign(tool_config.attributes, JSON.parse(JSON.stringify(base)));
+			if (base) this.restore_attributes(tool_config.attributes, base);
 		}
 		this.active_member = member;
 		if (member.preset && tool_config) {
@@ -424,6 +424,19 @@ class Ps_workspace_class {
 			app.GUI.GUI_tools.show_action_attributes();
 		});
 		this.highlight_active();
+	}
+
+	/**
+	 * saved (JSON) tool options back into a tool: { value, values() } attributes
+	 * keep their (function) values list, only the value is restored
+	 */
+	restore_attributes(attrs, saved) {
+		saved = JSON.parse(JSON.stringify(saved));
+		for (var k in saved) {
+			var cur = attrs[k], v = saved[k];
+			if (cur !== null && typeof cur == 'object' && 'value' in cur && v !== null && typeof v == 'object' && 'value' in v) cur.value = v.value;
+			else attrs[k] = v;
+		}
 	}
 
 	/**

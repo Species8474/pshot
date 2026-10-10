@@ -677,9 +677,11 @@ class GUI_layers_class {
 				e.stopPropagation();
 				var g = get();
 				show_popup_menu(row, [
+					{ name: (g[0].ps_smart.filters[g[1]].visible === false ? 'Enable' : 'Disable') + ' Smart Filter', action: () => SF.toggle(g[0], g[1]) },
 					{ name: 'Edit Smart Filter...', action: () => SF.edit(g[0], g[1]) },
+					{ name: 'Edit Smart Filter Blending Options...' },
 					{ name: 'Delete Smart Filter', action: () => SF.remove(g[0], g[1]) },
-				], { placement: 'below' });
+				], { point: { x: e.clientX, y: e.clientY } });
 			});
 		});
 		target.querySelectorAll('canvas.ps_thumb').forEach((canvas) => {

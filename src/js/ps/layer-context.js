@@ -8,6 +8,7 @@ import app from './../app.js';
 import config from './../config.js';
 import Dialog_class from './../libs/popup.js';
 import { show_popup_menu } from './popup-menu.js';
+import { layer_style_items } from './adjustments-def.js';
 
 const COLORS = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Gray'];
 
@@ -66,8 +67,42 @@ function row_items(layer) {
 	items.push(
 		{ divider: true },
 		{ name: 'Convert to Smart Object', action: cmd('convert_to_smart_object') },
-		{ divider: true },
-		{ name: 'Rasterize Layer', action: rasterizable ? raster : null },
+	);
+	if (layer.ps_smart) {
+		items.push(
+			{ name: 'New Smart Object via Copy', action: cmd('new_smart_object_via_copy') },
+			{ name: 'Edit Contents', action: cmd('edit_smart_contents') },
+			{ name: 'Export Contents...', action: cmd('export_smart_contents') },
+			{ name: 'Replace Contents...', action: cmd('replace_smart_contents') },
+		);
+	}
+	items.push({ divider: true });
+	if (layer.type == 'text') {
+		var aa = app.GUI.Ps_workspace.Text_aa.current();
+		var vertical = layer.params && layer.params.text_direction == 'ttb';
+		items.push(
+			{ name: 'Rasterize Type', action: raster },
+			{ name: 'Create Work Path', action: cmd('type_work_path') },
+			{ name: 'Convert to Shape', action: cmd('type_to_shape') },
+			{ divider: true },
+			{ name: 'Horizontal', checked: !vertical, action: cmd('text_horizontal') },
+			{ name: 'Vertical', checked: vertical, action: cmd('text_vertical') },
+			{ divider: true },
+		);
+		for (var m of ['None', 'Sharp', 'Crisp', 'Strong', 'Smooth']) {
+			let mode = m.toLowerCase();
+			items.push({ name: m, checked: aa == mode, action: cmd('anti_alias', mode) });
+		}
+		items.push(
+			{ divider: true },
+			{ name: app.GUI.modules['ps/commands'].paragraph_label(), action: cmd('toggle_paragraph') },
+			{ name: 'Warp Text...', action: cmd('warp_text') },
+		);
+	}
+	else {
+		items.push({ name: 'Rasterize Layer', action: rasterizable ? raster : null });
+	}
+	items.push(
 		{ name: 'Rasterize Layer Style' },
 		{ divider: true },
 	);
@@ -98,6 +133,55 @@ function row_items(layer) {
 		{ name: 'Postcard' },
 		{ name: 'New 3D Extrusion from Selected Layer' },
 	);
+	return items;
+}
+
+/**
+ * the fx badge and the Effects rows under a layer
+ */
+function effects_items() {
+	return layer_style_items().concat([
+		{ divider: true },
+		{ name: 'Copy Layer Style', action: cmd('copy_layer_style') },
+		{ name: 'Paste Layer Style', action: cmd('paste_layer_style') },
+		{ name: 'Clear Layer Style', action: cmd('clear_layer_style') },
+		{ divider: true },
+		{ name: 'Global Light...', action: cmd('global_light') },
+		{ name: 'Create Layer', action: cmd('create_style_layers') },
+		{ name: app.GUI.modules['ps/commands'].effects_label(), action: cmd('toggle_all_effects') },
+		{ name: 'Scale Effects...', action: cmd('scale_effects') },
+	]);
+}
+
+/**
+ * the Smart Filters header under a smart object
+ */
+function smart_filter_items(layer) {
+	var off = !!(layer.ps_smart && layer.ps_smart.filters_disabled);
+	return [
+		{ name: (off ? 'Enable' : 'Disable') + ' Smart Filters', action: cmd('smart_filters_toggle') },
+		{ name: 'Clear Smart Filters', action: cmd('smart_filters_clear') },
+	];
+}
+
+/**
+ * the visibility (eye) column
+ */
+function eye_items(layer) {
+	var others = config.layers.filter(l => l !== layer && l.type != 'ps_group');
+	var all_hidden = others.length && others.every(l => !l.visible);
+	var items = [
+		{ name: layer.visible ? 'Hide this layer' : 'Show this layer', action: () => app.State.do_action(new app.Actions.Bundle_action('visibility', layer.visible ? 'Hide Layer' : 'Show Layer', [
+			new app.Actions.Update_layer_action(layer.id, { visible: !layer.visible }),
+		])) },
+		{ name: all_hidden ? 'Show all other layers' : 'Hide all other layers', action: () => app.GUI.modules['ps/commands'].solo_visibility(layer) },
+		{ divider: true },
+		{ name: 'No Color', checked: !layer.ps_color, action: () => set_color(layer, null) },
+	];
+	for (var c of COLORS) {
+		let color = c;
+		items.push({ name: color, checked: layer.ps_color == color, action: () => set_color(layer, color) });
+	}
 	return items;
 }
 
@@ -140,7 +224,13 @@ function vmask_items(layer) {
  * contextmenu on the Layers panel: select the clicked layer, then show its menu
  */
 async function layer_context_menu(event) {
+	var fx = event.target.closest('.ps_effects');
 	var row = event.target.closest('.ps_layer_row');
+	if (fx) {
+		//effects / smart filter rows follow their layer's row
+		row = fx.previousElementSibling;
+		while (row && !row.classList.contains('ps_layer_row')) row = row.previousElementSibling;
+	}
 	if (!row) return false;
 	event.preventDefault();
 	var layer = app.Layers.get_layer(parseInt(row.dataset.id));
@@ -151,7 +241,10 @@ async function layer_context_menu(event) {
 	}
 	var action = (event.target.closest('[data-action]') || {}).dataset || {};
 	var items;
-	if (action.action == 'mask_thumb' && layer.ps_mask) items = mask_items(layer);
+	if (fx && fx.classList.contains('ps_sfilters')) items = smart_filter_items(layer);
+	else if (fx || event.target.closest('.ps_layer_fx')) items = effects_items();
+	else if (action.action == 'visibility') items = eye_items(layer);
+	else if (action.action == 'mask_thumb' && layer.ps_mask) items = mask_items(layer);
 	else if (action.action == 'vmask_thumb' && layer.ps_vmask) items = vmask_items(layer);
 	else if (action.action == 'layer_thumb' && layer.type != 'ps_adjust' && layer.type != 'ps_fill') items = thumb_items(layer);
 	else items = row_items(config.layer && config.layer.id == layer.id ? config.layer : layer);
