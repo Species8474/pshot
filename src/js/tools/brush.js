@@ -496,8 +496,30 @@ class Brush_class extends Base_tools_class {
 			dctx.setTransform(T);
 			var dp = { size: params.dual_size || 25, spacing: params.dual_spacing || 25, scatter: params.dual_scatter || 0, both_axes: true, count: params.dual_count || 1, tip: params.dual_tip || '', hardness: 100, flow: 100 };
 			this.render_dabs_raw(dctx, group.map(p => [p[0], p[1], dp.size, p[3]]), dp, '#000000');
-			octx.globalCompositeOperation = 'destination-in';
-			octx.drawImage(dual, 0, 0);
+			var dmode = params.dual_mode || 'Multiply';
+			if (dmode == 'Multiply') {
+				octx.globalCompositeOperation = 'destination-in';
+				octx.drawImage(dual, 0, 0);
+			}
+			else {
+				//Mode: how the second tip's coverage (b) combines with the stroke's (a)
+				var cl = (v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+				var DUAL = {
+					'Darken': (a, b) => Math.min(a, b),
+					'Overlay': (a, b) => a < 0.5 ? 2 * a * b : 1 - 2 * (1 - a) * (1 - b),
+					'Color Dodge': (a, b) => b >= 1 ? a : cl(a / (1 - b)),
+					'Color Burn': (a, b) => b <= 0 ? 0 : cl(1 - (1 - a) / b),
+					'Linear Burn': (a, b) => cl(a + b - 1),
+					'Hard Mix': (a, b) => (a + b >= 1 ? 1 : 0) * (a > 0 ? 1 : 0),
+				};
+				var df = DUAL[dmode] || ((a, b) => a * b);
+				var dd = dctx.getImageData(0, 0, W, H).data, oi = octx.getImageData(0, 0, W, H), odd = oi.data;
+				for (var q = 3; q < odd.length; q += 4) {
+					if (!odd[q]) continue;
+					odd[q] = Math.round(cl(df(odd[q] / 255, dd[q] / 255)) * 255);
+				}
+				octx.putImageData(oi, 0, 0);
+			}
 		}
 		if (params.texture) {
 			//Texture: the pattern (anchored to the document) lessens the paint in its dark areas
@@ -511,18 +533,45 @@ class Brush_class extends Base_tools_class {
 			var inv = T.inverse(), c0 = inv.transformPoint({ x: 0, y: 0 }), c1 = inv.transformPoint({ x: W, y: H });
 			tctx.fillRect(Math.min(c0.x, c1.x) - 2, Math.min(c0.y, c1.y) - 2, Math.abs(c1.x - c0.x) + 4, Math.abs(c1.y - c0.y) + 4);
 			tctx.setTransform(1, 0, 0, 1, 0, 0);
-			var img = tctx.getImageData(0, 0, W, H), d = img.data, depth = (params.texture_depth == null ? 100 : params.texture_depth) / 100;
-			var subtract = params.texture_mode == 'Subtract';
-			for (var k = 0; k < d.length; k += 4) {
-				var lum = (0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]) / 255;
-				if (params.texture_invert) lum = 1 - lum;
-				var keep = subtract ? Math.max(0, 1 - depth * (1 - lum) * 1.5) : 1 - depth * (1 - lum);
-				d[k] = d[k + 1] = d[k + 2] = 0;
-				d[k + 3] = Math.round(keep * 255);
+			var d = tctx.getImageData(0, 0, W, H).data, depth = (params.texture_depth == null ? 100 : params.texture_depth) / 100;
+			//Mode: how the texture (t, white = 1) changes the stroke's coverage (a)
+			var mode = params.texture_mode || 'Multiply';
+			var clamp = (v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+			var by_depth = (a, o) => a + (o - a) * depth;
+			var MODES = {
+				'Multiply': (a, t) => a * (1 - depth * (1 - t)),
+				'Subtract': (a, t) => a * Math.max(0, 1 - depth * (1 - t) * 1.5),
+				'Darken': (a, t) => Math.min(a, 1 - depth * (1 - t)),
+				'Overlay': (a, t) => by_depth(a, a < 0.5 ? 2 * a * t : 1 - 2 * (1 - a) * (1 - t)),
+				'Color Dodge': (a, t) => by_depth(a, t >= 1 ? 1 : clamp(a / (1 - t))) * (a > 0 ? 1 : 0),
+				'Color Burn': (a, t) => by_depth(a, t <= 0 ? 0 : clamp(1 - (1 - a) / t)),
+				'Linear Burn': (a, t) => by_depth(a, clamp(a + t - 1)),
+				//the height modes: Depth sets how high the texture stands (td)
+				'Hard Mix': (a, t) => (a + (1 - depth * (1 - t)) >= 1.75 ? 1 : 0) * Math.min(1, a * 2),
+				'Linear Height': (a, t) => clamp(((1 - depth * (1 - t)) - (1 - 0.3 * a)) / 0.3) * Math.min(1, a * 2),
+				'Height': (a, t) => (1 - depth * (1 - t) > 1 - 0.3 * a ? a : 0),
+			};
+			var fn = MODES[mode] || MODES['Multiply'];
+			//the threshold modes use the pattern's own range of tones
+			var lo = 0, span = 1;
+			if (mode == 'Hard Mix' || mode == 'Height') {
+				var mn = 1, mx = 0;
+				for (var q = 0; q < d.length; q += 16) {
+					var lq = (0.299 * d[q] + 0.587 * d[q + 1] + 0.114 * d[q + 2]) / 255;
+					if (lq < mn) mn = lq;
+					if (lq > mx) mx = lq;
+				}
+				if (mx - mn > 0.02) { lo = mn; span = mx - mn; }
 			}
-			tctx.putImageData(img, 0, 0);
-			octx.globalCompositeOperation = 'destination-in';
-			octx.drawImage(tex, 0, 0);
+			octx.globalCompositeOperation = 'source-over';
+			var oimg = octx.getImageData(0, 0, W, H), od = oimg.data;
+			for (var k = 0; k < od.length; k += 4) {
+				if (!od[k + 3]) continue;
+				var lum = ((0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2]) / 255 - lo) / span;
+				if (params.texture_invert) lum = 1 - lum;
+				od[k + 3] = Math.round(clamp(fn(od[k + 3] / 255, lum)) * 255);
+			}
+			octx.putImageData(oimg, 0, 0);
 		}
 		ctx.save();
 		ctx.setTransform(1, 0, 0, 1, 0, 0);

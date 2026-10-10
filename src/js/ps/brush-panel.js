@@ -43,6 +43,7 @@ class Ps_brush_panel_class {
 		var a = attrs();
 		var row = (key, label, min, max, unit) => '<div class="ps_bp_field"><span>' + label + '</span><input type="range" data-key="' + key + '" min="' + min + '" max="' + max + '" value="' + a[key] + '"><input type="number" data-num="' + key + '" min="' + min + '" max="' + max + '" value="' + a[key] + '"><span class="ps_bp_unit">' + (unit || '') + '</span></div>';
 		var check = (key, label) => '<label class="ps_adj_check"><input type="checkbox" data-check="' + key + '"' + (a[key] ? ' checked' : '') + '> ' + label + '</label>';
+		var sel = (key, label, values) => '<div class="ps_bp_field"><span>' + label + '</span><select data-sel="' + key + '">' + values.map(v => '<option' + (a[key] == v || (!a[key] && v == values[0]) ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>';
 		var right = '';
 		if (this.section == 'tip') {
 			right = row('size', 'Size:', 1, 2500, 'px') + row('angle', 'Angle:', -180, 180, '°') + row('roundness', 'Roundness:', 1, 100, '%')
@@ -55,14 +56,13 @@ class Ps_brush_panel_class {
 			+ row('sat_jitter', 'Saturation Jitter:', 0, 100, '%') + row('bright_jitter', 'Brightness Jitter:', 0, 100, '%') + row('purity', 'Purity:', -100, 100, '%');
 		else if (this.section == 'transfer') right = row('opacity_jitter', 'Opacity Jitter:', 0, 100, '%') + row('flow', 'Flow:', 1, 100, '%');
 		else if (this.section == 'texture') {
-			var sel = (key, label, values) => '<div class="ps_bp_field"><span>' + label + '</span><select data-sel="' + key + '">' + values.map(v => '<option' + (a[key] == v || (!a[key] && v == values[0]) ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></div>';
 			right = sel('texture_pattern', 'Pattern:', Patterns.names()) + check('texture_invert', 'Invert') + row('texture_scale', 'Scale:', 1, 1000, '%')
 				+ '<label class="ps_adj_check"><input type="checkbox" checked disabled> Texture Each Tip</label>'
-				+ sel('texture_mode', 'Mode:', ['Multiply', 'Subtract']) + row('texture_depth', 'Depth:', 0, 100, '%');
+				+ sel('texture_mode', 'Mode:', ['Multiply', 'Subtract', 'Darken', 'Overlay', 'Color Dodge', 'Color Burn', 'Linear Burn', 'Hard Mix', 'Linear Height', 'Height']) + row('texture_depth', 'Depth:', 0, 100, '%');
 		}
 		else if (this.section == 'dual') {
 			var tips = ['Round'].concat(tip_names());
-			right = '<div class="ps_bp_field"><span>Mode:</span><select disabled><option>Multiply</option></select></div>'
+			right = sel('dual_mode', 'Mode:', ['Multiply', 'Darken', 'Overlay', 'Color Dodge', 'Color Burn', 'Linear Burn', 'Hard Mix'])
 				+ '<div class="ps_bp_field"><span>Tip:</span><select data-sel="dual_tip">' + tips.map(t => '<option value="' + (t == 'Round' ? '' : t) + '"' + ((a.dual_tip || '') == (t == 'Round' ? '' : t) ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>'
 				+ row('dual_size', 'Size:', 1, 2500, 'px') + row('dual_spacing', 'Spacing:', 1, 1000, '%') + row('dual_scatter', 'Scatter:', 0, 1000, '%') + row('dual_count', 'Count:', 1, 16, '');
 		}

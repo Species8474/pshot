@@ -284,6 +284,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Type options bar orientation toggle (type layer: Horizontal/Vertical; otherwise swaps the Horizontal / Vertical Type tools). Art History Brush Mode (Normal, Darken, Lighten, Hue, Saturation, Color, Luminosity). Color Replacement Anti-alias (brush rim and the matched area's edge blended).
   - Brush: Always use Pressure for Opacity (pen pressure stored per point as [4]; each dab adds 1-(1-p)^(spacing/100) so a stroke settles at the pressure's opacity; a mouse paints at full opacity). Retouch-engine tools (Clone / Pattern Stamp, Eraser, History / Art History, Mixer, Background Eraser, Color Replacement): pressure icons scale Size / Opacity from a pen (Retouch getParams), Airbrush builds up while the pointer rests (start_buildup), Pattern Stamp Impressionist (daubs of the pattern's local average color). Dodge / Burn / Sponge Airbrush build-up.
   - Path Selection Select: All Layers (a click on another visible shape layer's shape targets that layer and selects the subpath). Constrain Path Dragging stays greyed.
+  - Brush panel Texture modes: Multiply, Subtract, Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height (stroke coverage vs texture tone and Depth; Hard Mix / Height use the pattern's own tone range). Dual Brush modes: Multiply, Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix.
 
 ## Known gaps / next
 
@@ -295,7 +296,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
 - Actions: droplets, Record Again, Insert Conditional, Button Mode; eraser and retouch strokes are not recorded. 3D.
 - Adjustments: Color Lookup's built-in looks are procedural approximations named like the CS6 presets (Adobe's LUT files are not redistributable); Abstract / Device Link profiles are greyed. HDR Toning presets are approximations.
 - Styles: Contour/Texture/quality contours are not written to PSD; Smart filters are not written to PSD (the placed layer's pixels include them).
-- Brush panel: Texture Each Tip off / the other Texture modes (Darken, Overlay, Color Dodge, Color Burn, Linear Burn, Hard Mix, Linear Height, Height) render as Multiply; Dual Brush modes other than Multiply; tilt.
+- Brush panel: Texture Each Tip off (texture is applied to the whole stroke); tilt.
 - Chrome reserves Ctrl+N, Ctrl+W and Ctrl+T in a normal window, so those commands work from the menus there. The full screen modes (F) also take the browser full screen and call the Keyboard Lock API, so the shortcuts reach pshot (not verifiable in headless tests).
 
 ## Testing
