@@ -134,7 +134,8 @@ class Ps_alpha_channels_class {
 		mask.width = config.WIDTH;
 		mask.height = config.HEIGHT;
 		list.push({ name: this.next_name(), mask: mask });
-		return this.commit(list, list.length - 1, 'New Channel');
+		//CS6: the new channel is shown and targeted
+		return this.commit(list, list.length - 1, 'New Channel').then(() => app.GUI.Ps_workspace.Channel_view.select_alpha(list.length - 1));
 	}
 
 	delete_channel() {
@@ -205,10 +206,15 @@ class Ps_alpha_channels_class {
 		var POP = new Dialog_class();
 		POP.show({
 			title: 'Channel Options',
-			params: [{ name: 'name', title: 'Name:', value: ch.name }],
+			params: [
+				{ name: 'name', title: 'Name:', value: ch.name },
+				{ name: 'indicates', title: 'Color Indicates:', values: ['Masked Areas', 'Selected Areas'], value: ch.indicates || 'Masked Areas', type: 'radio' },
+				{ name: 'color', title: 'Color:', value: ch.color || '#ff0000', type: 'color' },
+				{ name: 'opacity', title: 'Opacity (%):', value: ch.opacity == null ? 50 : ch.opacity, range: [0, 100] },
+			],
 			on_finish: (p) => {
 				var list = this.list().slice();
-				list[index] = Object.assign({}, ch, { name: p.name || ch.name });
+				list[index] = Object.assign({}, ch, { name: p.name || ch.name, indicates: p.indicates, color: p.color || '#ff0000', opacity: Math.max(0, Math.min(100, parseFloat(p.opacity) || 0)) });
 				this.commit(list, config.ps_alpha_active, 'Channel Options');
 			},
 		});

@@ -26,7 +26,57 @@ class Ps_channel_view_class {
 	state() {
 		var all = this.keys();
 		var s = config.ps_channels || {};
-		return { shown: s.shown || all, target: s.target || all, all: all };
+		return { shown: s.shown || all, target: s.target || all, all: all, alpha: s.alpha == null ? null : s.alpha, overlays: s.overlays || [] };
+	}
+
+	/**
+	 * the alpha channel being edited (targeted alone), or null
+	 */
+	alpha_target() {
+		var s = this.state(), list = config.ps_alpha || [];
+		return s.alpha != null && s.target.length == 0 && list[s.alpha] ? s.alpha : null;
+	}
+
+	/**
+	 * a click on an alpha channel: it alone is shown (gray) and targeted
+	 */
+	select_alpha(i) {
+		config.ps_alpha_active = i;
+		var s = this.state();
+		config.ps_channels = { shown: [], target: [], alpha: i, overlays: s.overlays.filter(k => k !== i) };
+		config.need_render = true;
+		app.GUI.Ps_workspace.render_channels(true);
+	}
+
+	/**
+	 * an alpha channel's eye: shown over the color channels (or with the alpha being edited)
+	 */
+	toggle_alpha_eye(i) {
+		var s = this.state();
+		if (s.alpha === i && s.shown.length == 0) {
+			//the edited alpha's eye: back to the composite
+			return this.set(null, null);
+		}
+		var overlays = s.overlays.includes(i) ? s.overlays.filter(k => k !== i) : s.overlays.concat([i]);
+		config.ps_channels = Object.assign({}, config.ps_channels || {}, { shown: s.shown, target: s.target, alpha: s.alpha, overlays: overlays });
+		config.need_render = true;
+		app.GUI.Ps_workspace.render_channels(true);
+	}
+
+	/**
+	 * a mask as a canvas: white where selected (gray view), or the channel's
+	 * color over the masked (unselected) areas for the overlay
+	 */
+	mask_layer(mask, kind, ch) {
+		var t = document.createElement('canvas');
+		t.width = mask.width;
+		t.height = mask.height;
+		var g = t.getContext('2d');
+		g.fillStyle = kind == 'gray' ? '#ffffff' : (ch.color || '#ff0000');
+		g.fillRect(0, 0, t.width, t.height);
+		g.globalCompositeOperation = kind == 'gray' || ch.indicates == 'Selected Areas' ? 'destination-in' : 'destination-out';
+		g.drawImage(mask, 0, 0);
+		return t;
 	}
 
 	is_composite() {
@@ -37,7 +87,8 @@ class Ps_channel_view_class {
 	set(shown, target) {
 		var all = this.keys();
 		var full = (list) => !list || list.length == all.length;
-		config.ps_channels = full(shown) && full(target) ? null : { shown: shown || all, target: target || all };
+		var overlays = config.ps_channels && config.ps_channels.overlays || [];
+		config.ps_channels = full(shown) && full(target) && !overlays.length ? null : { shown: shown || all, target: target || all, alpha: null, overlays: overlays };
 		config.need_render = true;
 		app.GUI.Ps_workspace.render_channels(true);
 	}
@@ -81,8 +132,29 @@ class Ps_channel_view_class {
 	 * the document area of the screen canvas shows the visible channels
 	 */
 	apply(ctx) {
-		var s = this.state();
-		if (s.shown.length == s.all.length) return;
+		var s = this.state(), alphas = config.ps_alpha || [];
+		if (s.alpha != null && s.shown.length == 0 && alphas[s.alpha]) {
+			//an alpha channel alone: gray, white = selected
+			ctx.save();
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, config.WIDTH, config.HEIGHT);
+			ctx.drawImage(this.mask_layer(alphas[s.alpha].mask, 'gray'), 0, 0);
+			ctx.restore();
+		}
+		else this.apply_colors(ctx, s);
+		//alpha channels with their eye on: a colored overlay (Channel Options color / opacity)
+		for (var i of s.overlays) {
+			var ch = alphas[i];
+			if (!ch || (i === s.alpha && s.shown.length == 0)) continue;
+			ctx.save();
+			ctx.globalAlpha = (ch.opacity == null ? 50 : ch.opacity) / 100;
+			ctx.drawImage(this.mask_layer(ch.mask, 'overlay', ch), 0, 0);
+			ctx.restore();
+		}
+	}
+
+	apply_colors(ctx, s) {
+		if (s.shown.length == s.all.length || s.shown.length == 0) return;
 		var t = ctx.getTransform(), cv = ctx.canvas;
 		var x0 = Math.max(0, Math.floor(t.e)), y0 = Math.max(0, Math.floor(t.f));
 		var x1 = Math.min(cv.width, Math.ceil(t.e + config.WIDTH * t.a)), y1 = Math.min(cv.height, Math.ceil(t.f + config.HEIGHT * t.d));
@@ -120,7 +192,7 @@ class Ps_channel_view_class {
 	 */
 	restrict(layer, canvas) {
 		var s = this.state();
-		if (s.target.length == s.all.length || typeof s.all[0] != 'number' || !layer || !layer.link) return canvas;
+		if (s.target.length == s.all.length || s.target.length == 0 || typeof s.all[0] != 'number' || !layer || !layer.link) return canvas;
 		if (canvas.width != layer.width_original || canvas.height != layer.height_original) return canvas;
 		if (layer.link.complete === false) return canvas;
 		var w = canvas.width, h = canvas.height;

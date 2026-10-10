@@ -1862,8 +1862,9 @@ class Ps_workspace_class {
 			//alpha channels (Save Selection)
 			var alpha = config.ps_alpha || [];
 			alpha.forEach((ch, i) => {
-				html += '<div class="ps_channel_row ps_alpha_row' + (i == config.ps_alpha_active ? ' active selected' : '') + '" data-alpha="' + i + '">'
-					+ '<span class="ps_eye"></span>'
+				var alpha_eye = cv.overlays.includes(i) || (cv.alpha === i && cv.shown.length == 0);
+				html += '<div class="ps_channel_row ps_alpha_row' + (cv.alpha === i && cv.target.length == 0 ? ' active selected' : '') + '" data-alpha="' + i + '">'
+					+ '<span class="ps_eye' + (alpha_eye ? ' on' : '') + '" data-alpha-eye="' + i + '">' + (alpha_eye ? '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/></svg>' : '') + '</span>'
 					+ '<canvas class="ps_alpha_thumb" width="32" height="32" data-alpha="' + i + '" title="Ctrl+click to load as a selection"></canvas>'
 					+ '<span class="ps_layer_name">' + this.Helper.escapeHtml(ch.name) + '</span><span class="ps_channel_key">Ctrl+' + (6 + i) + '</span></div>';
 			});
@@ -1885,8 +1886,8 @@ class Ps_workspace_class {
 					this.Alpha.load(i, e.shiftKey ? 'add' : (e.altKey ? 'subtract' : 'new'));
 					return;
 				}
-				config.ps_alpha_active = i == config.ps_alpha_active ? -1 : i;
-				this.render_channels(true);
+				if (e.target.closest('[data-alpha-eye]')) { this.Channel_view.toggle_alpha_eye(i); return; }
+				this.Channel_view.select_alpha(i);
 			}));
 			el.querySelectorAll('.ps_channel_row[data-ckey]').forEach((row) => row.addEventListener('click', (e) => {
 				var raw = row.dataset.ckey, key = raw === '' ? null : (/^\d$/.test(raw) ? parseInt(raw) : raw);

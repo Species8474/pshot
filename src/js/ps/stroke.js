@@ -34,6 +34,27 @@ async function commit_stroke(tool, pending, label) {
 		for (var group of temp.data) for (var q of (group || [])) if (q) pts.push([q[0] + (temp.x || 0), q[1] + (temp.y || 0), q[2]]);
 		app.GUI.Ps_workspace.Actions.record_stroke(tool.name, pts);
 	}
+	//Channels panel: an alpha channel targeted alone takes the stroke
+	var alpha_target = app.GUI.Ps_workspace.Channel_view ? app.GUI.Ps_workspace.Channel_view.alpha_target() : null;
+	if (alpha_target != null && temp && temp.type == tool.name) {
+		var astroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);
+		var aopacity = (temp.opacity == null ? 100 : temp.opacity) / 100;
+		await app.State.do_action(new app.Actions.Bundle_action(tool.name + '_tool', label, [
+			new app.Actions.Delete_layer_action(temp.id, true),
+		]), { merge_with_history: ['new_' + tool.name + '_layer'] });
+		if (target_id !== 'self' && target_id != null && app.Layers.get_layer(target_id)) {
+			await app.State.do_action(new app.Actions.Select_layer_action(target_id, true));
+		}
+		app.State.action_history.pop();
+		app.State.action_history_index = app.State.action_history.length;
+		var A = app.GUI.Ps_workspace.Alpha, list = A.list().slice(), ch = list[alpha_target];
+		var virtual = { x: 0, y: 0, ps_mask_x: 0, ps_mask_y: 0, ps_mask: ch.mask };
+		var painted = app.GUI.Ps_workspace.Mask.painted_mask(virtual, astroke, tool.name == 'gradient' ? null : config.COLOR, aopacity);
+		list[alpha_target] = Object.assign({}, ch, { mask: painted });
+		await A.commit(list, alpha_target, label);
+		config.need_render = true;
+		return;
+	}
 	if (Selection.quick_mask && temp && temp.type == tool.name) {
 		//Quick Mask mode: the stroke edits the selection, not the pixels
 		var qstroke = app.Layers.convert_layer_to_canvas(temp.id, false, false);
