@@ -21,6 +21,7 @@ import Ps_digimarc_class from './../../ps/digimarc.js';
 import Ps_vanishing_point_class from './../../ps/vanishing-point.js';
 import { cmyk_safe } from './../../ps/proof.js';
 import { STACK_MODES, combine_stack } from './../../ps/stack-modes.js';
+import Ps_zoomify_class from './../../ps/zoomify.js';
 import alertify from './../../../../node_modules/alertifyjs/build/alertify.min.js';
 
 var instance = null;
@@ -2311,6 +2312,11 @@ class Ps_commands_class {
 	adaptive_wide_angle() {
 		this.Wide_angle = this.Wide_angle || new Ps_wide_angle_class();
 		this.Wide_angle.open();
+	}
+
+	zoomify() {
+		this.Zoomify = this.Zoomify || new Ps_zoomify_class();
+		this.Zoomify.dialog();
 	}
 
 	vanishing_point() {

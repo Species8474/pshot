@@ -246,6 +246,7 @@ Layer properties pshot adds (all changed through `Update_layer_action`, so they'
   - Fix: the CMYK gamut map (Proof Colors, CMYK mode) pulled near-neutral colors (whites, grays) toward the cusp lightness; neutrals are now always in gamut.
   - Smart filter masks: the first smart filter brings a filter mask (from the selection, else white) kept in the smart object's source pixels (follows its transform); Layer > Smart Filter > Add/Delete Filter Mask, Disable/Enable Filter Mask; thumbnail on the Smart Filters row (Shift+click disables). Painting on the filter mask is not supported yet.
   - Convert to Smart Object with several layers selected keeps them as a stack (smart.stack); Layer > Smart Objects > Stack Mode (None, Entropy, Kurtosis, Maximum, Mean, Median, Minimum, Range, Skewness, Standard Deviation, Summation, Variance) via ps/stack-modes.js.
+  - File > Export > Zoomify (ps/zoomify.js): Zoomify tile pyramid (ImageProperties.xml, TileGroupN/z-x-y.jpg) + an HTML pan/zoom viewer, as a zip.
 
 ## Known gaps / next
 
