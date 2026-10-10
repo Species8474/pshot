@@ -1769,3 +1769,19 @@ body.theme-cs6 button:disabled svg { opacity: 0.45; }
 .ps_pm_name { font-size: 10px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
 .ps_pm_hint { color: var(--ps-text-dim); font-size: 11px; min-height: 14px; }
 .ps_pm .ps_ge_buttons button:disabled { opacity: 0.5; }
+
+/* ========== floating document windows (Window > Arrange) ================== */
+.ps_docarea { position: relative; }
+.ps_float_layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.ps_float_win { position: absolute; display: flex; flex-direction: column; pointer-events: auto; background: var(--ps-pasteboard); border: 1px solid #1a1a1a; box-shadow: 0 4px 16px rgba(0,0,0,0.55); }
+.ps_float_title { flex: none; height: 20px; display: flex; align-items: center; padding: 0 4px 0 8px; background: var(--ps-control-light); color: var(--ps-text); font-size: 11px; cursor: default; user-select: none; }
+.ps_float_win.active .ps_float_title { background: #5a5a5a; color: var(--ps-text-strong); }
+.ps_float_label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps_float_close { width: 16px; height: 16px; padding: 0; border: none; background: transparent; color: var(--ps-icon); font-size: 13px; line-height: 14px; }
+.ps_float_close:hover { color: var(--ps-text-strong); background: var(--ps-hover-strong); border-radius: 2px; }
+.ps_float_body { flex: 1; min-height: 0; position: relative; display: flex; overflow: hidden; }
+.ps_float_body > .middle_area { flex: 1; }
+.ps_float_pic { position: absolute; inset: 0; }
+.ps_float_grip { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, #777 50%, #777 60%, transparent 60%, transparent 70%, #777 70%, #777 80%, transparent 80%); }
+.ps_doctabs.ps_dock_target { box-shadow: inset 0 0 0 2px #4a90d9; }
+.ps_docarea > .ps_statusbar { margin-top: auto; } /* stays at the bottom while the view is in a floating window */

@@ -93,7 +93,7 @@ function doctab_items(tab) {
 	var docs = app.GUI.Ps_workspace.Documents;
 	var i = parseInt(tab.dataset.index);
 	return [
-		{ name: 'Move to New Window' },
+		{ name: 'Move to New Window', action: () => { app.GUI.Ps_workspace.Documents.switch_to(i); app.GUI.Ps_workspace.Float.float_current(); } },
 		{ divider: true },
 		{ name: 'Close', action: () => docs.close(i) },
 		{ name: 'Close All', action: cmd('close_all') },

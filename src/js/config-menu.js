@@ -365,7 +365,25 @@ const M = [
 		'Clear Slices|ps/commands.clear_slices',
 	]],
 	['Window', [
-		['Arrange', ['Tile All Vertically', 'Tile All Horizontally', '2-up Horizontal', '2-up Vertical', '3-up Horizontal', '3-up Vertical', '3-up Stacked', '4-up', '6-up', 'Consolidate All to Tabs', '-', 'Cascade', 'Tile', 'Float in Window', 'Float All in Windows', '-', 'Match Zoom', 'Match Location', 'Match Rotation', 'Match All', '-', 'New Window for Untitled-1']],
+		['Arrange', [
+			{ name: 'Tile All Vertically', target: 'ps/commands.tile_windows', parameter: 'vertical' },
+			{ name: 'Tile All Horizontally', target: 'ps/commands.tile_windows', parameter: 'horizontal' },
+			{ name: '2-up Horizontal', target: 'ps/commands.tile_windows', parameter: '2h' },
+			{ name: '2-up Vertical', target: 'ps/commands.tile_windows', parameter: '2v' },
+			{ name: '3-up Horizontal', target: 'ps/commands.tile_windows', parameter: '3h' },
+			{ name: '3-up Vertical', target: 'ps/commands.tile_windows', parameter: '3v' },
+			{ name: '3-up Stacked', target: 'ps/commands.tile_windows', parameter: '3s' },
+			{ name: '4-up', target: 'ps/commands.tile_windows', parameter: '4' },
+			{ name: '6-up', target: 'ps/commands.tile_windows', parameter: '6' },
+			'Consolidate All to Tabs|ps/commands.consolidate_tabs', '-',
+			'Cascade|ps/commands.cascade_windows',
+			{ name: 'Tile', target: 'ps/commands.tile_windows', parameter: 'grid' },
+			'Float in Window|ps/commands.float_in_window', 'Float All in Windows|ps/commands.float_all', '-',
+			{ name: 'Match Zoom', target: 'ps/commands.match_view', parameter: 'zoom' },
+			{ name: 'Match Location', target: 'ps/commands.match_view', parameter: 'location' },
+			{ name: 'Match Rotation', target: 'ps/commands.match_view', parameter: 'rotation' },
+			{ name: 'Match All', target: 'ps/commands.match_view', parameter: 'all' }, '-',
+			'New Window for Untitled-1']],
 		{
 			name: 'Workspace',
 			//user workspaces (New Workspace) are listed after the CS6 ones

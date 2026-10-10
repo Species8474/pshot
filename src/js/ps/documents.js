@@ -301,6 +301,12 @@ class Ps_documents_class {
 		if (app.GUI.Ps_workspace.Transform.active()) {
 			app.GUI.Ps_workspace.Transform.commit();
 		}
+		//the merged image: Match Color sources, floating window pictures
+		var flat = document.createElement('canvas');
+		flat.width = config.WIDTH;
+		flat.height = config.HEIGHT;
+		app.Layers.convert_layers_to_canvas(flat.getContext('2d'), null, false);
+		this.current().flat = flat;
 		this.current().state = this.capture();
 		app.GUI.Ps_workspace.Multi.clear();
 		this.active = index;

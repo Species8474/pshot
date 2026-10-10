@@ -777,6 +777,12 @@ class Ps_commands_class {
 	auto_align() { app.GUI.Ps_workspace.Auto_align.align_dialog(); }
 	auto_blend() { app.GUI.Ps_workspace.Auto_align.blend_dialog(); }
 	create_style_layers() { app.GUI.Ps_workspace.Styles.create_layers(); }
+	float_in_window() { app.GUI.Ps_workspace.Float.float_current(); }
+	float_all() { app.GUI.Ps_workspace.Float.float_all(); }
+	consolidate_tabs() { app.GUI.Ps_workspace.Float.consolidate(); }
+	cascade_windows() { app.GUI.Ps_workspace.Float.cascade(); }
+	tile_windows(layout) { app.GUI.Ps_workspace.Float.tile(layout); }
+	match_view(what) { app.GUI.Ps_workspace.Float.match(what); }
 	rasterize_layer_style() { app.GUI.Ps_workspace.Styles.rasterize_style(); }
 	scale_effects() { app.GUI.Ps_workspace.Extras.scale_effects(); }
 	global_light() { app.GUI.Ps_workspace.Extras.global_light(); }

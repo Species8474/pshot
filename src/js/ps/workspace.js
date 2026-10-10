@@ -60,6 +60,7 @@ import { install_pixel_layer_guard } from './pixel-layer.js';
 import { install_move_selection } from './move-selection.js';
 import { render_character, render_paragraph } from './type-panels.js';
 import { install_panel_context_menus, delete_state } from './panel-context.js';
+import Ps_float_windows_class from './float-windows.js';
 import { install_shape_modes } from './shape-modes.js';
 
 const PANEL_TITLES = {
@@ -117,6 +118,7 @@ class Ps_workspace_class {
 		this.Alpha = new Ps_alpha_channels_class();
 		this.Brush_panel = new Ps_brush_panel_class();
 		this.Comps = new Ps_layer_comps_class();
+		this.Float = new Ps_float_windows_class();
 		this.Actions = new Ps_actions_panel_class();
 		this.Styles = new Ps_styles_class();
 		this.Adjustment_layers = new Ps_adjustment_layers_class();
@@ -1306,7 +1308,7 @@ class Ps_workspace_class {
 			var z = st ? Math.round(st.ZOOM * 100) + '%' : '100%';
 			return this.tab_label(doc.name, z, layer);
 		});
-		var signature = active + '|' + labels.join('|');
+		var signature = active + '|' + labels.join('|') + '|' + docs.map(d => (d.float ? 'f' : 't')).join('');
 		if (this.last_tab_label === signature) {
 			return;
 		}
@@ -1314,6 +1316,8 @@ class Ps_workspace_class {
 		var tabs = document.getElementById('ps_doctabs');
 		var html = '';
 		labels.forEach((label, i) => {
+			//floating documents have a window instead of a tab
+			if (docs[i].float) return;
 			html += '<div class="ps_doctab' + (i == active ? ' active' : '') + '" data-index="' + i + '" title="' + label + '">'
 				+ '<span class="ps_doctab_label">' + label + '</span>'
 				+ '<button type="button" class="ps_doctab_close" data-index="' + i + '" title="Close">&times;</button></div>';
@@ -1321,15 +1325,18 @@ class Ps_workspace_class {
 		tabs.innerHTML = html;
 		tabs.querySelectorAll('.ps_doctab').forEach((tab) => {
 			tab.addEventListener('mousedown', (event) => {
-				if (event.target.closest('.ps_doctab_close')) {
+				if (event.target.closest('.ps_doctab_close') || event.button != 0) {
 					return;
 				}
 				this.Documents.switch_to(parseInt(tab.dataset.index));
+				//drag the tab down out of the bar: Move to New Window
+				this.Float.tab_drag(event, parseInt(tab.dataset.index));
 			});
 		});
 		tabs.querySelectorAll('.ps_doctab_close').forEach((button) => {
 			button.addEventListener('click', () => this.Documents.close(parseInt(button.dataset.index)));
 		});
+		this.Float.render(labels);
 		document.title = this.document_name() + ' - pshot';
 		this.update_window_menu();
 	}
